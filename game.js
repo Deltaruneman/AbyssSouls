@@ -398,3 +398,405 @@ function renderBoss(){
     }
 }
 
+
+/* =====================================
+   RENDER TEAM
+===================================== */
+
+function renderTeam(){
+
+    const container =
+        document.getElementById(
+            "player-team"
+        );
+
+    container.innerHTML = "";
+
+    team.forEach(
+        (servant,index)=>{
+        
+        const template =
+            document
+            .getElementById(
+                "character-template"
+            )
+            .content
+            .cloneNode(true);
+
+        const card =
+            template.querySelector(
+                ".servant-card"
+            );
+
+        if(index === currentTurn){
+
+            card.classList.add(
+                "active"
+            );
+        }
+
+        if(servant.hp <= 0){
+
+            card.classList.add(
+                "dead"
+            );
+        }
+
+        template.querySelector(
+            ".servant-name"
+        ).innerText =
+        `${servant.icon} ${servant.name}`;
+
+        template.querySelector(
+            ".servant-hp-text"
+        ).innerText =
+        `HP: ${Math.max(
+            0,
+            Math.floor(servant.hp)
+        )}/${servant.maxHp}`;
+
+        template.querySelector(
+            ".servant-np-text"
+        ).innerText =
+        `NP: ${servant.np}/100`;
+
+        template.querySelector(
+            ".hp-fill"
+        ).style.width =
+
+        (servant.hp /
+         servant.maxHp)
+         *100 + "%";
+
+        const npFill =
+            template.querySelector(
+                ".np-fill"
+            );
+
+        npFill.style.width =
+            servant.np + "%";
+
+        if(servant.np >= 100){
+
+            npFill.classList.add(
+                "np-ready"
+            );
+        }
+
+        template.querySelector(
+            ".servant-status"
+        ).innerText =
+            servant.status;
+
+        container.appendChild(
+            template
+        );
+    });
+}
+
+/* =====================================
+   TURN UI
+===================================== */
+
+function highlightTurn(){
+
+    if(gameOver)
+        return;
+
+    while(
+
+        currentTurn <
+        team.length &&
+
+        team[currentTurn].hp <= 0
+
+    ){
+
+        currentTurn++;
+    }
+
+    if(
+        currentTurn >=
+        team.length
+    ){
+
+        setTimeout(
+            bossAction,
+            1000
+        );
+
+        return;
+    }
+
+    const servant =
+        team[currentTurn];
+
+    document
+        .getElementById(
+            "turn-info"
+        )
+        .innerText =
+
+        `Lượt:
+        ${servant.icon}
+        ${servant.name}`;
+
+    document
+        .getElementById(
+            "skill-btn"
+        )
+        .disabled =
+
+        servant.np < 20;
+
+    document
+        .getElementById(
+            "np-btn"
+        )
+        .disabled =
+
+        servant.np < 100;
+
+    renderTeam();
+}
+
+/* =====================================
+   NP GAIN
+===================================== */
+
+function gainNP(servant){
+
+    let amount = 20;
+
+    switch(
+        servant.classId
+    ){
+
+        case 1:
+            amount = 20;
+            break;
+
+        case 2:
+            amount = 30;
+            break;
+
+        case 3:
+            amount = 25;
+            break;
+
+        case 4:
+            amount = 25;
+            break;
+
+        case 5:
+            amount = 20;
+            break;
+
+        case 6:
+            amount = 15;
+            break;
+    }
+
+    servant.np =
+        Math.min(
+            100,
+            servant.np + amount
+        );
+}
+
+/* =====================================
+   BASIC ATTACK
+===================================== */
+
+function basicAttack(
+    servant
+){
+
+    let damage =
+
+        randomDamage(
+            servant.atk
+        );
+
+    damage *=
+
+        (
+            1 +
+            getModifier(
+                servant.classId,
+                boss.classId
+            )
+        );
+
+    damage =
+        Math.floor(
+            damage
+        );
+
+    boss.hp -= damage;
+
+    gainNP(servant);
+
+    logPlayer(
+
+        `${servant.icon}
+        ${servant.name}
+        gây
+        ${damage}
+        sát thương`
+    );
+}
+
+/* =====================================
+   PLAYER ACTION
+===================================== */
+
+function playerAction(
+    action
+){
+
+    if(gameOver)
+        return;
+
+    let servant =
+        team[currentTurn];
+
+    if(
+        servant.hp <= 0
+    )
+        return;
+
+    switch(action){
+
+        case "attack":
+
+            basicAttack(
+                servant
+            );
+
+            break;
+
+        case "skill":
+
+            useSkill(
+                servant
+            );
+
+            break;
+
+        case "np":
+
+            useNP(
+                servant
+            );
+
+            break;
+    }
+
+    revealBossCheck();
+
+    renderBoss();
+
+    renderTeam();
+
+    if(
+        boss.hp <= 0
+    ){
+
+        victory();
+
+        return;
+    }
+
+    currentTurn++;
+
+    highlightTurn();
+}
+
+/* =====================================
+   BOSS REVEAL
+===================================== */
+
+function revealBossCheck(){
+
+    if(
+        boss.revealed
+    )
+        return;
+
+    if(
+
+        boss.hp <=
+
+        boss.maxHp * 0.5
+
+    ){
+
+        boss.revealed = true;
+
+        logSystem(
+
+            `⚠ Đã xác định
+            Class Boss:
+            ${
+                classData[
+                    boss.classId
+                ].name
+            }`
+        );
+
+        renderBoss();
+    }
+}
+
+/* =====================================
+   CHECK LOSE
+===================================== */
+
+function checkLose(){
+
+    const alive =
+
+        team.some(
+            s => s.hp > 0
+        );
+
+    if(alive)
+        return false;
+
+    gameOver = true;
+
+    document
+        .getElementById(
+            "action-panel"
+        )
+        .style.display =
+        "none";
+
+    logSystem(
+        "💀 GAME OVER"
+    );
+
+    return true;
+}
+
+/* =====================================
+   VICTORY
+===================================== */
+
+function victory(){
+
+    gameOver = true;
+
+    document
+        .getElementById(
+            "action-panel"
+        )
+        .style.display =
+        "none";
+
+    logSystem(
+        "🎉 CHIẾN THẮNG!"
+    );
+}
+
