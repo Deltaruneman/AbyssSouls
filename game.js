@@ -800,3 +800,962 @@ function victory(){
     );
 }
 
+/* =====================================
+   SKILL SYSTEM
+===================================== */
+
+function useSkill(servant){
+
+    if(servant.np < 20)
+        return;
+
+    servant.np -= 20;
+
+    switch(servant.classId){
+
+        /* =========================
+           KNIGHT
+        ========================= */
+
+        case 1:
+
+            servant.defending = true;
+
+            servant.reflect = true;
+
+            servant.status =
+                "🛡 Defending";
+
+            logPlayer(
+                "🛡 Knight sử dụng Thủ Chắc"
+            );
+
+            break;
+
+        /* =========================
+           ARCHER
+        ========================= */
+
+        case 2:
+
+            let hit1 = Math.floor(
+                servant.atk * 0.8
+            );
+
+            let hit2 = Math.floor(
+                servant.atk * 0.8
+            );
+
+            hit1 *=
+                (
+                    1 +
+                    getModifier(
+                        servant.classId,
+                        boss.classId
+                    )
+                );
+
+            hit2 *=
+                (
+                    1 +
+                    getModifier(
+                        servant.classId,
+                        boss.classId
+                    )
+                );
+
+            hit1 =
+                Math.floor(hit1);
+
+            hit2 =
+                Math.floor(hit2);
+
+            boss.hp -=
+                hit1 + hit2;
+
+            servant.np =
+                Math.min(
+                    100,
+                    servant.np + 30
+                );
+
+            logPlayer(
+                `🏹 Archer bắn 2 lần gây ${hit1 + hit2} sát thương`
+            );
+
+            break;
+
+        /* =========================
+           MAGE
+        ========================= */
+
+        case 3:
+
+            let mageDamage =
+
+                Math.floor(
+
+                    servant.atk *
+                    1.5 *
+
+                    (
+                        1 +
+                        getModifier(
+                            servant.classId,
+                            boss.classId
+                        )
+                    )
+
+                );
+
+            boss.hp -=
+                mageDamage;
+
+            boss.atkDebuff = 0.20;
+
+            boss.atkDebuffTurn = 2;
+
+            logPlayer(
+                `🔥 Mage gây ${mageDamage} sát thương`
+            );
+
+            logSystem(
+                "Boss bị giảm 20% ATK trong 2 lượt"
+            );
+
+            break;
+
+        /* =========================
+           ASSASSIN
+        ========================= */
+
+        case 4:
+
+            let crit =
+                Math.random() < 0.30;
+
+            let assassinDamage =
+
+                servant.atk;
+
+            if(crit){
+
+                assassinDamage *= 3;
+
+                logCrit(
+                    "💥 CRITICAL HIT!"
+                );
+            }
+
+            assassinDamage *=
+
+                (
+                    1 +
+                    getModifier(
+                        servant.classId,
+                        boss.classId
+                    )
+                );
+
+            assassinDamage =
+                Math.floor(
+                    assassinDamage
+                );
+
+            boss.hp -=
+                assassinDamage;
+
+            logPlayer(
+                `🗡 Assassin gây ${assassinDamage} sát thương`
+            );
+
+            break;
+
+        /* =========================
+           HEALER
+        ========================= */
+
+        case 5:
+
+            team.forEach(
+                ally => {
+
+                if(
+                    ally.hp <= 0
+                )
+                    return;
+
+                ally.hp =
+                    Math.min(
+                        ally.maxHp,
+                        ally.hp + 80
+                    );
+
+                ally.np =
+                    Math.min(
+                        100,
+                        ally.np + 15
+                    );
+            });
+
+            logPlayer(
+                "💚 Healer hồi 80 HP và +15 NP cho toàn đội"
+            );
+
+            break;
+
+        /* =========================
+           BERSERKER
+        ========================= */
+
+        case 6:
+
+            let hpCost =
+
+                Math.floor(
+                    servant.hp * 0.1
+                );
+
+            servant.hp -=
+                hpCost;
+
+            let berserkDamage =
+
+                Math.floor(
+
+                    servant.atk *
+                    1.5 *
+
+                    (
+                        1 +
+                        getModifier(
+                            servant.classId,
+                            boss.classId
+                        )
+                    )
+
+                );
+
+            boss.hp -=
+                berserkDamage;
+
+            let heal =
+
+                Math.floor(
+                    berserkDamage *
+                    0.4
+                );
+
+            servant.hp =
+                Math.min(
+                    servant.maxHp,
+                    servant.hp + heal
+                );
+
+            logPlayer(
+                `💀 Berserker gây ${berserkDamage} sát thương`
+            );
+
+            logPlayer(
+                `💚 Hút máu ${heal} HP`
+            );
+
+            break;
+    }
+
+    renderBoss();
+    renderTeam();
+}
+
+/* =====================================
+   CLEAR EXPIRED STATUS
+===================================== */
+
+function clearStatus(){
+
+    team.forEach(
+        servant => {
+
+        if(
+            servant.defending
+        ){
+
+            servant.defending =
+                false;
+
+            servant.reflect =
+                false;
+
+            servant.status = "";
+        }
+    });
+}
+
+
+/* =====================================
+   NOBLE PHANTASM SYSTEM
+===================================== */
+
+function useNP(servant){
+
+    if(servant.np < 100)
+        return;
+
+    servant.np = 0;
+
+    logNP(
+        `🔥 ${servant.name}
+         kích hoạt Noble Phantasm!`
+    );
+
+    switch(servant.classId){
+
+        /* =========================
+           KNIGHT NP
+        ========================= */
+
+        case 1:
+
+            team.forEach(
+                ally => {
+
+                if(ally.hp <= 0)
+                    return;
+
+                ally.defending = true;
+
+                ally.reflect = true;
+
+                ally.status =
+                    "🛡 Avalon";
+            });
+
+            window.teamProtectionTurn = 2;
+
+            logNP(
+                "🏰 Fortress of Avalon bảo vệ toàn đội trong 2 lượt Boss"
+            );
+
+            break;
+
+        /* =========================
+           ARCHER NP
+        ========================= */
+
+        case 2:
+
+            boss.hp -= 350;
+
+            servant.np = 20;
+
+            logNP(
+                "🏹 Thousand Arrows gây 350 sát thương"
+            );
+
+            break;
+
+        /* =========================
+           MAGE NP
+        ========================= */
+
+        case 3:
+
+            boss.hp -= 350;
+
+            boss.atkDebuff = 0.30;
+
+            boss.atkDebuffTurn = 3;
+
+            logNP(
+                "☄️ Meteor Fall gây 350 sát thương"
+            );
+
+            logSystem(
+                "Boss bị giảm 30% ATK trong 3 lượt"
+            );
+
+            break;
+
+        /* =========================
+           ASSASSIN NP
+        ========================= */
+
+        case 4:
+
+            let damage = 250;
+
+            if(Math.random() < 0.5){
+
+                damage += 300;
+
+                logCrit(
+                    "💀 Death Mark kích hoạt!"
+                );
+            }
+
+            boss.hp -= damage;
+
+            logNP(
+                `🗡 Death Mark gây ${damage} sát thương`
+            );
+
+            break;
+
+        /* =========================
+           HEALER NP
+        ========================= */
+
+        case 5:
+
+            team.forEach(
+                ally => {
+
+                if(ally.hp <= 0)
+                    return;
+
+                ally.hp +=
+                    ally.maxHp * 0.4;
+
+                if(
+                    ally.hp >
+                    ally.maxHp
+                ){
+                    ally.hp =
+                        ally.maxHp;
+                }
+
+                ally.np =
+                    Math.min(
+                        100,
+                        ally.np + 50
+                    );
+            });
+
+            logNP(
+                "💚 Miracle hồi máu và NP cho toàn đội"
+            );
+
+            break;
+
+        /* =========================
+           BERSERKER NP
+        ========================= */
+
+        case 6:
+
+            boss.hp -= 600;
+
+            servant.hp -=
+                Math.floor(
+                    servant.hp * 0.25
+                );
+
+            logNP(
+                "💀 Ragnarok gây 600 sát thương"
+            );
+
+            break;
+    }
+
+    renderBoss();
+
+    renderTeam();
+
+    if(boss.hp <= 0){
+
+        victory();
+
+        return;
+    }
+}
+
+/* =====================================
+   TEAM PROTECTION
+===================================== */
+
+window.teamProtectionTurn = 0;
+
+/* =====================================
+   REMOVE PROTECTION
+===================================== */
+
+function updateTeamProtection(){
+
+    if(
+        window.teamProtectionTurn <= 0
+    )
+        return;
+
+    window.teamProtectionTurn--;
+
+    if(
+        window.teamProtectionTurn <= 0
+    ){
+
+        team.forEach(
+            servant => {
+
+            servant.defending =
+                false;
+
+            servant.reflect =
+                false;
+
+            servant.status = "";
+        });
+
+        logSystem(
+            "🏰 Fortress of Avalon đã biến mất"
+        );
+    }
+}
+
+
+/* =====================================
+   BOSS ACTION
+===================================== */
+
+function bossAction(){
+
+    if(gameOver)
+        return;
+
+    bossTurnCount++;
+
+    boss.npCounter++;
+
+    let aliveTargets =
+
+        team.filter(
+            servant =>
+                servant.hp > 0
+        );
+
+    if(
+        aliveTargets.length === 0
+    ){
+
+        checkLose();
+
+        return;
+    }
+
+    /* =========================
+       BOSS NP
+    ========================= */
+
+    if(
+        boss.npCounter >= 3
+    ){
+
+        boss.npCounter = 0;
+
+        bossNP();
+
+        renderTeam();
+
+        if(checkLose())
+            return;
+
+        currentTurn = 0;
+
+        highlightTurn();
+
+        return;
+    }
+
+    /* =========================
+       NORMAL ATTACK
+    ========================= */
+
+    let target =
+
+        aliveTargets[
+            Math.floor(
+                Math.random() *
+                aliveTargets.length
+            )
+        ];
+
+    let effectiveAtk =
+        boss.atk;
+
+    if(
+        boss.atkDebuffTurn > 0
+    ){
+
+        effectiveAtk *=
+            (
+                1 -
+                boss.atkDebuff
+            );
+
+        boss.atkDebuffTurn--;
+
+        if(
+            boss.atkDebuffTurn <= 0
+        ){
+
+            boss.atkDebuff = 0;
+
+            logSystem(
+                "Boss đã hồi phục sức mạnh."
+            );
+        }
+    }
+
+    let damage =
+
+        Math.floor(
+
+            effectiveAtk +
+            Math.random()*15
+
+        );
+
+    damage *=
+
+        (
+            1 +
+            getModifier(
+                boss.classId,
+                target.classId
+            )
+        );
+
+    damage =
+        Math.floor(
+            damage
+        );
+
+    /* =========================
+       DEFENSE
+    ========================= */
+
+    if(
+        target.defending
+    ){
+
+        damage =
+            Math.floor(
+                damage * 0.5
+            );
+
+        if(
+            target.reflect
+        ){
+
+            let reflectDamage =
+
+                Math.floor(
+                    damage * 0.3
+                );
+
+            boss.hp -=
+                reflectDamage;
+
+            logPlayer(
+
+                `🛡 ${target.name}
+                 phản lại
+                 ${reflectDamage}
+                 sát thương`
+            );
+        }
+    }
+
+    target.hp -= damage;
+
+    logBoss(
+
+        `👹 Boss tấn công
+         ${target.name}
+         gây
+         ${damage}
+         sát thương`
+    );
+
+    if(
+        target.hp <= 0
+    ){
+
+        target.hp = 0;
+
+        logSystem(
+
+            `☠ ${target.name}
+             đã ngã xuống`
+        );
+    }
+
+    /* =========================
+       REVEAL CLASS
+    ========================= */
+
+    revealBossCheck();
+
+    renderBoss();
+
+    renderTeam();
+
+    clearStatus();
+
+    updateTeamProtection();
+
+    if(
+        boss.hp <= 0
+    ){
+
+        victory();
+
+        return;
+    }
+
+    if(
+        checkLose()
+    )
+        return;
+
+    currentTurn = 0;
+
+    highlightTurn();
+}
+
+/* =====================================
+   BOSS NP
+===================================== */
+
+function bossNP(){
+
+    let aoe =
+        Math.random() < 0.5;
+
+    if(aoe){
+
+        logBoss(
+            "💥 SOUL BURST!"
+        );
+
+        team.forEach(
+            servant => {
+
+            if(
+                servant.hp <= 0
+            )
+                return;
+
+            let damage = 120;
+
+            if(
+                servant.defending
+            ){
+
+                damage =
+                    Math.floor(
+                        damage * 0.5
+                    );
+            }
+
+            servant.hp -=
+                damage;
+
+            if(
+                servant.hp <= 0
+            ){
+
+                servant.hp = 0;
+
+                logSystem(
+                    `☠ ${servant.name}
+                     bị hạ gục`
+                );
+            }
+        });
+
+    }else{
+
+        let aliveTargets =
+
+            team.filter(
+                s => s.hp > 0
+            );
+
+        if(
+            aliveTargets.length === 0
+        )
+            return;
+
+        let target =
+
+            aliveTargets.reduce(
+                (lowest,current)=>{
+
+                return current.hp <
+                       lowest.hp
+                       ? current
+                       : lowest;
+
+            });
+
+        let damage =
+
+            Math.floor(
+                boss.atk * 1.5
+            );
+
+        if(
+            target.defending
+        ){
+
+            damage =
+                Math.floor(
+                    damage * 0.5
+                );
+        }
+
+        target.hp -=
+            damage;
+
+        logBoss(
+
+            `💀 SOUL EXECUTION
+             đánh vào
+             ${target.name}
+             gây
+             ${damage}
+             sát thương`
+        );
+
+        if(
+            target.hp <= 0
+        ){
+
+            target.hp = 0;
+
+            logSystem(
+                `☠ ${target.name}
+                 bị kết liễu`
+            );
+        }
+    }
+}
+
+/* =====================================
+   RESTART GAME
+===================================== */
+
+function restartGame(){
+
+    location.reload();
+}
+
+/* =====================================
+   AUTO SCROLL
+===================================== */
+
+function scrollLogBottom(){
+
+    const log =
+
+        document.getElementById(
+            "battle-log"
+        );
+
+    log.scrollTop =
+        log.scrollHeight;
+}
+
+/* =====================================
+   END GAME
+===================================== */
+
+function endGame(
+    message
+){
+
+    gameOver = true;
+
+    document
+        .getElementById(
+            "action-panel"
+        )
+        .style.display =
+        "none";
+
+    logSystem(
+        message
+    );
+
+    setTimeout(()=>{
+
+        const restartBtn =
+        document.createElement(
+            "button"
+        );
+
+        restartBtn.innerText =
+            "🔄 Chơi Lại";
+
+        restartBtn.onclick =
+            restartGame;
+
+        restartBtn.style.marginTop =
+            "20px";
+
+        restartBtn.style.padding =
+            "12px 20px";
+
+        restartBtn.style.fontSize =
+            "18px";
+
+        document
+            .getElementById(
+                "battle-log"
+            )
+            .appendChild(
+                restartBtn
+            );
+
+    },500);
+}
+
+/* =====================================
+   OVERRIDE WIN / LOSE
+===================================== */
+
+function victory(){
+
+    if(gameOver)
+        return;
+
+    endGame(
+        "🎉 THE NIGHTMARE SOUL ĐÃ BỊ TIÊU DIỆT!"
+    );
+}
+
+function checkLose(){
+
+    let alive =
+
+        team.some(
+            servant =>
+                servant.hp > 0
+        );
+
+    if(alive)
+        return false;
+
+    endGame(
+        "💀 TOÀN ĐỘI ĐÃ BỊ TIÊU DIỆT!"
+    );
+
+    return true;
+}
+
+/* =====================================
+   GAME READY
+===================================== */
+
+console.log(
+    " Loaded"
+);
