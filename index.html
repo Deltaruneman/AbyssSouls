@@ -1,367 +1,224 @@
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pokemon: Fate Battle Web</title>
-    <style>
-        :root {
-            --bg-color: #1a1a2e;
-            --panel-bg: #16213e;
-            --border-color: #0f3460;
-            --text-color: #e94560;
-            --text-light: #fff;
-        }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-light);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-        }
-        #game-wrapper {
-            width: 100%;
-            max-width: 900px;
-            background: var(--panel-bg);
-            border: 3px solid var(--border-color);
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.8);
-        }
-        h1, h2 { text-align: center; color: var(--text-color); margin-top: 0;}
-        
-        /* Màn hình chọn tướng */
-        #selection-screen { display: block; }
-        .class-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        .class-card {
-            background: #0f3460;
-            padding: 15px;
-            border-radius: 8px;
-            cursor: pointer;
-            text-align: center;
-            border: 2px solid transparent;
-            transition: 0.3s;
-        }
-        .class-card:hover { border-color: var(--text-color); transform: translateY(-3px); }
-        .selected-list { margin-top: 20px; font-size: 1.2em; text-align: center; color: #4cd137; }
-        
-        /* Màn hình chiến đấu */
-        #battle-screen { display: none; }
-        .battle-arena {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 20px;
-        }
-        .team, .boss-side { width: 45%; }
-        .character-card {
-            background: rgba(0, 0, 0, 0.4);
-            border: 1px solid #444;
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 5px;
-            position: relative;
-            transition: 0.3s;
-        }
-        .active-turn { border: 2px solid #e94560; box-shadow: 0 0 10px #e94560; }
-        .dead { opacity: 0.4; filter: grayscale(100%); }
-        .hp-bar-bg { background: #333; height: 15px; border-radius: 10px; overflow: hidden; margin-top: 5px; }
-        .hp-bar-fill { background: #4cd137; height: 100%; width: 100%; transition: width 0.3s; }
-        .np-bar-bg { background: #333; height: 8px; border-radius: 10px; overflow: hidden; margin-top: 5px; }
-        .np-bar-fill { background: #00a8ff; height: 100%; width: 0%; transition: width 0.3s; }
-        
-        .boss-card { background: rgba(233, 69, 96, 0.1); border: 2px solid var(--text-color); }
-        .boss-card .hp-bar-fill { background: var(--text-color); }
+    <title>Abyss Souls</title>
 
-        #log-window {
-            height: 180px;
-            background: #000;
-            border: 2px solid #555;
-            padding: 10px;
-            overflow-y: auto;
-            font-family: monospace;
-            font-size: 14px;
-            margin-bottom: 15px;
-            border-radius: 5px;
-        }
-        .log-entry { margin: 5px 0; border-bottom: 1px dashed #333; padding-bottom: 5px; }
-        .log-player { color: #4cd137; }
-        .log-boss { color: #e94560; }
-        .log-system { color: #fbc531; }
-
-        .action-panel { display: flex; gap: 10px; justify-content: center; }
-        button {
-            background: var(--border-color);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            font-size: 16px;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: 0.2s;
-            font-weight: bold;
-        }
-        button:hover:not(:disabled) { background: #1a5b9c; transform: scale(1.05); }
-        button:disabled { background: #555; cursor: not-allowed; }
-        .btn-start { background: #e94560; font-size: 20px; width: 100%; margin-top: 20px;}
-        .btn-start:hover { background: #ff4757; }
-        .btn-np { background: #9c88ff; }
-        .btn-np:hover:not(:disabled) { background: #8c7ae6; }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<div id="game-wrapper">
-    <div id="selection-screen">
-        <h1>BẤT DIỆT CHIẾN: CHỌN 3 CHIẾN BINH</h1>
-        <div class="class-grid">
-            <div class="class-card" onclick="selectClass(1)"><h3>Knight (Hệ 1)</h3>HP: 450 | ATK: 40<br>Kỹ năng: Thủ chắc</div>
-            <div class="class-card" onclick="selectClass(2)"><h3>Archer (Hệ 2)</h3>HP: 200 | ATK: 75<br>Kỹ năng: Xuyên thấu</div>
-            <div class="class-card" onclick="selectClass(3)"><h3>Mage (Hệ 3)</h3>HP: 350 | ATK: 60<br>Kỹ năng: Cầu lửa</div>
-            <div class="class-card" onclick="selectClass(4)"><h3>Assassin (Hệ 4)</h3>HP: 300 | ATK: 50<br>Kỹ năng: Chí mạng</div>
-            <div class="class-card" onclick="selectClass(5)"><h3>Healer (Hệ 5)</h3>HP: 450 | ATK: 10<br>Kỹ năng: Hồi máu Team</div>
-            <div class="class-card" onclick="selectClass(6)"><h3>Berserker (Hệ 6)</h3>HP: 200 | ATK: 75<br>Kỹ năng: Khát máu</div>
-        </div>
-        <div class="selected-list" id="selected-list">Đội hình: Đang trống (0/3)</div>
-        <button class="btn-start" id="btn-start" onclick="startBattle()" disabled>BẮT ĐẦU CHIẾN ĐẬU</button>
-    </div>
+<div class="container">
 
-    <div id="battle-screen">
-        <h2>TRẬN CHIẾN SINH TỬ</h2>
-        <div class="battle-arena">
-            <div class="team" id="player-team">
+    <!-- TITLE -->
+    <header class="header">
+        <h1>⚔️ Abyss Souls ⚔️</h1>
+        <p>Chọn 3 Nhân vật để đối đầu với Nightmare Soul</p>
+    </header>
+
+    <!-- TEAM SELECTION -->
+    <section id="selection-screen">
+
+        <h2>Chọn Đội Hình (3/3)</h2>
+
+        <div class="class-grid">
+
+            <div class="class-card knight"
+                 onclick="selectClass(1)">
+                <h3>🛡 Knight</h3>
+                <p>HP: 550</p>
+                <p>ATK: 40</p>
+                <p>Tank / Reflect</p>
+            </div>
+
+            <div class="class-card archer"
+                 onclick="selectClass(2)">
+                <h3>🏹 Archer</h3>
+                <p>HP: 250</p>
+                <p>ATK: 60</p>
+                <p>Multi Hit</p>
+            </div>
+
+            <div class="class-card mage"
+                 onclick="selectClass(3)">
+                <h3>🔥 Mage</h3>
+                <p>HP: 320</p>
+                <p>ATK: 55</p>
+                <p>Debuff</p>
+            </div>
+
+            <div class="class-card assassin"
+                 onclick="selectClass(4)">
+                <h3>🗡 Assassin</h3>
+                <p>HP: 280</p>
+                <p>ATK: 65</p>
+                <p>Critical</p>
+            </div>
+
+            <div class="class-card healer"
+                 onclick="selectClass(5)">
+                <h3>💚 Healer</h3>
+                <p>HP: 400</p>
+                <p>ATK: 20</p>
+                <p>Support</p>
+            </div>
+
+            <div class="class-card berserker"
+                 onclick="selectClass(6)">
+                <h3>💀 Berserker</h3>
+                <p>HP: 220</p>
+                <p>ATK: 85</p>
+                <p>Glass Cannon</p>
+            </div>
+
+        </div>
+
+        <div id="selected-team">
+            Chưa chọn Nhân vật nào
+        </div>
+
+        <button id="start-btn"
+                onclick="startBattle()"
+                disabled>
+            BẮT ĐẦU TRẬN ĐẤU
+        </button>
+
+    </section>
+
+    <!-- BATTLE -->
+    <section id="battle-screen">
+
+        <div class="battle-layout">
+
+            <!-- PLAYER -->
+            <div class="team-panel">
+
+                <h2>Đội Hình</h2>
+
+                <div id="player-team">
+
                 </div>
-            <div class="boss-side">
-                <div class="character-card boss-card" id="boss-card">
-                    <h3 id="boss-name">The Nightmare Soul (Hệ ?)</h3>
-                    <div>HP: <span id="boss-hp-text">1000/1000</span></div>
-                    <div class="hp-bar-bg"><div class="hp-bar-fill" id="boss-hp-bar"></div></div>
+
+            </div>
+
+            <!-- BOSS -->
+            <div class="boss-panel">
+
+                <div class="boss-card">
+
+                    <h2 id="boss-name">
+                        The Nightmare Soul (???)
+                    </h2>
+
+                    <div class="boss-class-hint"
+                         id="boss-hint">
+                    </div>
+
+                    <div class="hp-label">
+                        HP:
+                        <span id="boss-hp-text">
+                            0 / 0
+                        </span>
+                    </div>
+
+                    <div class="hp-bar">
+                        <div class="hp-fill"
+                             id="boss-hp-fill">
+                        </div>
+                    </div>
+
+                    <div class="boss-status"
+                         id="boss-status">
+
+                    </div>
+
                 </div>
+
+            </div>
+
+        </div>
+
+        <!-- TURN INFO -->
+
+        <div id="turn-info">
+
+        </div>
+
+        <!-- ACTIONS -->
+
+        <div id="action-panel">
+
+            <button
+                onclick="playerAction('attack')">
+                ⚔ Attack
+            </button>
+
+            <button
+                id="skill-btn"
+                onclick="playerAction('skill')">
+                ✨ Skill
+            </button>
+
+            <button
+                id="np-btn"
+                onclick="playerAction('np')">
+                🔥 Noble Phantasm
+            </button>
+
+        </div>
+
+        <!-- LOG -->
+
+        <div id="battle-log">
+
+        </div>
+
+    </section>
+
+</div>
+
+<!-- TEMPLATE -->
+
+<template id="character-template">
+
+    <div class="servant-card">
+
+        <div class="servant-name">
+
+        </div>
+
+        <div class="servant-hp-text">
+
+        </div>
+
+        <div class="hp-bar">
+            <div class="hp-fill">
+
             </div>
         </div>
 
-        <div id="log-window"></div>
+        <div class="servant-np-text">
 
-        <div class="action-panel" id="action-panel">
-            <button onclick="playerAction('attack')">⚔️ Tấn Công Cơ Bản</button>
-            <button onclick="playerAction('skill')" id="btn-skill">🪄 Dùng Kỹ Năng (20 NP)</button>
-            <button onclick="playerAction('np')" id="btn-np" class="btn-np">🔥 Tuyệt Chiêu NP (100 NP)</button>
         </div>
+
+        <div class="np-bar">
+            <div class="np-fill">
+
+            </div>
+        </div>
+
+        <div class="servant-status">
+
+        </div>
+
     </div>
-</div>
 
-<script>
-    // Dữ liệu Hệ thống Classes
-    const classData = {
-        1: { name: "Knight", maxHp: 450, atk: 40, type: 1 },
-        2: { name: "Archer", maxHp: 200, atk: 75, type: 2 },
-        3: { name: "Mage", maxHp: 350, atk: 60, type: 3 },
-        4: { name: "Assassin", maxHp: 300, atk: 50, type: 4 },
-        5: { name: "Healer", maxHp: 450, atk: 10, type: 5 },
-        6: { name: "Berserker", maxHp: 200, atk: 75, type: 6 }
-    };
+</template>
 
-    // Bảng khắc hệ (Sát thương tăng thêm)
-    const typeModifier = {
-        "1-2": 0.5, "1-6": -0.2,
-        "2-6": 1.0, 
-        "3-5": 0.2, "3-6": -0.2,
-        "4-3": 0.8, "4-6": -0.2
-    };
-
-    let team = [];
-    let boss = { name: "The Nightmare Soul", maxHp: 1500, hp: 1500, atk: 60, type: Math.floor(Math.random() * 6) + 1 };
-    let currentTurnIndex = 0;
-    let isGameOver = false;
-
-    // ----- LOGIC CHỌN TƯỚNG -----
-    function selectClass(typeId) {
-        if (team.length >= 3) return;
-        let c = classData[typeId];
-        team.push({
-            id: team.length,
-            name: c.name,
-            maxHp: c.maxHp,
-            hp: c.maxHp,
-            atk: c.atk,
-            type: c.type,
-            np: 0,
-            isDefending: false
-        });
-        updateSelectionUI();
-    }
-
-    function updateSelectionUI() {
-        let text = team.map((p, i) => `${i+1}. ${p.name}`).join(" | ");
-        document.getElementById('selected-list').innerText = `Đội hình: ${text} (${team.length}/3)`;
-        if (team.length === 3) document.getElementById('btn-start').disabled = false;
-    }
-
-    // ----- LOGIC KHỞI TẠO TRẬN ĐẤU -----
-    function startBattle() {
-        document.getElementById('selection-screen').style.display = 'none';
-        document.getElementById('battle-screen').style.display = 'block';
-        document.getElementById('boss-name').innerText = `The Nightmare Soul (Hệ ${boss.type})`;
-        renderTeam();
-        updateBossUI();
-        logMessage("Trận chiến bắt đầu! Sự kết hợp của bạn sẽ quyết định chiến thắng.", "system");
-        highlightCurrentTurn();
-    }
-
-    function renderTeam() {
-        const teamDiv = document.getElementById('player-team');
-        teamDiv.innerHTML = "";
-        team.forEach(p => {
-            let deadClass = p.hp <= 0 ? "dead" : "";
-            teamDiv.innerHTML += `
-                <div class="character-card ${deadClass}" id="char-${p.id}">
-                    <strong>${p.name}</strong> (Hệ ${p.type}) <br>
-                    HP: <span id="hp-text-${p.id}">${p.hp}/${p.maxHp}</span> <br>
-                    <div class="hp-bar-bg"><div class="hp-bar-fill" id="hp-bar-${p.id}" style="width: ${(p.hp/p.maxHp)*100}%"></div></div>
-                    NP: <span id="np-text-${p.id}">${p.np}/100</span>
-                    <div class="np-bar-bg"><div class="np-bar-fill" id="np-bar-${p.id}" style="width: ${p.np}%"></div></div>
-                </div>
-            `;
-        });
-    }
-
-    function updateBossUI() {
-        let percent = Math.max(0, (boss.hp / boss.maxHp) * 100);
-        document.getElementById('boss-hp-bar').style.width = percent + "%";
-        document.getElementById('boss-hp-text').innerText = `${Math.max(0, boss.hp)}/${boss.maxHp}`;
-    }
-
-    function logMessage(msg, type = "system") {
-        const logWindow = document.getElementById('log-window');
-        let colorClass = type === "player" ? "log-player" : (type === "boss" ? "log-boss" : "log-system");
-        logWindow.innerHTML += `<div class="log-entry ${colorClass}">> ${msg}</div>`;
-        logWindow.scrollTop = logWindow.scrollHeight;
-    }
-
-    // ----- LOGIC CHIẾN ĐẬU -----
-    function getModifier(attackerType, defenderType) {
-        let key = `${attackerType}-${defenderType}`;
-        return typeModifier[key] ? typeModifier[key] : 0;
-    }
-
-    function highlightCurrentTurn() {
-        if(isGameOver) return;
-        team.forEach(p => document.getElementById(`char-${p.id}`).classList.remove('active-turn'));
-        
-        // Bỏ qua các nhân vật đã chết
-        while(currentTurnIndex < 3 && team[currentTurnIndex].hp <= 0) {
-            currentTurnIndex++;
-        }
-
-        if (currentTurnIndex < 3) {
-            document.getElementById(`char-${currentTurnIndex}`).classList.add('active-turn');
-            let p = team[currentTurnIndex];
-            document.getElementById('btn-skill').disabled = p.np < 20;
-            document.getElementById('btn-np').disabled = p.np < 100;
-        } else {
-            // Lượt của Boss
-            document.getElementById('action-panel').style.display = 'none';
-            setTimeout(bossTurn, 1000);
-        }
-    }
-
-    function playerAction(action) {
-        if(isGameOver) return;
-        let p = team[currentTurnIndex];
-        p.isDefending = false; // Xóa trạng thái thủ
-
-        let baseDmg = p.atk;
-        let mod = getModifier(p.type, boss.type);
-        let finalDmg = Math.floor(baseDmg * (1 + mod) + Math.random()*10);
-
-        if (action === 'attack') {
-            boss.hp -= finalDmg;
-            p.np = Math.min(100, p.np + 25);
-            logMessage(`[${p.name}] Tấn công! Gây ${finalDmg} sát thương (Hệ số: ${mod*100}%).`, "player");
-        } 
-        else if (action === 'skill') {
-            p.np -= 20;
-            if(p.type === 1) { p.isDefending = true; logMessage(`[${p.name}] Dùng kỹ năng: Thủ chắc (Giảm 50% ST nhận vào).`, "player"); }
-            else if(p.type === 5) {
-                team.forEach(ally => { if(ally.hp > 0) ally.hp = Math.min(ally.maxHp, ally.hp + 100); });
-                logMessage(`[${p.name}] Dùng kỹ năng: Phục hồi 100 HP cho toàn đội.`, "player");
-            }
-            else {
-                let skillDmg = finalDmg * 1.5;
-                boss.hp -= skillDmg;
-                logMessage(`[${p.name}] Dùng kỹ năng! Gây ${Math.floor(skillDmg)} sát thương cực mạnh.`, "player");
-            }
-        }
-        else if (action === 'np') {
-            p.np = 0;
-            let npDmg = finalDmg * 4;
-            boss.hp -= npDmg;
-            logMessage(`[${p.name}] KÍCH HOẠT NOBLE PHANTASM! Giáng đòn hủy diệt gây ${Math.floor(npDmg)} sát thương!`, "player");
-        }
-
-        updateBossUI();
-        renderTeam();
-
-        if (boss.hp <= 0) {
-            logMessage("🎉 THE NIGHTMARE SOUL ĐÃ BỊ TIÊU DIỆT! BẠN LÀ NGƯỜI CHIẾN THẮNG!", "system");
-            endGame();
-            return;
-        }
-
-        currentTurnIndex++;
-        highlightCurrentTurn();
-    }
-
-    function bossTurn() {
-        if(isGameOver) return;
-        
-        let aliveTargets = team.filter(p => p.hp > 0);
-        if (aliveTargets.length === 0) return;
-
-        // Chọn mục tiêu ngẫu nhiên
-        let target = aliveTargets[Math.floor(Math.random() * aliveTargets.length)];
-        
-        let baseDmg = boss.atk + Math.floor(Math.random() * 20);
-        let mod = getModifier(boss.type, target.type);
-        let finalDmg = Math.floor(baseDmg * (1 + mod));
-
-        // Nếu mục tiêu đang thủ (Knight)
-        if(target.isDefending) finalDmg = Math.floor(finalDmg / 2);
-
-        target.hp -= finalDmg;
-        logMessage(`[BOSS] Tấn công ${target.name} gây ${finalDmg} sát thương!`, "boss");
-
-        if(target.hp <= 0) {
-            logMessage(`💀 ${target.name} đã ngã xuống!`, "system");
-        }
-
-        renderTeam();
-
-        // Kiểm tra thua
-        if (team.every(p => p.hp <= 0)) {
-            logMessage("💀 TOÀN ĐỘI ĐÃ BỊ TIÊU DIỆT... GAME OVER.", "system");
-            endGame();
-            return;
-        }
-
-        // Trả lại lượt cho Player
-        currentTurnIndex = 0;
-        document.getElementById('action-panel').style.display = 'flex';
-        highlightCurrentTurn();
-    }
-
-    function endGame() {
-        isGameOver = true;
-        document.getElementById('action-panel').style.display = 'none';
-        document.getElementById('log-window').style.border = "2px solid #e94560";
-    }
-</script>
+<script src="game.js"></script>
 
 </body>
 </html>
+
