@@ -40,10 +40,19 @@ h1, h2, #turn-info, .btn-action { font-family: 'Cinzel', serif; }
 }
 
 #dialogue-box {
-    position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
-    width: 80%; max-width: 800px; background: rgba(10, 15, 30, 0.95);
-    border: 3px solid var(--gold); border-radius: 12px; padding: 25px;
-    box-shadow: 0 0 30px rgba(0,0,0,0.8); z-index: 1001; cursor: pointer;
+    position: fixed; 
+    bottom: 40px; 
+    left: 50%; 
+    transform: translateX(-50%);
+    width: 80%; 
+    max-width: 800px; 
+    background: rgba(10, 15, 30, 0.95);
+    border: 3px solid var(--gold); 
+    border-radius: 12px; 
+    padding: 25px;
+    box-shadow: 0 0 30px rgba(0,0,0,0.8); 
+    z-index: 9999; 
+    cursor: pointer;
 }
 #dialogue-name { font-family: 'Cinzel', serif; font-size: 22px; font-weight: bold; color: var(--gold); margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 5px;}
 #dialogue-text { font-size: 18px; line-height: 1.5; color: #fff; }
