@@ -130,10 +130,11 @@ function startExploration() {
         if(e.code === "ArrowUp") playerObj.canJump = true; 
     });
 
-    showDialogue("Hệ Thống", [
-        "Nhiệm vụ của bạn là tìm kiếm các Servant rải rác.",
-        "Thu thập càng nhiều càng tốt, nhưng bạn CHỈ ĐƯỢC CHỌN 3 NGƯỜI để đánh Boss.",
-        "Chạm vào Cổng Đỏ ở cuối đường để mở bảng chọn Đội hình."
+    showDialogue("???", [
+        "Mình cảm nhận được Abyss đã ở đây.",
+        "May mà Abyss Expand đã bị ngăn chặn... Dù không biết là kẻ nào.",
+        "Không quan trọng, mình phải phong ấn Abyss Gate trước khi nó bùng phát thêm 1 lần nữa.",
+         "... The Abyss One đã tạo ra Abyss Expand vẫn còn ở đây. Nó vẫn chưa bị tiêu diệt hoàn toàn ư."
     ]);
     requestAnimationFrame(updatePlatformer);
 }
@@ -187,7 +188,7 @@ function updatePlatformer() {
                         maxHp: base.hp, hp: base.hp, atk: base.atk, np: 0, alive: true, defending: false, reflect: false, status: ""
                     });
                     map2D[centerY][centerX] = 0;
-                    showDialogue(base.name, [`Ta là ${base.name} ${base.icon}. Sức mạnh của ta sẽ hỗ trợ ngươi!`, `(Đã thu thập: ${collectedServants.length} Servant)`]);
+                    showDialogue(base.name, [` ${base.name} ${base.icon}. ký kết khế ước với bạn!`, `(Đã thu thập: ${collectedServants.length} Servant)`]);
                 }
             }
 
@@ -308,6 +309,16 @@ function startBattle() {
     renderBoss();
     renderTeam();
     highlightTurn();
+
+    showDialogue("Cốt Truyện", [
+        "<b>The Nightmare Soul:</b> Chết tiệt, thế quái nào sức mạnh của cả UIT lại mạnh đến như vậy?",
+        "<b>The Nightmare Soul:</b> Không sao, Abyss Gate sẽ được mở ra một lần nữa, và bóng tối sẽ bao trùm tất cả sinh linh!",
+        "<b>???:</b> Không có cơ hội đó đâu!.",
+        "<b>???:</b> Kiến tạo ma lực!",
+        "<b>???:</b> Thiêu đốt linh hồn .",
+        "<b>???:</b> Triệu hồi Anh Linh!!!.",
+        "<b>The Nightmare Soul:</b> Chết tiệt, ta sẽ biến nơi đây thành mồ chôn của ngươi."
+    ]);
 }
 
 function getModifier(attacker, defender) { return typeAdvantage[`${attacker}-${defender}`] || 0; }
@@ -572,8 +583,32 @@ function endGame(msg) {
     setTimeout(() => alert(msg), 500);
 }
 
-function victory() { if (!gameOver) endGame("🎉 CHIẾN THẮNG! BOSS ĐÃ BỊ TIÊU DIỆT!"); }
+function victory() { 
+    if (!gameOver) {
+        gameOver = true; 
+        document.getElementById("action-panel").style.display = "none";
+        logSystem(`🎉 CHIẾN THẮNG! BOSS ĐÃ BỊ TIÊU DIỆT!`);
+
+        showDialogue("Cốt Truyện", [
+            "<b>The Nightmare Soul:</b> Khục... Không thể nào... Vực thẳm... sẽ không bao giờ... lụi tàn...",
+            "<b>The Nightmare Soul:</b> Cơ thể này... đang tan biến... Ngươi sẽ phải hối hận...",
+            "<b>???:</b> ...( phong ấn Abyss Gate )...",
+            "<b>The Nightmare Soul:</b> Ha ha ha ha, ta đã cảm nhận được thứ ma lực trong người ngươi.",
+            "<b>The Nightmare Soul:</b> Nó đến từ Abyss, thứ ma thuật lấy linh hồn kẻ khác làm sức mạnh của ngươi.",
+            "<b>The Nightmare Soul:</b> Ha ha ha, rồi thì chính tâm trí ngươi sẽ dần bị tha hóa không khác gì chúng ta.",
+             "<b>???:</b> Ta hiểu nhưng...",
+            "<b>Hệ Thống:</b> 🎉 CHIẾN THẮNG! Bạn đã bảo vệ thành công thế giới khỏi The Abyss!"
+        ]);
+
+        let checkDialog = setInterval(() => {
+            if (!isDialogueActive) {
+                clearInterval(checkDialog);
+                alert("🎉 CHIẾN THẮNG! BOSS ĐÃ BỊ TIÊU DIỆT!");
+            }
+        }, 500);
+    } 
+}
 function checkLose() {
-    if (!team.some(s => s.hp > 0)) { endGame("THẤT BẠI... TOÀN ĐỘI ĐÃ BỊ TIÊU DIỆT."); return true; }
+    if (!team.some(s => s.hp > 0)) { endGame("THẤT BẠI... TOÀN ĐỘI ĐÃ BỊ TIÊU DIỆT. Tâm trí của bạn bị Abyss và rồi trở thành một Abyss One"); return true; }
     return false;
 }
