@@ -50,6 +50,21 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 /* ==========================================================================
    PLATFORMER ENGINE
    ========================================================================== */
+   /* ==========================================================================
+   PLATFORMER ASSETS CHARGING (IMAGES)
+   ========================================================================== */
+const gameImages = {
+    wall: new Image(),
+    servant: new Image(),
+    gate: new Image(),
+    player: new Image()
+};
+
+// Định nghĩa đường dẫn nguồn từ thư mục assets/images
+gameImages.wall.src = 'assets/images/wall.png';       
+gameImages.servant.src = 'assets/images/soul.png'; 
+gameImages.gate.src = 'assets/images/gate.png';      
+gameImages.player.src = 'assets/images/player.png';   
 const TILE_SIZE = 40;
 const map2D = [
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
