@@ -221,25 +221,20 @@ function updatePlatformer() {
         
     }
 
-    const zoomLevel = 2; 
+
+    const zoomLevel = 2.2; 
     const viewWidth = canvas.width / zoomLevel;
     const viewHeight = canvas.height / zoomLevel;
-    camera.x = Math.max(0, Math.min(
-        playerObj.x + (playerObj.width / 2) - (viewWidth / 2), 
-        (map2D[0].length * TILE_SIZE) - viewWidth
-    ));
-    
-    camera.y = Math.max(0, Math.min(
-        playerObj.y + (playerObj.height / 2) - (viewHeight / 2), 
-        (map2D.length * TILE_SIZE) - viewHeight
-    ));
+    camera.x = Math.max(0, Math.min(playerObj.x + (playerObj.width / 2) - (viewWidth / 2), (map2D[0].length * TILE_SIZE) - viewWidth));
+    camera.y = Math.max(0, Math.min(playerObj.y + (playerObj.height / 2) - (viewHeight / 2), (map2D.length * TILE_SIZE) - viewHeight));
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.save();
+    ctx.save(); 
     ctx.scale(zoomLevel, zoomLevel);
     for (let r = 0; r < map2D.length; r++) {
         for (let c = 0; c < map2D[r].length; c++) {
             let tileX = c * TILE_SIZE - camera.x;
             let tileY = r * TILE_SIZE - camera.y;
+            
             if (tileX > -TILE_SIZE && tileX < viewWidth && tileY > -TILE_SIZE && tileY < viewHeight) {
                 if (map2D[r][c] === 1) {
                     ctx.drawImage(gameImages.wall, tileX, tileY, TILE_SIZE, TILE_SIZE);
@@ -256,7 +251,7 @@ function updatePlatformer() {
     if (playerObj.vx < 0) playerObj.facingRight = false;
     else if (playerObj.vx > 0) playerObj.facingRight = true;
     if (typeof playerObj.facingRight === 'undefined') playerObj.facingRight = true;
-    ctx.save();
+    ctx.save(); 
     
     let drawX = playerObj.x - camera.x;
     let drawY = playerObj.y - camera.y;
@@ -269,6 +264,7 @@ function updatePlatformer() {
         ctx.drawImage(gameImages.player, drawX, drawY, playerObj.width, playerObj.height);
     }
     
+    ctx.restore(); 
     ctx.restore(); 
 
     if (isExploring) requestAnimationFrame(updatePlatformer);
