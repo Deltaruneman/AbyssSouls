@@ -218,29 +218,41 @@ function updatePlatformer() {
                 }
             }
         }
+        
     }
 
-    camera.x = Math.max(0, Math.min(playerObj.x - canvas.width / 2, (map2D[0].length * TILE_SIZE) - canvas.width));
+  camera.x = Math.max(0, Math.min(playerObj.x - canvas.width / 2, (map2D[0].length * TILE_SIZE) - canvas.width));
     camera.y = Math.max(0, Math.min(playerObj.y - canvas.height / 2, (map2D.length * TILE_SIZE) - canvas.height));
-
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     for (let r = 0; r < map2D.length; r++) {
         for (let c = 0; c < map2D[r].length; c++) {
             let tileX = c * TILE_SIZE - camera.x;
             let tileY = r * TILE_SIZE - camera.y;
+            
             if (tileX > -TILE_SIZE && tileX < canvas.width && tileY > -TILE_SIZE && tileY < canvas.height) {
-                if (map2D[r][c] === 1) { ctx.fillStyle = "#24345e"; ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE); } 
-                else if (map2D[r][c] >= 2 && map2D[r][c] <= 8) {
-                    ctx.fillStyle = "#ffd700"; ctx.beginPath(); ctx.arc(tileX + TILE_SIZE/2, tileY + TILE_SIZE/2, 12, 0, Math.PI * 2); ctx.fill();
-                    ctx.fillStyle = "#000"; ctx.font = "14px Arial"; ctx.fillText("?", tileX + 16, tileY + 25);
+                if (map2D[r][c] === 1) {
+                    ctx.drawImage(gameImages.wall, tileX, tileY, TILE_SIZE, TILE_SIZE);
                 } 
-                else if (map2D[r][c] === 9) { ctx.fillStyle = "#ff4757"; ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE); }
+                else if (map2D[r][c] >= 2 && map2D[r][c] <= 8) {
+                    ctx.drawImage(gameImages.servant, tileX, tileY, TILE_SIZE, TILE_SIZE);
+                } 
+                else if (map2D[r][c] === 9) {
+                    ctx.drawImage(gameImages.gate, tileX, tileY, TILE_SIZE, TILE_SIZE);
+                }
             }
         }
     }
-    ctx.fillStyle = "#00d2ff"; ctx.fillRect(playerObj.x - camera.x, playerObj.y - camera.y, playerObj.width, playerObj.height);
+
+    ctx.drawImage(
+        gameImages.player, 
+        playerObj.x - camera.x, 
+        playerObj.y - camera.y, 
+        playerObj.width, 
+        playerObj.height
+    );
 
     if (isExploring) requestAnimationFrame(updatePlatformer);
+
 }
 
 /* ==========================================================================
