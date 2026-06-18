@@ -1,224 +1,142 @@
-
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Abyss Souls</title>
-
+    <title>Abyss Souls - Remastered</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Thêm font chữ gaming -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;900&family=Inter:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
 
-<div class="container">
-
-    <!-- TITLE -->
+<div class="game-wrapper" id="game-container">
     <header class="header">
         <h1>⚔️ Abyss Souls ⚔️</h1>
-        <p>Chọn 3 Nhân vật để đối đầu với Nightmare Soul</p>
+        <p>Thành lập tổ đội 3 người chống lại hiện thân của bóng tối</p>
     </header>
 
-    <!-- TEAM SELECTION -->
+    <!-- MÀN HÌNH CHỌN TƯỚNG -->
     <section id="selection-screen">
-
-        <h2>Chọn Đội Hình (3/3)</h2>
-
+        <h2 class="section-title">Chọn Đội Hình Trận Đấu</h2>
         <div class="class-grid">
-
-            <div class="class-card knight"
-                 onclick="selectClass(1)">
-                <h3>🛡 Knight</h3>
-                <p>HP: 550</p>
-                <p>ATK: 40</p>
-                <p>Tank / Reflect</p>
+            <div class="class-card knight" onclick="selectClass(1)">
+                <div class="card-icon">🛡️</div>
+                <h3>Knight</h3>
+                <div class="card-stats"><span>HP: 550</span><span>ATK: 40</span></div>
+                <div class="card-desc">Phòng thủ & Phản đòn</div>
             </div>
-
-            <div class="class-card archer"
-                 onclick="selectClass(2)">
-                <h3>🏹 Archer</h3>
-                <p>HP: 250</p>
-                <p>ATK: 60</p>
-                <p>Multi Hit</p>
+            <div class="class-card archer" onclick="selectClass(2)">
+                <div class="card-icon">🏹</div>
+                <h3>Archer</h3>
+                <div class="card-stats"><span>HP: 250</span><span>ATK: 60</span></div>
+                <div class="card-desc">Xả kích & Liên hoàn</div>
             </div>
-
-            <div class="class-card mage"
-                 onclick="selectClass(3)">
-                <h3>🔥 Mage</h3>
-                <p>HP: 320</p>
-                <p>ATK: 55</p>
-                <p>Debuff</p>
+            <div class="class-card mage" onclick="selectClass(3)">
+                <div class="card-icon">🔥</div>
+                <h3>Mage</h3>
+                <div class="card-stats"><span>HP: 320</span><span>ATK: 55</span></div>
+                <div class="card-desc">Ma pháp & Suy giảm</div>
             </div>
-
-            <div class="class-card assassin"
-                 onclick="selectClass(4)">
-                <h3>🗡 Assassin</h3>
-                <p>HP: 280</p>
-                <p>ATK: 65</p>
-                <p>Critical</p>
+            <div class="class-card assassin" onclick="selectClass(4)">
+                <div class="card-icon">🗡️</div>
+                <h3>Assassin</h3>
+                <div class="card-stats"><span>HP: 280</span><span>ATK: 65</span></div>
+                <div class="card-desc">Bạo kích chí mạng</div>
             </div>
-
-            <div class="class-card healer"
-                 onclick="selectClass(5)">
-                <h3>💚 Healer</h3>
-                <p>HP: 400</p>
-                <p>ATK: 20</p>
-                <p>Support</p>
+            <div class="class-card healer" onclick="selectClass(5)">
+                <div class="card-icon">💚</div>
+                <h3>Healer</h3>
+                <div class="card-stats"><span>HP: 400</span><span>ATK: 20</span></div>
+                <div class="card-desc">Trị thương & Trợ lực</div>
             </div>
-
-            <div class="class-card berserker"
-                 onclick="selectClass(6)">
-                <h3>💀 Berserker</h3>
-                <p>HP: 220</p>
-                <p>ATK: 85</p>
-                <p>Glass Cannon</p>
+            <div class="class-card berserker" onclick="selectClass(6)">
+                <div class="card-icon">💀</div>
+                <h3>Berserker</h3>
+                <div class="card-stats"><span>HP: 220</span><span>ATK: 85</span></div>
+                <div class="card-desc">Cuồng nộ hy sinh</div>
             </div>
-
         </div>
 
-        <div id="selected-team">
-            Chưa chọn Nhân vật nào
+        <div id="selected-team-wrapper">
+            <h3>Đội Hình Hiện Tại:</h3>
+            <div id="selected-team">Chưa chọn Servant nào</div>
         </div>
 
-        <button id="start-btn"
-                onclick="startBattle()"
-                disabled>
-            BẮT ĐẦU TRẬN ĐẤU
-        </button>
-
+        <button id="start-btn" onclick="startBattle()" disabled>BẮT ĐẦU TRẬN ĐẤU</button>
     </section>
 
-    <!-- BATTLE -->
+    <!-- MÀN HÌNH CHIẾN ĐẤU -->
     <section id="battle-screen">
-
-        <div class="battle-layout">
-
-            <!-- PLAYER -->
-            <div class="team-panel">
-
-                <h2>Đội Hình</h2>
-
-                <div id="player-team">
-
-                </div>
-
-            </div>
-
-            <!-- BOSS -->
-            <div class="boss-panel">
-
-                <div class="boss-card">
-
-                    <h2 id="boss-name">
-                        The Nightmare Soul (???)
-                    </h2>
-
-                    <div class="boss-class-hint"
-                         id="boss-hint">
+        <div class="battlefield">
+            
+            <!-- VÙNG CỦA BOSS -->
+            <div class="boss-zone" id="boss-zone">
+                <div class="boss-ui">
+                    <h2 id="boss-name">The Nightmare Soul (???)</h2>
+                    <div class="boss-class-hint" id="boss-hint"></div>
+                    
+                    <!-- Thanh máu Boss dạng phân đoạn hoành tráng -->
+                    <div class="bar-container hp">
+                        <div class="bar-fill" id="boss-hp-fill"></div>
+                        <span class="bar-text" id="boss-hp-text">0/0</span>
                     </div>
 
-                    <div class="hp-label">
-                        HP:
-                        <span id="boss-hp-text">
-                            0 / 0
-                        </span>
-                    </div>
-
-                    <div class="hp-bar">
-                        <div class="hp-fill"
-                             id="boss-hp-fill">
+                    <!-- Thanh đếm ngược Tuyệt kỹ của Boss (NP) -->
+                    <div class="boss-charge-container">
+                        <span class="charge-label">CHARGE</span>
+                        <div class="charge-dots" id="boss-charge-dots">
+                            <span class="dot"></span>
+                            <span class="dot"></span>
+                            <span class="dot"></span>
                         </div>
                     </div>
-
-                    <div class="boss-status"
-                         id="boss-status">
-
-                    </div>
-
                 </div>
-
             </div>
 
+            <!-- VÙNG CỦA PLAYER (3 Servant xếp ngang) -->
+            <div class="player-zone" id="player-team">
+                <!-- Sẽ tự động render thẻ nhân vật vào đây -->
+            </div>
         </div>
 
-        <!-- TURN INFO -->
-
-        <div id="turn-info">
-
+        <!-- BẢNG ĐIỀU KHIỂN & NHẬT KÝ TRẬN ĐẤU -->
+        <div class="control-deck">
+            <div class="panel-left">
+                <div id="turn-info">Lượt hành động</div>
+                <div id="action-panel">
+                    <button class="btn-action attack" onclick="playerAction('attack')">⚔️ ATTACK</button>
+                    <button class="btn-action skill" id="skill-btn" onclick="playerAction('skill')">✨ SKILL (-20 NP)</button>
+                    <button class="btn-action np" id="np-btn" onclick="playerAction('np')">🔥 NOBLE PHANTASM</button>
+                </div>
+            </div>
+            <div class="panel-right">
+                <div id="battle-log"></div>
+            </div>
         </div>
-
-        <!-- ACTIONS -->
-
-        <div id="action-panel">
-
-            <button
-                onclick="playerAction('attack')">
-                ⚔ Attack
-            </button>
-
-            <button
-                id="skill-btn"
-                onclick="playerAction('skill')">
-                ✨ Skill
-            </button>
-
-            <button
-                id="np-btn"
-                onclick="playerAction('np')">
-                🔥 Noble Phantasm
-            </button>
-
-        </div>
-
-        <!-- LOG -->
-
-        <div id="battle-log">
-
-        </div>
-
     </section>
-
 </div>
 
-<!-- TEMPLATE -->
-
+<!-- TEMPLATE NHÂN VẬT -->
 <template id="character-template">
-
     <div class="servant-card">
-
-        <div class="servant-name">
-
+        <div class="servant-avatar"></div>
+        <div class="servant-name"></div>
+        
+        <div class="bar-container hp">
+            <div class="bar-fill hp-fill"></div>
+            <span class="bar-text servant-hp-text"></span>
         </div>
 
-        <div class="servant-hp-text">
-
+        <div class="bar-container np">
+            <div class="bar-fill np-fill"></div>
+            <span class="bar-text servant-np-text"></span>
         </div>
 
-        <div class="hp-bar">
-            <div class="hp-fill">
-
-            </div>
-        </div>
-
-        <div class="servant-np-text">
-
-        </div>
-
-        <div class="np-bar">
-            <div class="np-fill">
-
-            </div>
-        </div>
-
-        <div class="servant-status">
-
-        </div>
-
+        <div class="servant-status"></div>
     </div>
-
 </template>
 
 <script src="game.js"></script>
-
 </body>
 </html>
-
