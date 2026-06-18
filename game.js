@@ -50,7 +50,7 @@ const classData = {
         atk:85
     }
 };
-
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 /* =====================================
    CLASS ADVANTAGE
 ===================================== */
@@ -651,68 +651,42 @@ function basicAttack(
    PLAYER ACTION
 ===================================== */
 
-function playerAction(
-    action
-){
+async function playerAction(action) {
+    if(gameOver) return;
 
-    if(gameOver)
-        return;
+    let servant = team[currentTurn];
+    if(servant.hp <= 0) return;
 
-    let servant =
-        team[currentTurn];
-
-    if(
-        servant.hp <= 0
-    )
-        return;
+    document.getElementById("action-panel").style.pointerEvents = "none";
 
     switch(action){
-
         case "attack":
-
-            basicAttack(
-                servant
-            );
-
+            basicAttack(servant);
             break;
-
         case "skill":
-
-            useSkill(
-                servant
-            );
-
+            useSkill(servant);
             break;
-
         case "np":
-
-            useNP(
-                servant
-            );
-
+            useNP(servant);
             break;
     }
 
+    await sleep(800); 
+
     revealBossCheck();
-
     renderBoss();
-
     renderTeam();
 
-    if(
-        boss.hp <= 0
-    ){
-
+    if(boss.hp <= 0){
         victory();
-
         return;
     }
 
     currentTurn++;
-
     highlightTurn();
-}
 
+    document.getElementById("action-panel").style.pointerEvents = "auto";
+}
 /* =====================================
    BOSS REVEAL
 ===================================== */

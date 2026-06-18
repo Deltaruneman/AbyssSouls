@@ -431,3 +431,34 @@ body{
     }
 }
 
+/* ===========================
+   Effects
+=========================== */
+@keyframes shake {
+    0% { transform: translateX(0); border-color: #ff4757; }
+    25% { transform: translateX(-5px); }
+    50% { transform: translateX(5px); }
+    75% { transform: translateX(-5px); }
+    100% { transform: translateX(0); }
+}
+
+.taking-damage {
+    animation: shake 0.3s ease-in-out;
+}
+
+/* Sát thương nảy lên (Floating Text) */
+.damage-number {
+    position: absolute;
+    color: #ff4757;
+    font-size: 24px;
+    font-weight: bold;
+    text-shadow: 2px 2px 0 #000;
+    pointer-events: none;
+    animation: floatUp 1s forwards ease-out;
+}
+
+@keyframes floatUp {
+    0% { transform: translateY(0) scale(1); opacity: 1; }
+    50% { transform: translateY(-30px) scale(1.2); opacity: 1; }
+    100% { transform: translateY(-50px) scale(1); opacity: 0; }
+}
