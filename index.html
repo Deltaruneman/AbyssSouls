@@ -15,21 +15,21 @@
         <p>Thành lập tổ đội chống lại hiện thân của bóng tối</p>
     </header>
 
+    <!-- MÀN HÌNH BẮT ĐẦU -->
     <section id="selection-screen">
         <h2 class="section-title" style="text-align: center; margin-bottom: 20px;">Khởi hành vào Vực Thẳm</h2>
         <div style="text-align: center; margin: 40px 0;">
-            <p style="color: #ccc; margin-bottom: 20px;">Tiến vào hầm ngục rộng lớn, tìm kiếm toàn bộ 7 Servant và đánh bại Boss.</p>
-            <button id="start-btn" onclick="startExploration()" style="max-width: 400px; margin: 0 auto; display: block; cursor: pointer;">BẮT ĐẦU KHÁM PHÁ</button>
+            <p style="color: #ccc; margin-bottom: 20px;">Tiến vào hầm ngục rộng lớn, tìm kiếm Servant và đánh bại Boss.</p>
+            <button id="start-btn" onclick="startExploration()">BẮT ĐẦU KHÁM PHÁ</button>
         </div>
     </section>
 
+    <!-- MÀN HÌNH KHÁM PHÁ PLATFORMER -->
     <section id="platformer-screen" style="display: none;">
         <canvas id="gameCanvas" style="background: #000; display: block;"></canvas>
-        
         <div id="exploration-log">
-            Mũi tên Trái/Phải: Di chuyển | Mũi tên Lên: Nhảy / Nhảy đúp | Phím X: Tương tác / Tiếp tục hội thoại
+            Mũi tên Trái/Phải: Di chuyển | Mũi tên Lên: Nhảy / Nhảy đúp | Phím X: Tiếp tục hội thoại
         </div>
-
         <div id="dialogue-box" style="display: none;">
             <div id="dialogue-name">???</div>
             <p id="dialogue-text">Nội dung hội thoại...</p>
@@ -37,6 +37,22 @@
         </div>
     </section>
 
+    <!-- MÀN HÌNH CHỌN ĐỘI HÌNH TRƯỚC KHI ĐÁNH BOSS -->
+    <section id="team-selection-screen" style="display: none;">
+        <h2 style="text-align: center; color: var(--gold); margin-bottom: 10px; font-size: 32px; font-family: 'Cinzel', serif;">Chuẩn bị Đội Hình</h2>
+        <p style="text-align: center; color: #ccc; margin-bottom: 30px;">Chọn đúng 3 Servant từ danh sách bạn đã thu thập để tiến vào tử chiến.</p>
+        
+        <div id="selection-roster" class="roster-grid">
+            <!-- Render danh sách nhân vật ở đây -->
+        </div>
+
+        <div style="text-align: center; margin-top: 40px;">
+            <p id="selection-count" style="font-size: 20px; font-weight: bold; margin-bottom: 15px; color: #fff;">Đã chọn: 0/3</p>
+            <button id="confirm-team-btn" class="btn-action np" onclick="confirmTeamAndBattle()" disabled style="padding: 15px 40px; font-size: 20px;">KHIÊU CHIẾN BOSS</button>
+        </div>
+    </section>
+
+    <!-- MÀN HÌNH CHIẾN ĐẤU -->
     <section id="battle-screen" style="display: none;">
         <div class="battlefield">
             <div class="boss-zone" id="boss-zone">
@@ -65,7 +81,7 @@
                 <div id="action-panel">
                     <button class="btn-action attack" onclick="playerAction('attack')">⚔️ ATTACK</button>
                     <button class="btn-action skill" id="skill-btn" onclick="playerAction('skill')">✨ SKILL (-20 NP)</button>
-                    <button class="btn-action np" id="np-btn" onclick="playerAction('np')">🔥 NP</button>
+                    <button class="btn-action np" id="np-btn" onclick="playerAction('np')">🔥 NOBLE PHANTASM</button>
                 </div>
             </div>
             <div class="panel-right">
@@ -75,16 +91,19 @@
     </section>
 </div>
 
+<!-- TEMPLATE NHÂN VẬT (Kích thước to đẹp cho 3 người) -->
 <template id="character-template">
     <div class="servant-card">
-        <div class="servant-name" style="font-size: 14px;"></div>
-        <div class="bar-container hp" style="height: 16px;">
+        <div class="servant-name"></div>
+        <div class="bar-container hp">
             <div class="bar-fill hp-fill"></div>
+            <span class="bar-text servant-hp-text"></span>
         </div>
-        <div class="bar-container np" style="height: 16px;">
+        <div class="bar-container np">
             <div class="bar-fill np-fill"></div>
+            <span class="bar-text servant-np-text"></span>
         </div>
-        <div class="servant-status" style="font-size: 11px;"></div>
+        <div class="servant-status"></div>
     </div>
 </template>
 
