@@ -35,7 +35,7 @@ let boss = {
     revealed: false,
     maxHp: 1800,
     hp: 1800,
-    atk: 55,
+    atk: 100,
     atkDebuff: 0,
     atkDebuffTurn: 0,
     npCounter: 0
@@ -301,10 +301,10 @@ function useSkill(servant) {
         case 5:
             team.forEach(ally => {
                 if (ally.hp <= 0) return;
-                ally.hp = Math.min(ally.maxHp, ally.hp + 80);
+                ally.hp = Math.min(ally.maxHp, ally.hp + 40);
                 ally.np = Math.min(100, ally.np + 15);
             });
-            logPlayer("💚 Healer niệm phép hồi phục 80 HP & +15 NP cho toàn đội.");
+            logPlayer("💚 Healer niệm phép hồi phục 40 HP & +15 NP cho toàn đội.");
             break;
         case 6:
             let cost = Math.floor(servant.hp * 0.1); servant.hp -= cost;
