@@ -35,19 +35,189 @@ let boss = {
     revealed: false,
     maxHp: 1800,
     hp: 1800,
-    atk: 100,
+    atk: 55,
     atkDebuff: 0,
     atkDebuffTurn: 0,
     npCounter: 0
 };
 
 window.teamProtectionTurn = 0;
-
-// Bộ tạo trễ thời gian (Engine chính điều khiển Pacing game)
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 /* ==========================================================================
-   UI CINEMATIC EFFECTS (Hiệu ứng hình ảnh chuyên nghiệp)
+   PLATFORMER ENGINE (EXPLORATION)
+   ========================================================================== */
+const TILE_SIZE = 40;
+const map2D = [
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 0, 0, 1],
+    [1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 3, 0, 0, 0, 1, 1, 1, 1, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 1, 1, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+];
+
+let playerObj = {
+    x: 60, y: 300, width: 30, height: 30,
+    vx: 0, vy: 0, speed: 4, 
+    jumpPower: -10,
+    grounded: false,
+    maxJumps: 2, 
+    jumpsLeft: 2,
+    canJump: true
+};
+
+let keys = { ArrowLeft: false, ArrowRight: false, ArrowUp: false };
+let isExploring = false;
+
+function checkWall(x, y, width, height) {
+    let left = Math.floor(x / TILE_SIZE);
+    let right = Math.floor((x + width - 1) / TILE_SIZE);
+    let top = Math.floor(y / TILE_SIZE);
+    let bottom = Math.floor((y + height - 1) / TILE_SIZE);
+
+    for (let r = top; r <= bottom; r++) {
+        for (let c = left; c <= right; c++) {
+            if (map2D[r] !== undefined && map2D[r][c] === 1) {
+                return true; 
+            }
+        }
+    }
+    return false;
+}
+
+function startExploration() {
+    document.getElementById("selection-screen").style.display = "none";
+    document.getElementById("platformer-screen").style.display = "block";
+    team = [];
+    isExploring = true;
+    
+    window.addEventListener("keydown", (e) => { 
+        if(keys.hasOwnProperty(e.code)) keys[e.code] = true; 
+    });
+    window.addEventListener("keyup", (e) => { 
+        if(keys.hasOwnProperty(e.code)) keys[e.code] = false; 
+        if(e.code === "ArrowUp") playerObj.canJump = true; 
+    });
+    
+    requestAnimationFrame(updatePlatformer);
+}
+
+function updatePlatformer() {
+    if (!isExploring) return;
+
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    // Lực nhảy Double Jump
+    if (keys.ArrowUp && playerObj.canJump && playerObj.jumpsLeft > 0) {
+        playerObj.vy = playerObj.jumpPower; 
+        playerObj.jumpsLeft--;              
+        playerObj.grounded = false;         
+        playerObj.canJump = false;          
+    }
+    playerObj.vy += 0.6; // Trọng lực
+
+    // Tốc độ X
+    if (keys.ArrowLeft) playerObj.vx = -playerObj.speed;
+    else if (keys.ArrowRight) playerObj.vx = playerObj.speed;
+    else playerObj.vx = 0;
+
+    // Xử lý trục X
+    playerObj.x += playerObj.vx;
+    if (checkWall(playerObj.x, playerObj.y, playerObj.width, playerObj.height)) {
+        if (playerObj.vx > 0) {
+            playerObj.x = Math.floor((playerObj.x + playerObj.width) / TILE_SIZE) * TILE_SIZE - playerObj.width;
+        } else if (playerObj.vx < 0) {
+            playerObj.x = Math.floor(playerObj.x / TILE_SIZE) * TILE_SIZE + TILE_SIZE;
+        }
+        playerObj.vx = 0;
+    }
+
+    if (playerObj.x < 0) playerObj.x = 0;
+    if (playerObj.x + playerObj.width > canvas.width) playerObj.x = canvas.width - playerObj.width;
+
+    // Xử lý trục Y
+    playerObj.y += playerObj.vy;
+    playerObj.grounded = false;
+
+    if (checkWall(playerObj.x, playerObj.y, playerObj.width, playerObj.height)) {
+        if (playerObj.vy > 0) { 
+            playerObj.y = Math.floor((playerObj.y + playerObj.height) / TILE_SIZE) * TILE_SIZE - playerObj.height;
+            playerObj.grounded = true;
+            playerObj.jumpsLeft = playerObj.maxJumps; // Hồi lại nhảy
+        } else if (playerObj.vy < 0) { 
+            playerObj.y = Math.floor(playerObj.y / TILE_SIZE) * TILE_SIZE + TILE_SIZE;
+        }
+        playerObj.vy = 0;
+    }
+
+    // Tương tác (Nhặt đồ & Cổng Boss)
+    let centerX = Math.floor((playerObj.x + playerObj.width / 2) / TILE_SIZE);
+    let centerY = Math.floor((playerObj.y + playerObj.height / 2) / TILE_SIZE);
+    
+    if (map2D[centerY] !== undefined && map2D[centerY][centerX] !== undefined) {
+        let currentTile = map2D[centerY][centerX];
+
+        if (currentTile >= 2 && currentTile <= 7) {
+            let classId = currentTile - 1; 
+            if (!team.find(s => s.classId === classId) && team.length < 3) {
+                let base = classData[classId];
+                team.push({
+                    uid: Date.now() + Math.random(), classId: classId, name: base.name, icon: base.icon,
+                    maxHp: base.hp, hp: base.hp, atk: base.atk, np: 0, alive: true, defending: false, reflect: false, status: ""
+                });
+                document.getElementById("exploration-log").innerText = `Nhận được: ${base.icon} ${base.name}! (${team.length}/3)`;
+                map2D[centerY][centerX] = 0;
+            }
+        }
+
+        if (currentTile === 9) {
+            if (team.length === 0) {
+                document.getElementById("exploration-log").innerText = "⚠️ Đội hình trống! Hãy tìm Servant trước khi khiêu chiến.";
+                playerObj.x -= (playerObj.vx !== 0 ? playerObj.vx * 2 : 10); 
+            } else {
+                isExploring = false;
+                startBattle(); 
+                return;
+            }
+        }
+    }
+
+    // Render Platformer
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let r = 0; r < map2D.length; r++) {
+        for (let c = 0; c < map2D[r].length; c++) {
+            let tileX = c * TILE_SIZE;
+            let tileY = r * TILE_SIZE;
+            
+            if (map2D[r][c] === 1) {
+                ctx.fillStyle = "#24345e"; 
+                ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+            } else if (map2D[r][c] >= 2 && map2D[r][c] <= 7) {
+                ctx.fillStyle = "#ffd700"; 
+                ctx.beginPath();
+                ctx.arc(tileX + TILE_SIZE/2, tileY + TILE_SIZE/2, 10, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (map2D[r][c] === 9) {
+                ctx.fillStyle = "#ff4757"; 
+                ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+            }
+        }
+    }
+
+    ctx.fillStyle = "#00d2ff";
+    ctx.fillRect(playerObj.x, playerObj.y, playerObj.width, playerObj.height);
+
+    if (isExploring) requestAnimationFrame(updatePlatformer);
+}
+
+/* ==========================================================================
+   BATTLE ENGINE (ĐÁNH THEO LƯỢT)
    ========================================================================== */
 function popDamageText(parentElement, damageValue, isCrit = false) {
     const pop = document.createElement("div");
@@ -63,46 +233,14 @@ function triggerScreenShake() {
     setTimeout(() => container.classList.remove("shake-anim"), 400);
 }
 
-/* ==========================================================================
-   CORE LOGIC & RENDERING
-   ========================================================================== */
-function selectClass(id) {
-    if (team.length >= 3) return;
-    if (team.find(s => s.classId === id)) return;
-
-    const base = classData[id];
-    team.push({
-        uid: Date.now() + Math.random(),
-        classId: id, name: base.name, icon: base.icon,
-        maxHp: base.hp, hp: base.hp, atk: base.atk,
-        np: 0, alive: true, defending: false, reflect: false, status: ""
-    });
-
-    // Thêm class đánh dấu đã chọn trên UI
-    event.currentTarget.classList.add("selected");
-    updateSelectedTeam();
-}
-
-function updateSelectedTeam() {
-    const div = document.getElementById("selected-team");
-    if (team.length === 0) {
-        div.innerHTML = "Chưa chọn Servant nào";
-        return;
-    }
-    div.innerHTML = team.map(s => `${s.icon} <b>${s.name}</b>`).join(" &nbsp; | &nbsp; ");
-    if (team.length === 3) {
-        document.getElementById("start-btn").disabled = false;
-    }
-}
-
 function startBattle() {
-    document.getElementById("selection-screen").style.display = "none";
+    document.getElementById("platformer-screen").style.display = "none";
     document.getElementById("battle-screen").style.display = "block";
     document.getElementById("boss-hint").innerText = bossHints[boss.classId];
 
     renderBoss();
     renderTeam();
-    logSystem("⚔️ Trận chiến tử thủ bắt đầu!");
+    logSystem("⚔️ Bạn đã bước qua cổng. Trận chiến tử thủ bắt đầu!");
     logSystem("❓ Vết tích class của Boss chưa rõ ràng...");
     highlightTurn();
 }
@@ -135,7 +273,6 @@ function renderBoss() {
         document.getElementById("boss-name").innerText = `${boss.name} (${classData[boss.classId].name})`;
     }
 
-    // Cập nhật ngọc nạp chiêu của Boss
     const dots = document.querySelectorAll("#boss-charge-dots .dot");
     dots.forEach((dot, idx) => {
         if (idx < boss.npCounter) dot.classList.add("filled");
@@ -210,18 +347,12 @@ function revealBossCheck() {
     }
 }
 
-/* ==========================================================================
-   TURN ACTION PROCESSOR (Bất đồng bộ kiểm soát Animation nhịp độ)
-   ========================================================================== */
 async function playerAction(action) {
     if (gameOver) return;
     let servant = team[currentTurn];
     if (servant.hp <= 0) return;
 
-    // Khóa điều khiển tạm thời để chạy hiệu ứng
     document.getElementById("action-panel").style.pointerEvents = "none";
-
-    // Phóng thẻ nhân vật lên báo hiệu tấn công
     const cards = document.querySelectorAll(".servant-card");
     cards[currentTurn].classList.add("attack-dash");
     await sleep(250);
@@ -235,7 +366,7 @@ async function playerAction(action) {
         damage = Math.floor(damage);
         boss.hp -= damage;
         gainNP(servant);
-        logPlayer(`${servant.icon} ${servant.name} vung vũ khí đánh thẳng vào Boss gây ${damage} sát thương.`);
+        logPlayer(`${servant.icon} ${servant.name} vung vũ khí đánh vào Boss gây ${damage} sát thương.`);
         popDamageText(document.getElementById("boss-zone"), damage, false);
     } 
     else if (action === "skill") {
@@ -256,15 +387,12 @@ async function playerAction(action) {
         return;
     }
 
-    await sleep(600); // Khoảng lặng nghỉ giữa các nhân vật hành động
+    await sleep(600); 
     document.getElementById("action-panel").style.pointerEvents = "auto";
     currentTurn++;
     highlightTurn();
 }
 
-/* ==========================================================================
-   SKILLS & ULTIMATE ATTACKS
-   ========================================================================== */
 function useSkill(servant) {
     if (servant.np < 20) return;
     servant.np -= 20;
@@ -295,7 +423,7 @@ function useSkill(servant) {
             if (crit) { aDmg *= 3; logCrit("💥 CRITICAL HIT! Ám sát chí mạng!"); }
             aDmg = Math.floor(aDmg * (1 + getModifier(servant.classId, boss.classId)));
             boss.hp -= aDmg;
-            logPlayer(`🗡️ Assassin thoát ẩn thoát hiện đâm chí mạng gây ${aDmg} sát thương.`);
+            logPlayer(`🗡️ Assassin đâm chí mạng gây ${aDmg} sát thương.`);
             popDamageText(document.getElementById("boss-zone"), aDmg, crit);
             break;
         case 5:
@@ -352,9 +480,9 @@ function useNP(servant) {
             logNP("💚 Phép Màu Phục Sinh đại hồi phục 40% HP tối đa & nạp mạnh 50 NP toàn tổ đội.");
             break;
         case 6:
-            boss.hp -= 600; servant.hp -= Math.floor(servant.hp * 0.25);
-            logNP("💀 Hoàng Hôn Thần Thoại nện vũ khí hủy diệt nghiền nát 600 HP của Boss.");
-            popDamageText(document.getElementById("boss-zone"), 600, true);
+            boss.hp -= 300; servant.hp -= Math.floor(servant.hp * 0.5);
+            logNP("💀 Hoàng Hôn Thần Thoại nện vũ khí hủy diệt nghiền nát 300 HP của Boss.");
+            popDamageText(document.getElementById("boss-zone"), 300, true);
             break;
     }
 }
@@ -372,9 +500,6 @@ function updateTeamProtection() {
     }
 }
 
-/* ==========================================================================
-   BOSS AI BRAIN (Hành động phản kích bất đồng bộ của Boss)
-   ========================================================================== */
 async function bossAction() {
     if (gameOver) return;
 
@@ -388,7 +513,6 @@ async function bossAction() {
     logBoss(`👹 Vòng nạp Tuyệt kỹ Boss tăng tiến (${boss.npCounter}/3).`);
     await sleep(600);
 
-    // KIỂM TRA BOSS TUNG ULTIMATE (NP COUNTER = 3)
     if (boss.npCounter >= 3) {
         boss.npCounter = 0;
         triggerScreenShake();
@@ -401,7 +525,6 @@ async function bossAction() {
         return;
     }
 
-    // TẤN CÔNG THƯỜNG
     let target = aliveTargets[Math.floor(Math.random() * aliveTargets.length)];
     let targetIndex = team.findIndex(s => s.uid === target.uid);
     let effectiveAtk = boss.atk;
@@ -415,7 +538,6 @@ async function bossAction() {
     let damage = Math.floor(effectiveAtk + Math.random() * 15);
     damage = Math.floor(damage * (1 + getModifier(boss.classId, target.classId)));
 
-    // Hiệu ứng rung nhẹ nhân vật khi bị đánh trúng
     const targetCard = document.querySelectorAll(".servant-card")[targetIndex];
 
     if (target.defending) {
@@ -429,10 +551,10 @@ async function bossAction() {
 
     target.hp -= damage;
     triggerScreenShake();
-    logBoss(`👹 Boss rít lên, tung đòn đập mạnh vào vị trí ${target.name} gây ${damage} sát thương.`);
+    logBoss(`👹 Boss tung đòn đập mạnh vào ${target.name} gây ${damage} sát thương.`);
     popDamageText(targetCard, damage, false);
 
-    if (target.hp <= 0) { target.hp = 0; logSystem(`☠️ Đau đớn thay! Chiến binh ${target.name} đã ngã xuống chiến trường.`); }
+    if (target.hp <= 0) { target.hp = 0; logSystem(`☠️ ${target.name} đã ngã xuống chiến trường.`); }
 
     revealBossCheck();
     clearStatus();
@@ -458,7 +580,7 @@ function bossNP() {
             let d = servant.defending ? 60 : 120;
             servant.hp -= d;
             popDamageText(cards[idx], d, true);
-            if (servant.hp <= 0) { servant.hp = 0; logSystem(`☠️ ${servant.name} không chịu nổi sóng xung kích dữ dội từ tuyệt kỹ.`); }
+            if (servant.hp <= 0) { servant.hp = 0; logSystem(`☠️ ${servant.name} không chịu nổi sóng xung kích.`); }
         });
     } else {
         let aliveTargets = team.filter(s => s.hp > 0);
@@ -470,16 +592,13 @@ function bossNP() {
         if (target.defending) d = Math.floor(d * 0.5);
         
         target.hp -= d;
-        logBoss(`💀 TUYỆT KỸ KẾT LIỄU: SOUL EXECUTION nhắm vào tử điểm của ${target.name}! Gây ${d} sát thương.`);
+        logBoss(`💀 TUYỆT KỸ KẾT LIỄU: SOUL EXECUTION nhắm vào ${target.name}! Gây ${d} sát thương.`);
         popDamageText(cards[targetIndex], d, true);
         
-        if (target.hp <= 0) { target.hp = 0; logSystem(`☠️ Khắc nghiệt! ${target.name} dính trọng thương mất mạng.`); }
+        if (target.hp <= 0) { target.hp = 0; logSystem(`☠️ ${target.name} dính trọng thương mất mạng.`); }
     }
 }
 
-/* ==========================================================================
-   ENDGAME SYSTEM (Kết thúc kịch tính)
-   ========================================================================== */
 function endGame(message) {
     gameOver = true;
     document.getElementById("action-panel").style.display = "none";
@@ -500,4 +619,4 @@ function checkLose() {
     return false;
 }
 
-console.log("Abyss Souls Battle Engine Remastered Loaded Successfully.");
+console.log("Abyss Souls Battle Engine & Platformer Loaded Successfully.");

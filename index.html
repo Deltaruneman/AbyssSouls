@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Abyss Souls - Remastered</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Thêm font chữ gaming -->
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;900&family=Inter:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -16,73 +15,38 @@
         <p>Thành lập tổ đội 3 người chống lại hiện thân của bóng tối</p>
     </header>
 
-    <!-- MÀN HÌNH CHỌN TƯỚNG -->
+    <!-- MÀN HÌNH BẮT ĐẦU -->
     <section id="selection-screen">
-        <h2 class="section-title">Chọn Đội Hình Trận Đấu</h2>
-        <div class="class-grid">
-            <div class="class-card knight" onclick="selectClass(1)">
-                <div class="card-icon">🛡️</div>
-                <h3>Knight</h3>
-                <div class="card-stats"><span>HP: 550</span><span>ATK: 40</span></div>
-                <div class="card-desc">Phòng thủ & Phản đòn</div>
-            </div>
-            <div class="class-card archer" onclick="selectClass(2)">
-                <div class="card-icon">🏹</div>
-                <h3>Archer</h3>
-                <div class="card-stats"><span>HP: 250</span><span>ATK: 60</span></div>
-                <div class="card-desc">Xả kích & Liên hoàn</div>
-            </div>
-            <div class="class-card mage" onclick="selectClass(3)">
-                <div class="card-icon">🔥</div>
-                <h3>Mage</h3>
-                <div class="card-stats"><span>HP: 320</span><span>ATK: 55</span></div>
-                <div class="card-desc">Ma pháp & Suy giảm</div>
-            </div>
-            <div class="class-card assassin" onclick="selectClass(4)">
-                <div class="card-icon">🗡️</div>
-                <h3>Assassin</h3>
-                <div class="card-stats"><span>HP: 280</span><span>ATK: 65</span></div>
-                <div class="card-desc">Bạo kích chí mạng</div>
-            </div>
-            <div class="class-card healer" onclick="selectClass(5)">
-                <div class="card-icon">💚</div>
-                <h3>Healer</h3>
-                <div class="card-stats"><span>HP: 400</span><span>ATK: 20</span></div>
-                <div class="card-desc">Trị thương & Trợ lực</div>
-            </div>
-            <div class="class-card berserker" onclick="selectClass(6)">
-                <div class="card-icon">💀</div>
-                <h3>Berserker</h3>
-                <div class="card-stats"><span>HP: 220</span><span>ATK: 85</span></div>
-                <div class="card-desc">Cuồng nộ hy sinh</div>
-            </div>
+        <h2 class="section-title" style="text-align: center; margin-bottom: 20px;">Khởi hành vào Vực Thẳm</h2>
+        <div style="text-align: center; margin: 40px 0;">
+            <p style="color: #ccc; margin-bottom: 20px;">Tiến vào hầm ngục, thu thập đội hình Servant rải rác và đánh bại Boss ở cuối bản đồ.</p>
+            <button id="start-btn" onclick="startExploration()" style="max-width: 400px; margin: 0 auto; display: block; cursor: pointer;">BẮT ĐẦU KHÁM PHÁ</button>
         </div>
+    </section>
 
-        <div id="selected-team-wrapper">
-            <h3>Đội Hình Hiện Tại:</h3>
-            <div id="selected-team">Chưa chọn Servant nào</div>
+    <!-- MÀN HÌNH KHÁM PHÁ PLATFORMER -->
+    <section id="platformer-screen" style="display: none;">
+        <h2 class="section-title" style="text-align: center; margin-bottom: 15px;">Khám phá Hầm ngục - Tìm kiếm Servant</h2>
+        <div style="text-align: center;">
+            <canvas id="gameCanvas" width="800" height="400" style="background: #000; border: 2px solid #24345e; border-radius: 10px; max-width: 100%; box-shadow: 0 0 20px rgba(0,0,0,0.8);"></canvas>
         </div>
-
-        <button id="start-btn" onclick="startBattle()" disabled>BẮT ĐẦU TRẬN ĐẤU</button>
+        <div id="exploration-log" style="margin-top: 15px; color: #ffd700; text-align: center; font-size: 18px; font-weight: bold; font-family: 'Cinzel', serif;">
+            Sử dụng Phím Mũi Tên trái/phải để di chuyển. Mũi tên lên để Nhảy (Hỗ trợ Nhảy đúp).
+        </div>
     </section>
 
     <!-- MÀN HÌNH CHIẾN ĐẤU -->
-    <section id="battle-screen">
+    <section id="battle-screen" style="display: none;">
         <div class="battlefield">
-            
             <!-- VÙNG CỦA BOSS -->
             <div class="boss-zone" id="boss-zone">
                 <div class="boss-ui">
                     <h2 id="boss-name">The Nightmare Soul (???)</h2>
                     <div class="boss-class-hint" id="boss-hint"></div>
-                    
-                    <!-- Thanh máu Boss dạng phân đoạn hoành tráng -->
                     <div class="bar-container hp">
                         <div class="bar-fill" id="boss-hp-fill"></div>
                         <span class="bar-text" id="boss-hp-text">0/0</span>
                     </div>
-
-                    <!-- Thanh đếm ngược Tuyệt kỹ của Boss (NP) -->
                     <div class="boss-charge-container">
                         <span class="charge-label">CHARGE</span>
                         <div class="charge-dots" id="boss-charge-dots">
@@ -94,7 +58,7 @@
                 </div>
             </div>
 
-            <!-- VÙNG CỦA PLAYER (3 Servant xếp ngang) -->
+            <!-- VÙNG CỦA PLAYER -->
             <div class="player-zone" id="player-team">
                 <!-- Sẽ tự động render thẻ nhân vật vào đây -->
             </div>
