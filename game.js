@@ -221,7 +221,7 @@ function updatePlatformer() {
         
     }
 
-    const zoomLevel = 1.5; 
+    const zoomLevel = 2.5; 
     const viewWidth = canvas.width / zoomLevel;
     const viewHeight = canvas.height / zoomLevel;
     camera.x = Math.max(0, Math.min(
