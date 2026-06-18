@@ -221,7 +221,7 @@ function updatePlatformer() {
         
     }
 
-    const zoomLevel = 2.5; 
+    const zoomLevel = 2; 
     const viewWidth = canvas.width / zoomLevel;
     const viewHeight = canvas.height / zoomLevel;
     camera.x = Math.max(0, Math.min(
@@ -253,17 +253,23 @@ function updatePlatformer() {
             }
         }
     }
+    if (playerObj.vx < 0) playerObj.facingRight = false;
+    else if (playerObj.vx > 0) playerObj.facingRight = true;
+    if (typeof playerObj.facingRight === 'undefined') playerObj.facingRight = true;
+    ctx.save();
     
-    // 6. Vẽ Nhân vật
-    ctx.drawImage(
-        gameImages.player, 
-        playerObj.x - camera.x, 
-        playerObj.y - camera.y, 
-        playerObj.width, 
-        playerObj.height
-    );
+    let drawX = playerObj.x - camera.x;
+    let drawY = playerObj.y - camera.y;
 
-    ctx.restore();
+    if (!playerObj.facingRight) {
+        ctx.translate(drawX + playerObj.width, drawY);
+        ctx.scale(-1, 1);
+        ctx.drawImage(gameImages.player, 0, 0, playerObj.width, playerObj.height);
+    } else {
+        ctx.drawImage(gameImages.player, drawX, drawY, playerObj.width, playerObj.height);
+    }
+    
+    ctx.restore(); 
 
     if (isExploring) requestAnimationFrame(updatePlatformer);
 
