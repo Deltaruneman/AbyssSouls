@@ -10,35 +10,35 @@
 <body>
 
 <div class="game-wrapper" id="game-container">
-    <header class="header">
+    <header class="header" id="main-header">
         <h1>⚔️ Abyss Souls ⚔️</h1>
-        <p>Thành lập tổ đội 3 người chống lại hiện thân của bóng tối</p>
+        <p>Thành lập tổ đội chống lại hiện thân của bóng tối</p>
     </header>
 
-    <!-- MÀN HÌNH BẮT ĐẦU -->
     <section id="selection-screen">
         <h2 class="section-title" style="text-align: center; margin-bottom: 20px;">Khởi hành vào Vực Thẳm</h2>
         <div style="text-align: center; margin: 40px 0;">
-            <p style="color: #ccc; margin-bottom: 20px;">Tiến vào hầm ngục, thu thập đội hình Servant rải rác và đánh bại Boss ở cuối bản đồ.</p>
+            <p style="color: #ccc; margin-bottom: 20px;">Tiến vào hầm ngục rộng lớn, tìm kiếm toàn bộ 7 Servant và đánh bại Boss.</p>
             <button id="start-btn" onclick="startExploration()" style="max-width: 400px; margin: 0 auto; display: block; cursor: pointer;">BẮT ĐẦU KHÁM PHÁ</button>
         </div>
     </section>
 
-    <!-- MÀN HÌNH KHÁM PHÁ PLATFORMER -->
     <section id="platformer-screen" style="display: none;">
-        <h2 class="section-title" style="text-align: center; margin-bottom: 15px;">Khám phá Hầm ngục - Tìm kiếm Servant</h2>
-        <div style="text-align: center;">
-            <canvas id="gameCanvas" width="800" height="400" style="background: #000; border: 2px solid #24345e; border-radius: 10px; max-width: 100%; box-shadow: 0 0 20px rgba(0,0,0,0.8);"></canvas>
+        <canvas id="gameCanvas" style="background: #000; display: block;"></canvas>
+        
+        <div id="exploration-log">
+            Mũi tên Trái/Phải: Di chuyển | Mũi tên Lên: Nhảy / Nhảy đúp | Phím X: Tương tác / Tiếp tục hội thoại
         </div>
-        <div id="exploration-log" style="margin-top: 15px; color: #ffd700; text-align: center; font-size: 18px; font-weight: bold; font-family: 'Cinzel', serif;">
-            Sử dụng Phím Mũi Tên trái/phải để di chuyển. Mũi tên lên để Nhảy (Hỗ trợ Nhảy đúp).
+
+        <div id="dialogue-box" style="display: none;">
+            <div id="dialogue-name">???</div>
+            <p id="dialogue-text">Nội dung hội thoại...</p>
+            <span class="dialogue-hint">Bấm phím [X] hoặc Click để tiếp tục ▼</span>
         </div>
     </section>
 
-    <!-- MÀN HÌNH CHIẾN ĐẤU -->
     <section id="battle-screen" style="display: none;">
         <div class="battlefield">
-            <!-- VÙNG CỦA BOSS -->
             <div class="boss-zone" id="boss-zone">
                 <div class="boss-ui">
                     <h2 id="boss-name">The Nightmare Soul (???)</h2>
@@ -50,28 +50,22 @@
                     <div class="boss-charge-container">
                         <span class="charge-label">CHARGE</span>
                         <div class="charge-dots" id="boss-charge-dots">
-                            <span class="dot"></span>
-                            <span class="dot"></span>
-                            <span class="dot"></span>
+                            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- VÙNG CỦA PLAYER -->
-            <div class="player-zone" id="player-team">
-                <!-- Sẽ tự động render thẻ nhân vật vào đây -->
-            </div>
+            <div class="player-zone" id="player-team"></div>
         </div>
 
-        <!-- BẢNG ĐIỀU KHIỂN & NHẬT KÝ TRẬN ĐẤU -->
         <div class="control-deck">
             <div class="panel-left">
                 <div id="turn-info">Lượt hành động</div>
                 <div id="action-panel">
                     <button class="btn-action attack" onclick="playerAction('attack')">⚔️ ATTACK</button>
                     <button class="btn-action skill" id="skill-btn" onclick="playerAction('skill')">✨ SKILL (-20 NP)</button>
-                    <button class="btn-action np" id="np-btn" onclick="playerAction('np')">🔥 NOBLE PHANTASM</button>
+                    <button class="btn-action np" id="np-btn" onclick="playerAction('np')">🔥 NP</button>
                 </div>
             </div>
             <div class="panel-right">
@@ -81,23 +75,16 @@
     </section>
 </div>
 
-<!-- TEMPLATE NHÂN VẬT -->
 <template id="character-template">
     <div class="servant-card">
-        <div class="servant-avatar"></div>
-        <div class="servant-name"></div>
-        
-        <div class="bar-container hp">
+        <div class="servant-name" style="font-size: 14px;"></div>
+        <div class="bar-container hp" style="height: 16px;">
             <div class="bar-fill hp-fill"></div>
-            <span class="bar-text servant-hp-text"></span>
         </div>
-
-        <div class="bar-container np">
+        <div class="bar-container np" style="height: 16px;">
             <div class="bar-fill np-fill"></div>
-            <span class="bar-text servant-np-text"></span>
         </div>
-
-        <div class="servant-status"></div>
+        <div class="servant-status" style="font-size: 11px;"></div>
     </div>
 </template>
 
