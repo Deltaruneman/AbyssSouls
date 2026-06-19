@@ -1,4 +1,63 @@
 /* ==========================================================================
+   AUDIO ASSETS & PRELOADING
+   ========================================================================== */
+const preloadedAudio = {};
+const audioAssets = {
+    jump: 'assets/sfx/jump.mp3',
+    step: 'assets/sfx/step.mp3',
+    boss_skill: 'assets/sfx/boss_skill.mp3',
+    boss_attack: 'assets/sfx/boss_attack.mp3',
+    boss_np: 'assets/sfx/boss_np.mp3'
+};
+
+// Tự động sinh danh sách âm thanh cho 7 class
+for (let i = 1; i <= 7; i++) {
+    audioAssets[`attack_${i}`] = `assets/sfx/attack_${i}.mp3`;
+    audioAssets[`skill_${i}`] = `assets/sfx/skill_${i}.mp3`;
+    audioAssets[`np_${i}`] = `assets/sfx/np_${i}.mp3`;
+}
+
+// Hàm tải toàn bộ âm thanh
+async function preloadAllAudio() {
+    const promises = [];
+    for (const [key, src] of Object.entries(audioAssets)) {
+        promises.push(new Promise((resolve) => {
+            const audio = new Audio();
+            audio.src = src;
+            audio.preload = "auto";
+            
+            // Xử lý khi load xong hoặc bị lỗi (file không tồn tại) để không chặn tiến trình
+            audio.addEventListener('canplaythrough', resolve, { once: true });
+            audio.addEventListener('error', resolve, { once: true }); 
+            
+            preloadedAudio[key] = audio;
+        }));
+    }
+    
+    await Promise.all(promises);
+    console.log("[Hệ thống] Toàn bộ âm thanh đã được tải xong!");
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    const startBtn = document.getElementById("start-btn");
+    if (startBtn) {
+        // Khóa nút lúc mới vào trang
+        startBtn.innerText = "ĐANG TẢI DỮ LIỆU...";
+        startBtn.disabled = true;
+        startBtn.style.opacity = "0.5";
+        startBtn.style.cursor = "wait";
+
+        // Tải âm thanh, sau đó mở khóa nút
+        preloadAllAudio().then(() => {
+            startBtn.innerText = "BẮT ĐẦU KHÁM PHÁ";
+            startBtn.disabled = false;
+            startBtn.style.opacity = "1";
+            startBtn.style.cursor = "pointer";
+        });
+    }
+});
+
+/* ==========================================================================
    GAME COMPATIBILITY & CONFIGURATION
    ========================================================================== */
 const classData = {
@@ -132,8 +191,10 @@ function checkWall(x, y, width, height) {
 
 function resizeCanvas() {
     const canvas = document.getElementById("gameCanvas");
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    if (canvas) {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
 }
 window.addEventListener('resize', resizeCanvas);
 
@@ -329,14 +390,21 @@ function confirmTeamAndBattle() {
 
 function playSFX(action, id = null) {
     try {
-        let fileName = id ? `${action}_${id}.mp3` : `${action}.mp3`;
-        let sound = new Audio(`assets/sfx/${fileName}`);
-        sound.volume = 0.8;
-        sound.play().catch(e => console.log(`[SFX] Chưa có file ${fileName} hoặc trình duyệt chặn:`));
+        let key = id ? `${action}_${id}` : action;
+        
+        if (preloadedAudio[key]) {
+            // Clone node để phát đè âm thanh mà không làm gián đoạn file gốc
+            let soundClone = preloadedAudio[key].cloneNode();
+            soundClone.volume = 0.8;
+            soundClone.play().catch(e => console.log(`[SFX] Trình duyệt chặn tự động phát âm thanh:`, e));
+        } else {
+            console.log(`[SFX] Không tìm thấy file âm thanh trong cache cho: ${key}`);
+        }
     } catch (e) {
         console.log("Lỗi hệ thống âm thanh:", e);
     }
 }
+
 function popDamageText(parentElement, damageValue, isCrit = false, isHeal = false) {
     const pop = document.createElement("div");
     let className = 'dmg-player-pop';
@@ -676,6 +744,7 @@ function victory() {
         }, 500);
     } 
 }
+
 function checkLose() {
     if (!team.some(s => s.hp > 0)) { endGame("THẤT BẠI... TOÀN ĐỘI ĐÃ BỊ TIÊU DIỆT. Tâm trí của bạn bị Abyss và rồi trở thành một Abyss One"); return true; }
     return false;
