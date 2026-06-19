@@ -7,7 +7,9 @@ const audioAssets = {
     step: 'assets/sfx/step.mp3',
     boss_skill: 'assets/sfx/boss_skill.mp3',
     boss_attack: 'assets/sfx/boss_attack.mp3',
-    boss_np: 'assets/sfx/boss_np.mp3'
+    boss_np: 'assets/sfx/boss_np.mp3',
+    collect: 'assets/sfx/collect.mp3', 
+    gate: 'assets/sfx/gate.mp3'
 };
 
 for (let i = 1; i <= 7; i++) {
@@ -275,6 +277,7 @@ function updatePlatformer() {
                         maxHp: base.hp, hp: base.hp, atk: base.atk, np: 0, alive: true, defending: false, reflect: false, status: ""
                     });
                     map2D[centerY][centerX] = 0;
+                    playSFX('collect');
                     showDialogue("", [` Hấp thụ linh hồn quanh đây!`, `(Đã thu thập: ${collectedServants.length} linh hồn)`]);
                 }
             }
@@ -285,6 +288,7 @@ function updatePlatformer() {
                     playerObj.x -= 30; 
                 } else {
                     isExploring = false;
+                    playSFX('gate');
                     openSelectionScreen();
                     return;
                 }
