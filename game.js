@@ -10,14 +10,12 @@ const audioAssets = {
     boss_np: 'assets/sfx/boss_np.mp3'
 };
 
-// Tự động sinh danh sách âm thanh cho 7 class
 for (let i = 1; i <= 7; i++) {
     audioAssets[`attack_${i}`] = `assets/sfx/attack_${i}.mp3`;
     audioAssets[`skill_${i}`] = `assets/sfx/skill_${i}.mp3`;
     audioAssets[`np_${i}`] = `assets/sfx/np_${i}.mp3`;
 }
 
-// Hàm tải toàn bộ âm thanh
 async function preloadAllAudio() {
     const promises = [];
     for (const [key, src] of Object.entries(audioAssets)) {
@@ -25,8 +23,6 @@ async function preloadAllAudio() {
             const audio = new Audio();
             audio.src = src;
             audio.preload = "auto";
-            
-            // Xử lý khi load xong hoặc bị lỗi (file không tồn tại) để không chặn tiến trình
             audio.addEventListener('canplaythrough', resolve, { once: true });
             audio.addEventListener('error', resolve, { once: true }); 
             
@@ -119,7 +115,6 @@ const gameImages = {
     player: new Image()
 };
 
-// Định nghĩa đường dẫn nguồn từ thư mục assets/images
 gameImages.wall.src = 'assets/images/wall.png';       
 gameImages.servant.src = 'assets/images/soul.png'; 
 gameImages.gate.src = 'assets/images/gate.png';      
@@ -162,13 +157,10 @@ function showDialogue(name, textArray) {
 function nextDialogue() {
     if (dialogueQueue.length > 0) {
         let current = dialogueQueue.shift();
-        
-        // Nếu là định dạng mới {name: "...", text: "..."}
         if (typeof current === 'object' && current !== null) {
             document.getElementById("dialogue-name").innerText = current.name;
             document.getElementById("dialogue-text").innerHTML = current.text;
         } else {
-            // Dành cho các câu thoại cũ chỉ dùng string
             document.getElementById("dialogue-text").innerHTML = current;
         }
     } else {
@@ -283,7 +275,7 @@ function updatePlatformer() {
                         maxHp: base.hp, hp: base.hp, atk: base.atk, np: 0, alive: true, defending: false, reflect: false, status: ""
                     });
                     map2D[centerY][centerX] = 0;
-                    showDialogue(base.name, [` Hấp thụ linh hồn quanh đây!`, `(Đã thu thập: ${collectedServants.length} linh hồn)`]);
+                    showDialogue("", [` Hấp thụ linh hồn quanh đây!`, `(Đã thu thập: ${collectedServants.length} linh hồn)`]);
                 }
             }
 
