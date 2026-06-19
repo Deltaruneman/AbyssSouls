@@ -84,7 +84,7 @@ const map2D = [
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ];
 
-let playerObj = { x: 100, y: 400, width: 30, height: 30, vx: 0, vy: 0, speed: 5, jumpPower: -11, grounded: false, maxJumps: 2, jumpsLeft: 2, canJump: true };
+let playerObj = { stepTimer: 0, x: 100, y: 400, width: 30, height: 30, vx: 0, vy: 0, speed: 5, jumpPower: -11, grounded: false, maxJumps: 2, jumpsLeft: 2, canJump: true };
 let camera = { x: 0, y: 0 };
 let keys = { ArrowLeft: false, ArrowRight: false, ArrowUp: false };
 let isExploring = false;
@@ -162,7 +162,7 @@ function updatePlatformer() {
     if (!isDialogueActive) {
         if (keys.ArrowUp && playerObj.canJump && playerObj.jumpsLeft > 0) {
             playerObj.vy = playerObj.jumpPower; playerObj.jumpsLeft--;              
-            playerObj.grounded = false; playerObj.canJump = false;          
+            playerObj.grounded = false; playerObj.canJump = false; playSFX("jump");          
         }
         playerObj.vy += 0.6; 
         if (keys.ArrowLeft) playerObj.vx = -playerObj.speed;
@@ -187,6 +187,16 @@ function updatePlatformer() {
                 playerObj.y = Math.floor(playerObj.y / TILE_SIZE) * TILE_SIZE + TILE_SIZE;
             }
             playerObj.vy = 0;
+        }
+
+        if (playerObj.vx !== 0 && playerObj.grounded) {
+            playerObj.stepTimer++;
+            if (playerObj.stepTimer >= 15) { 
+                playSFX('step');
+                playerObj.stepTimer = 0;
+            }
+        } else {
+            playerObj.stepTimer = 14;
         }
 
         let centerX = Math.floor((playerObj.x + playerObj.width / 2) / TILE_SIZE);
@@ -315,13 +325,12 @@ function confirmTeamAndBattle() {
    BATTLE ENGINE & SFX SYSTEM
    ========================================================================== */
 
-// HỆ THỐNG ÂM THANH THEO CLASS
-function playSFX(action, classId) {
+function playSFX(action, id = null) {
     try {
-        // Tạo đường dẫn file: ví dụ assets/sfx/attack_1.mp3, skill_3.mp3, np_7.mp3
-        let sound = new Audio(`assets/sfx/${action}_${classId}.mp3`);
-        sound.volume = 0.8; // Cài đặt âm lượng
-        sound.play().catch(e => console.log(`[SFX] Chưa có file ${action}_${classId}.mp3 hoặc trình duyệt chặn:`));
+        let fileName = id ? `${action}_${id}.mp3` : `${action}.mp3`;
+        let sound = new Audio(`assets/sfx/${fileName}`);
+        sound.volume = 0.8;
+        sound.play().catch(e => console.log(`[SFX] Chưa có file ${fileName} hoặc trình duyệt chặn:`));
     } catch (e) {
         console.log("Lỗi hệ thống âm thanh:", e);
     }
@@ -547,6 +556,7 @@ async function bossAction() {
     let isUsingSkill = Math.random() < 0.35;
 
     if (isUsingSkill) {
+        playSFX("boss_skill", boss.classId);
         let dmg = 0;
         switch(boss.classId) {
             case 1:
@@ -598,7 +608,8 @@ async function bossAction() {
                 break;
         }
     } else {
-        // TẤN CÔNG THƯỜNG CỦA BOSS (65% TỶ LỆ)
+        // TẤN CÔNG THƯỜNG CỦA BOSS
+        playSFX("boss_attack", boss.classId);
         let damage = Math.floor(effectiveAtk * modifier);
         if (target.defending) damage = Math.floor(damage * 0.5);
 
@@ -619,9 +630,10 @@ async function bossAction() {
 }
 
 function bossNP() {
+    playSFX("boss_np", boss.classId);
+    logBoss("💥 TUYỆT KỸ BOSS PHÁT ĐỘNG!");
     let aoe = Math.random() < 0.5;
     const cards = document.querySelectorAll(".servant-card");
-    logBoss("💥 TUYỆT KỸ BOSS PHÁT ĐỘNG!");
     
     if (aoe) {
         team.forEach((s, idx) => {
