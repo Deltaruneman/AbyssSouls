@@ -102,7 +102,16 @@ function showDialogue(name, textArray) {
 
 function nextDialogue() {
     if (dialogueQueue.length > 0) {
-        document.getElementById("dialogue-text").innerHTML = dialogueQueue.shift();
+        let current = dialogueQueue.shift();
+        
+        // Nếu là định dạng mới {name: "...", text: "..."}
+        if (typeof current === 'object' && current !== null) {
+            document.getElementById("dialogue-name").innerText = current.name;
+            document.getElementById("dialogue-text").innerHTML = current.text;
+        } else {
+            // Dành cho các câu thoại cũ chỉ dùng string
+            document.getElementById("dialogue-text").innerHTML = current;
+        }
     } else {
         isDialogueActive = false;
         document.getElementById("dialogue-box").style.display = "none";
@@ -376,14 +385,14 @@ function startBattle() {
     renderTeam();
     highlightTurn();
 
-    showDialogue("Cốt Truyện", [
-        "<b>The Nightmare Soul:</b> Chết tiệt, thế quái nào sức mạnh của cả UIT lại mạnh đến như vậy?",
-        "<b>The Nightmare Soul:</b> Không sao, Abyss Gate sẽ được mở ra một lần nữa, và bóng tối sẽ bao trùm tất cả sinh linh!",
-        "<b>???:</b> Không có cơ hội đó đâu!.",
-        "<b>???:</b> Kiến tạo ma lực!",
-        "<b>???:</b> Thiêu đốt linh hồn .",
-        "<b>???:</b> Triệu hồi Anh Linh!!!.",
-        "<b>The Nightmare Soul:</b> Chết tiệt, ta sẽ biến nơi đây thành mồ chôn của ngươi."
+  showDialogue("", [
+        { name: "The Nightmare Soul", text: "Chết tiệt, thế quái nào sức mạnh của cả UIT lại mạnh đến như vậy?" },
+        { name: "The Nightmare Soul", text: "Không sao, Abyss Gate sẽ được mở ra một lần nữa, và bóng tối sẽ bao trùm tất cả sinh linh!" },
+        { name: "???", text: "Không có cơ hội đó đâu!" },
+        { name: "???", text: "Kiến tạo ma lực!" },
+        { name: "???", text: "Thiêu đốt linh hồn." },
+        { name: "???", text: "Triệu hồi Anh Linh!!!" },
+        { name: "The Nightmare Soul", text: "Chết tiệt, ta sẽ biến nơi đây thành mồ chôn của ngươi." }
     ]);
 }
 
@@ -666,15 +675,15 @@ function victory() {
         document.getElementById("action-panel").style.display = "none";
         logSystem(`🎉 CHIẾN THẮNG! BOSS ĐÃ BỊ TIÊU DIỆT!`);
 
-        showDialogue("Cốt Truyện", [
-            "<b>The Nightmare Soul:</b> Khục... Không thể nào... Vực thẳm... sẽ không bao giờ... lụi tàn...",
-            "<b>The Nightmare Soul:</b> Cơ thể này... đang tan biến... Ngươi sẽ phải hối hận...",
-            "<b>???:</b> ...( phong ấn Abyss Gate )...",
-            "<b>The Nightmare Soul:</b> Ha ha ha ha, ta đã cảm nhận được thứ ma lực trong người ngươi.",
-            "<b>The Nightmare Soul:</b> Nó đến từ Abyss, thứ ma thuật lấy linh hồn kẻ khác làm sức mạnh của ngươi.",
-            "<b>The Nightmare Soul:</b> Ha ha ha, rồi thì chính tâm trí ngươi sẽ dần bị tha hóa không khác gì chúng ta.",
-             "<b>???:</b> Ta hiểu nhưng...",
-            "<b>Hệ Thống:</b> 🎉 CHIẾN THẮNG! Bạn đã bảo vệ thành công thế giới khỏi The Abyss!"
+       showDialogue("", [
+            { name: "The Nightmare Soul", text: "Khục... Không thể nào... Vực thẳm... sẽ không bao giờ... lụi tàn..." },
+            { name: "The Nightmare Soul", text: "Cơ thể này... đang tan biến... Ngươi sẽ phải hối hận..." },
+            { name: "???", text: "...( phong ấn Abyss Gate )..." },
+            { name: "The Nightmare Soul", text: "Ha ha ha ha, ta đã cảm nhận được thứ ma lực trong người ngươi." },
+            { name: "The Nightmare Soul", text: "Nó đến từ Abyss, thứ ma thuật lấy linh hồn kẻ khác làm sức mạnh của ngươi." },
+            { name: "The Nightmare Soul", text: "Ha ha ha, rồi thì chính tâm trí ngươi sẽ dần bị tha hóa không khác gì chúng ta." },
+            { name: "???", text: "Ta hiểu nhưng..." },
+            { name: "Hệ Thống", text: "🎉 CHIẾN THẮNG! Bạn đã bảo vệ thành công thế giới khỏi The Abyss!" }
         ]);
 
         let checkDialog = setInterval(() => {
