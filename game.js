@@ -312,8 +312,21 @@ function confirmTeamAndBattle() {
 }
 
 /* ==========================================================================
-   BATTLE ENGINE
+   BATTLE ENGINE & SFX SYSTEM
    ========================================================================== */
+
+// HỆ THỐNG ÂM THANH THEO CLASS
+function playSFX(action, classId) {
+    try {
+        // Tạo đường dẫn file: ví dụ assets/sfx/attack_1.mp3, skill_3.mp3, np_7.mp3
+        let sound = new Audio(`assets/sfx/${action}_${classId}.mp3`);
+        sound.volume = 0.8; // Cài đặt âm lượng
+        sound.play().catch(e => console.log(`[SFX] Chưa có file ${action}_${classId}.mp3 hoặc trình duyệt chặn:`));
+    } catch (e) {
+        console.log("Lỗi hệ thống âm thanh:", e);
+    }
+}
+
 function popDamageText(parentElement, damageValue, isCrit = false, isHeal = false) {
     const pop = document.createElement("div");
     let className = 'dmg-player-pop';
@@ -435,6 +448,8 @@ async function playerAction(action) {
     
     let damage = 0;
     if (action === "attack") {
+        playSFX("attack", servant.classId); // PHÁT ÂM THANH ĐÁNH THƯỜNG THEO CLASS
+
         damage = Math.floor(randomDamage(servant.atk) * (1 + getModifier(servant.classId, boss.classId)));
         damage = hitBoss(damage);
         gainNP(servant);
@@ -459,6 +474,9 @@ async function playerAction(action) {
 function useSkill(servant) {
     if (servant.np < 20) return;
     servant.np -= 20;
+    
+    playSFX("skill", servant.classId); // PHÁT ÂM THANH SKILL THEO CLASS
+
     let dmg = 0;
     switch(servant.classId) {
         case 1: servant.defending = true; servant.status = "🛡️ Phản đòn"; logPlayer("Knight bật khiên phòng thủ."); break;
@@ -474,6 +492,9 @@ function useSkill(servant) {
 function useNP(servant) {
     if (servant.np < 100) return;
     servant.np = 0;
+
+    playSFX("np", servant.classId); // PHÁT ÂM THANH TUYỆT KỸ THEO CLASS
+
     logPlayer(`🔥 ${servant.name} PHÁT ĐỘNG TUYỆT KỸ!`);
     switch(servant.classId) {
         case 1: team.forEach(a => { if(a.hp > 0) { a.defending = true; a.status = "🏰 Avalon"; }}); window.teamProtectionTurn = 2; break;
