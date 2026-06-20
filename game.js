@@ -77,13 +77,12 @@ const bossHints = {
     7:"Một mũi giáo xuyên thấu bóng tối...", 8:"Kẻ thao túng linh hồn đang ẩn mình trong bóng tối..."
 };
 
-let collectedServants = []; 
-let selectedUids = [];      
+let selectedClasses = []; // Lưu classId người chơi chọn trong cửa hàng  
 let team = [];              
 let currentTurn = 0;
 let gameOver = false;
 let bossTurnCount = 0;
-let soulEnergy = 0; // Năng lượng dùng để Gacha
+let soulEnergy = 0; // Năng lượng
 
 let boss = {
     name: "The Nightmare Soul", classId: Math.floor(Math.random() * 8) + 1,
@@ -105,7 +104,6 @@ gameImages.gate.src = 'assets/images/gate.png';
 gameImages.player.src = 'assets/images/player.png';   
 
 const TILE_SIZE = 40;
-// Map chỉ chứa Tường (1), Năng lượng (2), và Cửa Boss (9)
 const map2D = [
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
     [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
@@ -178,8 +176,9 @@ function startExploration() {
     document.getElementById("selection-screen").style.display = "none";
     document.getElementById("platformer-screen").style.display = "block";
     resizeCanvas();
-    collectedServants = [];
+    
     soulEnergy = 0;
+    selectedClasses = [];
     isExploring = true;
     
     window.addEventListener("keydown", (e) => { 
@@ -194,7 +193,7 @@ function startExploration() {
     showDialogue("???", [
         "Mình cảm nhận được Abyss đã ở đây.",
         "May mà Abyss Expand đã bị ngăn chặn... Dù không biết là kẻ nào.",
-        "Không quan trọng, mình phải thu thập đủ Năng Lượng Linh Hồn để triệu hồi các Anh Linh.",
+        "Phải thu thập đủ Năng Lượng Linh Hồn để triệu hồi các Anh Linh.",
         "Cần ít nhất 6 Năng Lượng để chuẩn bị đủ đội hình chiến đấu..."
     ]);
     requestAnimationFrame(updatePlatformer);
@@ -258,8 +257,8 @@ function updatePlatformer() {
 
             // XỬ LÝ CỔNG BOSS (Tile 9)
             if (currentTile === 9) {
-                if (soulEnergy < 6 && collectedServants.length < 3) {
-                    showDialogue("Hệ Thống", ["⚠️ Bạn phải có ít nhất 6 Năng Lượng để đủ triệu hồi đội hình 3 Servant! Hãy quay lại tìm thêm."]);
+                if (soulEnergy < 6) {
+                    showDialogue("Hệ Thống", ["⚠️ Bạn phải có ít nhất 6 Năng Lượng để đủ chiêu mộ 3 Servant! Hãy quay lại tìm thêm."]);
                     playerObj.x -= 30; 
                 } else {
                     isExploring = false; playSFX('gate'); openSelectionScreen(); return;
@@ -311,70 +310,87 @@ function updatePlatformer() {
 }
 
 /* ==========================================================================
-   GACHA & SELECTION SYSTEM
+   SHOP / SELECTION SYSTEM
    ========================================================================== */
 function openSelectionScreen() {
     document.getElementById("platformer-screen").style.display = "none";
     document.getElementById("team-selection-screen").style.display = "block";
     document.body.style.overflow = "auto";
     
-    document.getElementById("energy-display").innerText = soulEnergy;
-    renderRoster(); 
+    renderShop(); 
 }
 
-function summonServant(cost) {
-    if (soulEnergy < cost) {
-        alert("⚠️ Không đủ Năng lượng! Cần " + cost + " NL.");
-        return;
-    }
-
-    soulEnergy -= cost;
+function renderShop() {
     document.getElementById("energy-display").innerText = soulEnergy;
-
-    // Phân chia Pool theo giá trị Năng Lượng (Không có Summoner ID 8)
-    let pool = cost === 2 ? [1, 2, 5, 7] : [3, 4, 6]; 
-    
-    let randomClassId = pool[Math.floor(Math.random() * pool.length)];
-    let base = classData[randomClassId];
-
-    collectedServants.push({
-        uid: Date.now() + Math.random(), classId: randomClassId, name: base.name, icon: base.icon,
-        maxHp: base.hp, hp: base.hp, atk: base.atk, np: 0, alive: true, defending: false, reflect: false, status: "", controlled: false
-    });
-
-    playSFX('collect');
-    renderRoster();
-}
-
-function renderRoster() {
     const roster = document.getElementById("selection-roster");
     roster.innerHTML = "";
 
-    collectedServants.forEach(s => {
+    // Danh sách 7 Class được phép mua
+    const shopClasses = [1, 2, 3, 4, 5, 6, 7];
+
+    shopClasses.forEach(classId => {
+        let base = classData[classId];
+        // Xác định giá năng lượng: Assassin(4), Berserker(6), Mage(3) tốn 3 NL. Còn lại tốn 2.
+        let cost = (classId === 3 || classId === 4 || classId === 6) ? 3 : 2;
+
         const card = document.createElement("div");
         card.className = "roster-card";
-        if (selectedUids.includes(s.uid)) card.classList.add("selected");
+        if (selectedClasses.includes(classId)) card.classList.add("selected");
 
-        card.innerHTML = `<div style="font-size: 35px;">${s.icon}</div><div style="margin-top: 10px; font-weight: bold; font-size: 16px;">${s.name}</div>`;
+        card.innerHTML = `
+            <div style="font-size: 35px;">${base.icon}</div>
+            <div style="margin-top: 10px; font-weight: bold; font-size: 16px;">${base.name}</div>
+            <div style="margin-top: 8px; color: #00d2ff; font-size: 14px; font-weight: bold;">💎 ${cost} NL</div>
+        `;
+
         card.onclick = () => {
-            if (selectedUids.includes(s.uid)) {
-                selectedUids = selectedUids.filter(id => id !== s.uid);
-                card.classList.remove("selected");
+            if (selectedClasses.includes(classId)) {
+                // Bỏ chọn (Hoàn lại năng lượng)
+                selectedClasses = selectedClasses.filter(id => id !== classId);
+                soulEnergy += cost;
             } else {
-                if (selectedUids.length < 3) {
-                    selectedUids.push(s.uid);
-                    card.classList.add("selected");
+                // Mua (Chiêu mộ)
+                if (selectedClasses.length >= 3) {
+                    alert("Chỉ được chọn tối đa 3 Servant để xuất chiến!");
+                    return;
                 }
+                if (soulEnergy < cost) {
+                    alert("Không đủ Năng lượng! Hãy chọn Servant khác hoặc quay lại màn chơi.");
+                    return;
+                }
+                selectedClasses.push(classId);
+                soulEnergy -= cost;
+                playSFX('collect'); // Bật tiếng khi mua thành công
             }
-            document.getElementById("selection-count").innerText = `Đã chọn: ${selectedUids.length}/3`;
-            document.getElementById("confirm-team-btn").disabled = selectedUids.length !== 3;
+            renderShop(); // Vẽ lại để cập nhật số năng lượng và viền vàng
         };
         roster.appendChild(card);
     });
+
+    document.getElementById("selection-count").innerText = `Đã chọn: ${selectedClasses.length}/3`;
+    document.getElementById("confirm-team-btn").disabled = selectedClasses.length !== 3;
 }
 
 function confirmTeamAndBattle() {
-    team = collectedServants.filter(s => selectedUids.includes(s.uid));
+    // Chuyển mảng selectedClasses thành mảng object team để đánh nhau
+    team = selectedClasses.map(classId => {
+        let base = classData[classId];
+        return {
+            uid: Date.now() + Math.random(), 
+            classId: classId, 
+            name: base.name, 
+            icon: base.icon,
+            maxHp: base.hp, 
+            hp: base.hp, 
+            atk: base.atk, 
+            np: 0, 
+            alive: true, 
+            defending: false, 
+            reflect: false, 
+            status: "", 
+            controlled: false
+        };
+    });
     document.getElementById("team-selection-screen").style.display = "none";
     startBattle();
 }
