@@ -36,19 +36,28 @@
         <span class="dialogue-hint">Bấm phím [X] hoặc Click để tiếp tục ▼</span>
     </div>
 
-    <section id="team-selection-screen" style="display: none;">
-        <h2 style="text-align: center; color: var(--gold); margin-bottom: 10px; font-size: 32px; font-family: 'Cinzel', serif;">Chuẩn bị Đội Hình</h2>
-        <p style="text-align: center; color: #ccc; margin-bottom: 30px;">Chọn đúng 3 Servant từ danh sách bạn đã thu thập để tiến vào tử chiến.</p>
-        
-        <div id="selection-roster" class="roster-grid">
-            </div>
-
-        <div style="text-align: center; margin-top: 40px;">
-            <p id="selection-count" style="font-size: 20px; font-weight: bold; margin-bottom: 15px; color: #fff;">Đã chọn: 0/3</p>
-            <button id="confirm-team-btn" class="btn-action np" onclick="confirmTeamAndBattle()" disabled style="padding: 15px 40px; font-size: 20px;">KHIÊU CHIẾN BOSS</button>
+ <section id="team-selection-screen" style="display: none;">
+    <h2 style="text-align: center; color: var(--gold); margin-bottom: 10px; font-size: 32px; font-family: 'Cinzel', serif;">Vòng Tròn Triệu Hồi</h2>
+    <p style="text-align: center; color: #ccc; margin-bottom: 20px;">Sử dụng Năng Lượng Linh Hồn để triệu hồi Anh Linh. Sau đó chọn 3 người để xuất chiến.</p>
+    
+    <!-- Khu vực Gacha -->
+    <div id="summon-zone" style="background: rgba(0, 0, 0, 0.5); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 30px; max-width: 600px; margin-left: auto; margin-right: auto;">
+        <h3 style="color: #00d2ff; margin-bottom: 15px; font-size: 20px;">💎 Năng lượng đang có: <span id="energy-display" style="font-size: 26px; color: #fff;">0</span></h3>
+        <div style="display: flex; gap: 15px; justify-content: center;">
+            <button class="btn-action skill" onclick="summonServant(2)" style="font-size: 14px; padding: 12px;">Triệu hồi Thường (2 NL)<br><span style="font-size: 11px; font-weight: normal;">(Knight, Archer, Lancer, Healer)</span></button>
+            <button class="btn-action attack" onclick="summonServant(3)" style="font-size: 14px; padding: 12px;">Triệu hồi Cao cấp (3 NL)<br><span style="font-size: 11px; font-weight: normal;">(Assassin, Berserker, Mage)</span></button>
         </div>
-    </section>
+    </div>
 
+    <div id="selection-roster" class="roster-grid">
+        <!-- Render danh sách nhân vật đã triệu hồi ở đây -->
+    </div>
+
+    <div style="text-align: center; margin-top: 40px;">
+        <p id="selection-count" style="font-size: 20px; font-weight: bold; margin-bottom: 15px; color: #fff;">Đã chọn: 0/3</p>
+        <button id="confirm-team-btn" class="btn-action np" onclick="confirmTeamAndBattle()" disabled style="padding: 15px 40px; font-size: 20px;">KHIÊU CHIẾN BOSS</button>
+    </div>
+</section>
     <section id="battle-screen" style="display: none;">
         <div class="battlefield">
             <div class="boss-zone" id="boss-zone">
