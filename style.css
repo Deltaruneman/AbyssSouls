@@ -25,9 +25,6 @@ h1, h2, #turn-info, .btn-action { font-family: 'Cinzel', serif; }
     border: none; border-radius: 12px; font-size: 20px; font-weight: bold; cursor: pointer; transition: 0.2s;
 }
 
-/* =========================================
-   PLATFORMER & DIALOGUE UI
-   ========================================= */
 #platformer-screen {
     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1000; background: #000;
 }
@@ -40,28 +37,16 @@ h1, h2, #turn-info, .btn-action { font-family: 'Cinzel', serif; }
 }
 
 #dialogue-box {
-    position: fixed; 
-    bottom: 40px; 
-    left: 50%; 
-    transform: translateX(-50%);
-    width: 80%; 
-    max-width: 800px; 
-    background: rgba(10, 15, 30, 0.95);
-    border: 3px solid var(--gold); 
-    border-radius: 12px; 
-    padding: 25px;
-    box-shadow: 0 0 30px rgba(0,0,0,0.8); 
-    z-index: 9999; 
-    cursor: pointer;
+    position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
+    width: 80%; max-width: 800px; background: rgba(10, 15, 30, 0.95);
+    border: 3px solid var(--gold); border-radius: 12px; padding: 25px;
+    box-shadow: 0 0 30px rgba(0,0,0,0.8); z-index: 9999; cursor: pointer;
 }
 #dialogue-name { font-family: 'Cinzel', serif; font-size: 22px; font-weight: bold; color: var(--gold); margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 5px;}
 #dialogue-text { font-size: 18px; line-height: 1.5; color: #fff; }
 .dialogue-hint { display: block; text-align: right; font-size: 13px; color: #aaa; margin-top: 15px; animation: blink 1s infinite; }
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
-/* =========================================
-   TEAM SELECTION SCREEN
-   ========================================= */
 #team-selection-screen {
     background: rgba(5, 7, 20, 0.95); padding: 40px; border: 2px solid var(--border-color); border-radius: 16px;
 }
@@ -74,14 +59,11 @@ h1, h2, #turn-info, .btn-action { font-family: 'Cinzel', serif; }
 .roster-card.selected { background: #1e3a8a; border-color: var(--gold); box-shadow: 0 0 15px rgba(255, 215, 0, 0.4); transform: translateY(-5px); }
 #confirm-team-btn:disabled { background: #374151; border: none; box-shadow: none; cursor: not-allowed; opacity: 0.6; }
 
-/* =========================================
-   BATTLE UI (Trả về 3 Servant to đẹp)
-   ========================================= */
 .battlefield {
     display: flex; flex-direction: column; gap: 40px; background: rgba(5, 7, 20, 0.6);
     border: 2px solid #1a2342; border-radius: 20px; padding: 40px 20px; margin-bottom: 25px;
 }
-.boss-zone { display: flex; justify-content: center; width: 100%; }
+.boss-zone { display: flex; justify-content: center; width: 100%; position: relative; }
 .boss-ui { width: 100%; max-width: 650px; background: linear-gradient(180deg, #2c0b16 0%, #15050b 100%); border: 2px solid #ff4757; border-radius: 16px; padding: 25px; text-align: center; }
 .boss-ui h2 { color: #ff6b81; font-size: 28px; margin-bottom: 5px; }
 .boss-class-hint { color: #f1c40f; font-size: 14px; margin-bottom: 15px;}
@@ -90,7 +72,12 @@ h1, h2, #turn-info, .btn-action { font-family: 'Cinzel', serif; }
 .dot { width: 14px; height: 14px; border: 2px solid #ff4757; border-radius: 50%; }
 .dot.filled { background: #ff4757; box-shadow: 0 0 10px #ff4757; }
 
-/* Trả lại Grid 3 Cột */
+/* CSS cho Binh Lính của Summoner */
+.minions-zone { display: flex; justify-content: center; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+.minion-card { background: rgba(50, 0, 0, 0.6); border: 1px solid #ff4757; border-radius: 8px; padding: 8px 12px; font-size: 12px; width: 120px; }
+.minion-card .bar-container { height: 10px; margin-top: 5px; margin-bottom: 0; }
+.minion-card .bar-text { font-size: 9px; line-height: 10px; }
+
 .player-zone { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; width: 100%; max-width: 1000px; margin: 0 auto; }
 .servant-card {
     background: linear-gradient(180deg, #161f3b 0%, #0d1326 100%);
@@ -98,9 +85,11 @@ h1, h2, #turn-info, .btn-action { font-family: 'Cinzel', serif; }
 }
 .servant-card.active { border-color: var(--gold); transform: translateY(-12px); box-shadow: 0 15px 30px rgba(255, 215, 0, 0.25); }
 .servant-card.dead { opacity: 0.3; filter: grayscale(100%); transform: translateY(0); }
+.servant-card.controlled { border-color: #9b59b6; box-shadow: 0 0 20px rgba(155, 89, 182, 0.6); animation: shake 0.5s infinite; filter: hue-rotate(45deg); }
 .servant-name { font-size: 18px; font-weight: bold; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
 
-/* Bars & Controls */
+@keyframes shake { 0% { transform: translate(1px, 1px) rotate(0deg); } 10% { transform: translate(-1px, -2px) rotate(-1deg); } 20% { transform: translate(-3px, 0px) rotate(1deg); } 30% { transform: translate(3px, 2px) rotate(0deg); } 40% { transform: translate(1px, -1px) rotate(1deg); } 50% { transform: translate(-1px, 2px) rotate(-1deg); } 60% { transform: translate(-3px, 1px) rotate(0deg); } 70% { transform: translate(3px, 1px) rotate(-1deg); } 80% { transform: translate(-1px, -1px) rotate(1deg); } 90% { transform: translate(1px, 2px) rotate(0deg); } 100% { transform: translate(1px, -2px) rotate(-1deg); } }
+
 .bar-container { width: 100%; height: 22px; background: #111; border-radius: 6px; position: relative; overflow: hidden; margin-bottom: 12px; border: 1px solid #222; }
 .bar-fill { height: 100%; transition: width 0.4s; }
 .hp .bar-fill { background: var(--hp-color); }

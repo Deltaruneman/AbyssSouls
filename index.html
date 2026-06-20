@@ -15,7 +15,6 @@
         <p>Thành lập tổ đội chống lại hiện thân của bóng tối</p>
     </header>
 
-    <!-- MÀN HÌNH BẮT ĐẦU -->
     <section id="selection-screen">
         <h2 class="section-title" style="text-align: center; margin-bottom: 20px;">Khởi hành vào Vực Thẳm</h2>
         <div style="text-align: center; margin: 40px 0;">
@@ -24,28 +23,25 @@
         </div>
     </section>
 
-    <!-- MÀN HÌNH KHÁM PHÁ PLATFORMER -->
     <section id="platformer-screen" style="display: none;">
         <canvas id="gameCanvas" style="background: #000; display: block;"></canvas>
         <div id="exploration-log">
             Mũi tên Trái/Phải: Di chuyển | Mũi tên Lên: Nhảy / Nhảy đúp | Phím X: Tiếp tục hội thoại
         </div>  
     </section>
-        <div id="dialogue-box" style="display: none;">
-            <div id="dialogue-name">???</div>
-            <p id="dialogue-text">Nội dung hội thoại...</p>
-            <span class="dialogue-hint">Bấm phím [X] hoặc Click để tiếp tục ▼</span>
-        </div>
-  
+    
+    <div id="dialogue-box" style="display: none;">
+        <div id="dialogue-name">???</div>
+        <p id="dialogue-text">Nội dung hội thoại...</p>
+        <span class="dialogue-hint">Bấm phím [X] hoặc Click để tiếp tục ▼</span>
+    </div>
 
-    <!-- MÀN HÌNH CHỌN ĐỘI HÌNH TRƯỚC KHI ĐÁNH BOSS -->
     <section id="team-selection-screen" style="display: none;">
         <h2 style="text-align: center; color: var(--gold); margin-bottom: 10px; font-size: 32px; font-family: 'Cinzel', serif;">Chuẩn bị Đội Hình</h2>
         <p style="text-align: center; color: #ccc; margin-bottom: 30px;">Chọn đúng 3 Servant từ danh sách bạn đã thu thập để tiến vào tử chiến.</p>
         
         <div id="selection-roster" class="roster-grid">
-            <!-- Render danh sách nhân vật ở đây -->
-        </div>
+            </div>
 
         <div style="text-align: center; margin-top: 40px;">
             <p id="selection-count" style="font-size: 20px; font-weight: bold; margin-bottom: 15px; color: #fff;">Đã chọn: 0/3</p>
@@ -53,7 +49,6 @@
         </div>
     </section>
 
-    <!-- MÀN HÌNH CHIẾN ĐẤU -->
     <section id="battle-screen" style="display: none;">
         <div class="battlefield">
             <div class="boss-zone" id="boss-zone">
@@ -70,6 +65,7 @@
                             <span class="dot"></span><span class="dot"></span><span class="dot"></span>
                         </div>
                     </div>
+                    <div id="minions-zone" class="minions-zone"></div>
                 </div>
             </div>
 
@@ -92,7 +88,6 @@
     </section>
 </div>
 
-<!-- TEMPLATE NHÂN VẬT (Kích thước to đẹp cho 3 người) -->
 <template id="character-template">
     <div class="servant-card">
         <div class="servant-name"></div>
