@@ -25,7 +25,9 @@ h1, h2, #turn-info, .btn-action { font-family: 'Cinzel', serif; }
     border: none; border-radius: 12px; font-size: 20px; font-weight: bold; cursor: pointer; transition: 0.2s;
 }
 
-
+/* =========================================
+   PLATFORMER & DIALOGUE UI
+   ========================================= */
 #platformer-screen {
     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1000; background: #000;
 }
@@ -34,7 +36,7 @@ h1, h2, #turn-info, .btn-action { font-family: 'Cinzel', serif; }
 #exploration-log {
     position: absolute; top: 20px; left: 0; width: 100%; text-align: center;
     color: rgba(255, 255, 255, 0.7); font-size: 16px; font-weight: bold;
-    pointer-events: none; text-shadow: 1px 1px 2px #000; line-height: 1.5;
+    pointer-events: none; text-shadow: 1px 1px 2px #000;
 }
 
 #dialogue-box {
@@ -57,7 +59,9 @@ h1, h2, #turn-info, .btn-action { font-family: 'Cinzel', serif; }
 .dialogue-hint { display: block; text-align: right; font-size: 13px; color: #aaa; margin-top: 15px; animation: blink 1s infinite; }
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
-
+/* =========================================
+   TEAM SELECTION SCREEN
+   ========================================= */
 #team-selection-screen {
     background: rgba(5, 7, 20, 0.95); padding: 40px; border: 2px solid var(--border-color); border-radius: 16px;
 }
@@ -70,7 +74,9 @@ h1, h2, #turn-info, .btn-action { font-family: 'Cinzel', serif; }
 .roster-card.selected { background: #1e3a8a; border-color: var(--gold); box-shadow: 0 0 15px rgba(255, 215, 0, 0.4); transform: translateY(-5px); }
 #confirm-team-btn:disabled { background: #374151; border: none; box-shadow: none; cursor: not-allowed; opacity: 0.6; }
 
-
+/* =========================================
+   BATTLE UI (Trả về 3 Servant to đẹp)
+   ========================================= */
 .battlefield {
     display: flex; flex-direction: column; gap: 40px; background: rgba(5, 7, 20, 0.6);
     border: 2px solid #1a2342; border-radius: 20px; padding: 40px 20px; margin-bottom: 25px;
@@ -84,6 +90,7 @@ h1, h2, #turn-info, .btn-action { font-family: 'Cinzel', serif; }
 .dot { width: 14px; height: 14px; border: 2px solid #ff4757; border-radius: 50%; }
 .dot.filled { background: #ff4757; box-shadow: 0 0 10px #ff4757; }
 
+/* Trả lại Grid 3 Cột */
 .player-zone { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; width: 100%; max-width: 1000px; margin: 0 auto; }
 .servant-card {
     background: linear-gradient(180deg, #161f3b 0%, #0d1326 100%);
