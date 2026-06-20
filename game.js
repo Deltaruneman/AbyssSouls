@@ -516,6 +516,8 @@ function renderTeam() {
 
 function highlightTurn() {
     if (gameOver) return;
+    
+    // Bỏ qua Servant đã chết hoặc bị thao túng
     while (currentTurn < team.length && (team[currentTurn].hp <= 0 || team[currentTurn].controlled)) currentTurn++;
 
     if (currentTurn >= team.length) { 
@@ -556,10 +558,10 @@ async function playerAction(action) {
         damage = hitBoss(damage);
         gainNP(servant);
         
-        if (servant.classId === 3) { 
+        if (servant.classId === 3) { // Mage đánh thường AOE
             logPlayer(`🔥 ${servant.name} bắn cầu lửa AOE trúng Boss gây ${damage} sát thương!`);
             if (boss.minions && boss.minions.length > 0) {
-                boss.minions = []; 
+                boss.minions = []; // Mage dọn dẹp sạch binh lính
                 logPlayer(`🔥 Toàn bộ lính của Summoner Boss đã bị thiêu rụi bởi sát thương AOE!`);
             }
         } else {
@@ -593,7 +595,7 @@ function useSkill(servant) {
         case 1: 
             servant.defending = true; servant.status = "🛡️ Phản đòn"; logPlayer("Knight bật khiên phòng thủ."); 
             break;
-        case 2: 
+        case 2: // Archer (random 1-5 hit)
             let hitCount = Math.floor(Math.random() * 5) + 1;
             let totalDmg = 0;
             for(let i = 0; i < hitCount; i++) {
@@ -603,7 +605,7 @@ function useSkill(servant) {
             logPlayer(`🏹 Archer xả ${hitCount} mũi tên liên hoàn gây tổng ${totalDmg} sát thương.`); 
             popDamageText(document.getElementById("boss-zone"), totalDmg, false); 
             break;
-        case 3:
+        case 3: // Mage (AOE)
             dmg = hitBoss(servant.atk * 2); 
             boss.atkDebuff = 0.20; boss.atkDebuffTurn = 2; 
             logPlayer(`🔥 Mage dùng bão lửa AOE gây ${dmg} sát thương. Boss giảm ATK.`); 
@@ -653,11 +655,13 @@ async function bossAction() {
     boss.defending = false; 
     renderBoss();
 
-    let aliveTargets = team.filter(s => s.hp > 0 && !s.controlled); 
+    let aliveTargets = team.filter(s => s.hp > 0 && !s.controlled); // Chỉ lấy Servant phe mình
     if (aliveTargets.length === 0) { checkLose(); return; }
 
     logBoss(`👹 Boss đang tích tụ năng lượng (${boss.npCounter}/3).`);
     await sleep(800);
+    
+    // Xử lý NP của Boss
     if (boss.npCounter >= 3) {
         boss.npCounter = 0; 
         bossNP();
@@ -679,6 +683,8 @@ async function bossAction() {
     const cards = document.querySelectorAll(".servant-card");
     let modifier = 1 + getModifier(boss.classId, target.classId);
     let isUsingSkill = Math.random() < 0.35;
+    
+    // Boss dùng kỹ năng
     if (isUsingSkill) {
         playSFX("boss_skill");
         let dmg = 0;
@@ -725,7 +731,7 @@ async function bossAction() {
                 logBoss(`🔱 KỸ NĂNG: Boss phóng Ngọn Giáo Tuyệt Vọng xuyên thủng ${target.name} gây ${dmg} sát thương!`);
                 popDamageText(cards[targetIndex], dmg, true);
                 break;
-            case 8: 
+            case 8: // Summoner Boss
                 if (boss.mana >= 50) {
                     boss.mana -= 50;
                     let minionAtk = Math.floor(boss.atk / 3);
@@ -738,9 +744,11 @@ async function bossAction() {
                 break;
         }
     } else {
+        // Boss đánh thường
         playSFX("boss_attack");
         
         if (boss.classId === 3) { 
+            // Mage Boss đánh thường AOE
             logBoss(`👹 Boss Mage đánh thường AOE lên toàn đội!`);
             aliveTargets.forEach(t => {
                 let damage = Math.floor(effectiveAtk * (1 + getModifier(boss.classId, t.classId)));
@@ -750,6 +758,7 @@ async function bossAction() {
             });
         } 
         else if (boss.classId === 8) {
+            // Summoner đánh thường + Lính + Servant bị thao túng đánh cùng
             let damage = Math.floor(effectiveAtk * modifier);
             if (target.defending) damage = Math.floor(damage * 0.5);
             target.hp -= damage;
@@ -803,6 +812,7 @@ function bossNP() {
     if (aliveTargets.length === 0) return;
 
     if (boss.classId === 8) {
+        // NP của Summoner: Thao túng tâm trí 1 mục tiêu
         let target = aliveTargets[Math.floor(Math.random() * aliveTargets.length)];
         target.controlled = true;
         boss.controlledServants.push(target);
@@ -862,6 +872,7 @@ function victory() {
 }
 
 function checkLose() {
+    // Thất bại nếu không còn Servant phe ta (tất cả đều chết hoặc bị thao túng)
     if (!team.some(s => s.hp > 0 && !s.controlled)) { 
         endGame("THẤT BẠI... TOÀN ĐỘI ĐÃ BỊ TIÊU DIỆT HOẶC BỊ THAO TÚNG. Tâm trí của bạn bị Abyss chiếm đoạt."); 
         return true; 
