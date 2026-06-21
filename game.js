@@ -706,7 +706,7 @@ async function bossAction() {
         currentTurn = 0; document.getElementById("action-panel").style.pointerEvents = "auto"; highlightTurn(); return;
     }
 
-    let isUsingSkill = Math.random() < 0.35;
+    let isUsingSkill = Math.random() < 0.25;
     let target = aliveTargets[Math.floor(Math.random() * aliveTargets.length)];
     let targetIndex = team.findIndex(s => s.uid === target.uid);
     let effectiveAtk = boss.atk * (boss.atkDebuffTurn > 0 ? (1 - boss.atkDebuff) : 1);
@@ -820,7 +820,7 @@ async function bossAction() {
         } else {
             playSFX("boss_attack");
             let damage = Math.floor(effectiveAtk * modifier);
-            if (target.defending) damage = Math.floor(damage * 0.5);
+            if (target.defending) damage = Math.floor(damage * 0.3);
             target.hp -= damage;
             logBoss(`👹 Boss đánh thường ${target.name} gây ${damage} sát thương.`);
             popDamageText(cards[targetIndex], damage, false, false, true); 
