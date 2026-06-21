@@ -137,10 +137,10 @@ const roomMap = [
     [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
     [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
     [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-    [1,0,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0,8,0,1],
+    [1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,1,1,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,8,0,1],
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ];
@@ -293,14 +293,18 @@ function updatePlatformer() {
             if (currentTile === 3 && !npcTalked) {
                 npcTalked = true;
                 playerObj.vx = 0; 
-                showDialogue("Người Qua Đường Bí Ẩn", [
-                    "Ồ... Vậy là trận chiến đã kết thúc rồi sao?",
-                    "Cậu thực sự đã đẩy lùi được thực thể đó. Ngay cả khi Abyss vẫn đang rình rập.",
-                    "Lối ra ở ngay bức tường phía Đông. Hãy bảo trọng."
-                ]);
+                showDialogue("", [
+            { name: " Hàng sớm", text: "Oi Sơn, tối qua mày đi đâu à?" },
+            { name: "Sơn", text: "À ở tối qua tao có đi giải quyết chút chuyện, có chuyện gì sao Trọng ?" },
+            { name: "Trọng", text: "Ờ thì tao có nghe nói bên trường tối qua có gì đó quỷ dị, tao cũng không tin lắm đâu nhưng mà phòng thì vẫn hơn." },
+            { name: "Trọng", text: "Mà chắc chẳng sao đâu, nhớ chú ý buổi tối là được." },
+            { name: "Sơn", text: "Ờ, tao sẽ chú ý. Mà đi ăn sáng không." },
+            { name: "Trọng", text: "Nah tao có mì tôm rồi" },
+            { name: "Sơn", text: "Ờ vậy tao đi trước đây" },
+            { name: "Trọng", text: "... nghi ngờ vcl" }
+        ]);
             }
 
-            // XỬ LÝ CỬA RA NGOÀI (Tile 8)
             if (currentTile === 8) {
                 isExploring = false;
                 alert("Bạn đã thoát ra ngoài ánh sáng thành công. HẾT GAME!");
@@ -329,12 +333,12 @@ function updatePlatformer() {
                 else if (currentMap[r][c] === 9) ctx.drawImage(gameImages.gate, tileX, tileY, TILE_SIZE, TILE_SIZE);
                 // Vẽ NPC
                 else if (currentMap[r][c] === 3) {
-                    ctx.fillStyle = "#3498db"; // Màu xanh dương
+                    ctx.fillStyle = "#6edb34"; 
                     ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
                 }
                 // Vẽ Cửa ra
                 else if (currentMap[r][c] === 8) {
-                    ctx.fillStyle = "#f1c40f"; // Màu vàng
+                    ctx.fillStyle = "#f1c40f"; 
                     ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
                 }
             }
