@@ -86,7 +86,7 @@ let soulEnergy = 0; // Năng lượng
 
 let boss = {
     name: "The Nightmare Soul", classId: Math.floor(Math.random() * 8) + 1,
-    revealed: false, maxHp: 2000, hp: 2000, atk: 65, atkDebuff: 0, atkDebuffTurn: 0, npCounter: 0, defending: false, energy: 100
+    revealed: false, maxHp: 1000, hp: 1000, atk: 65, atkDebuff: 0, atkDebuffTurn: 0, npCounter: 0, defending: false, energy: 100
 };
 
 let enemies = [];
