@@ -122,6 +122,29 @@ const map2D = [
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ];
 
+// --- THÊM HỆ THỐNG MAP MỚI ---
+let currentMap = map2D; // Map hiện tại đang khám phá
+let npcTalked = false;  // Trạng thái hội thoại NPC
+
+// Map căn phòng nhỏ sau khi giết boss (Tile 3: NPC, Tile 8: Cửa)
+const roomMap = [
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0,8,0,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+];
+
 let playerObj = { stepTimer: 0, x: 100, y: 400, width: 30, height: 30, vx: 0, vy: 0, speed: 5, jumpPower: -11, grounded: false, maxJumps: 2, jumpsLeft: 2, canJump: true };
 let camera = { x: 0, y: 0 };
 let keys = { ArrowLeft: false, ArrowRight: false, ArrowUp: false };
@@ -159,7 +182,7 @@ function checkWall(x, y, width, height) {
     let top = Math.floor(y / TILE_SIZE), bottom = Math.floor((y + height - 1) / TILE_SIZE);
     for (let r = top; r <= bottom; r++) {
         for (let c = left; c <= right; c++) {
-            if (map2D[r] !== undefined && map2D[r][c] === 1) return true; 
+            if (currentMap[r] !== undefined && currentMap[r][c] === 1) return true; 
         }
     }
     return false;
@@ -177,6 +200,7 @@ function startExploration() {
     document.getElementById("platformer-screen").style.display = "block";
     resizeCanvas();
     
+    currentMap = map2D; // Đảm bảo bắt đầu với map chính
     soulEnergy = 0;
     selectedClasses = [];
     isExploring = true;
@@ -244,13 +268,13 @@ function updatePlatformer() {
         let centerX = Math.floor((playerObj.x + playerObj.width / 2) / TILE_SIZE);
         let centerY = Math.floor((playerObj.y + playerObj.height / 2) / TILE_SIZE);
         
-        if (map2D[centerY] !== undefined && map2D[centerY][centerX] !== undefined) {
-            let currentTile = map2D[centerY][centerX];
+        if (currentMap[centerY] !== undefined && currentMap[centerY][centerX] !== undefined) {
+            let currentTile = currentMap[centerY][centerX];
             
             // XỬ LÝ NHẶT NĂNG LƯỢNG (Tile 2)
             if (currentTile === 2) {
                 soulEnergy++;
-                map2D[centerY][centerX] = 0; 
+                currentMap[centerY][centerX] = 0; 
                 playSFX('collect');
                 showDialogue("", [` Nhặt được tinh thể năng lượng!`, `(Năng lượng hiện có: ${soulEnergy})`]);
             }
@@ -264,27 +288,55 @@ function updatePlatformer() {
                     isExploring = false; playSFX('gate'); openSelectionScreen(); return;
                 }
             }
+            
+            // XỬ LÝ NPC TRONG PHÒNG MỚI (Tile 3)
+            if (currentTile === 3 && !npcTalked) {
+                npcTalked = true;
+                playerObj.vx = 0; 
+                showDialogue("Người Qua Đường Bí Ẩn", [
+                    "Ồ... Vậy là trận chiến đã kết thúc rồi sao?",
+                    "Cậu thực sự đã đẩy lùi được thực thể đó. Ngay cả khi Abyss vẫn đang rình rập.",
+                    "Lối ra ở ngay bức tường phía Đông. Hãy bảo trọng."
+                ]);
+            }
+
+            // XỬ LÝ CỬA RA NGOÀI (Tile 8)
+            if (currentTile === 8) {
+                isExploring = false;
+                alert("Bạn đã thoát ra ngoài ánh sáng thành công. HẾT GAME!");
+                return;
+            }
         }
     }
 
     const zoomLevel = 2.2; 
     const viewWidth = canvas.width / zoomLevel;
     const viewHeight = canvas.height / zoomLevel;
-    camera.x = Math.max(0, Math.min(playerObj.x + (playerObj.width / 2) - (viewWidth / 2), (map2D[0].length * TILE_SIZE) - viewWidth));
-    camera.y = Math.max(0, Math.min(playerObj.y + (playerObj.height / 2) - (viewHeight / 2), (map2D.length * TILE_SIZE) - viewHeight));
+    camera.x = Math.max(0, Math.min(playerObj.x + (playerObj.width / 2) - (viewWidth / 2), (currentMap[0].length * TILE_SIZE) - viewWidth));
+    camera.y = Math.max(0, Math.min(playerObj.y + (playerObj.height / 2) - (viewHeight / 2), (currentMap.length * TILE_SIZE) - viewHeight));
     
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save(); ctx.scale(zoomLevel, zoomLevel);
     
-    for (let r = 0; r < map2D.length; r++) {
-        for (let c = 0; c < map2D[r].length; c++) {
+    for (let r = 0; r < currentMap.length; r++) {
+        for (let c = 0; c < currentMap[r].length; c++) {
             let tileX = c * TILE_SIZE - camera.x;
             let tileY = r * TILE_SIZE - camera.y;
             
             if (tileX > -TILE_SIZE && tileX < viewWidth && tileY > -TILE_SIZE && tileY < viewHeight) {
-                if (map2D[r][c] === 1) ctx.drawImage(gameImages.wall, tileX, tileY, TILE_SIZE, TILE_SIZE);
-                else if (map2D[r][c] === 2) ctx.drawImage(gameImages.servant, tileX, tileY, TILE_SIZE, TILE_SIZE); 
-                else if (map2D[r][c] === 9) ctx.drawImage(gameImages.gate, tileX, tileY, TILE_SIZE, TILE_SIZE);
+                if (currentMap[r][c] === 1) ctx.drawImage(gameImages.wall, tileX, tileY, TILE_SIZE, TILE_SIZE);
+                else if (currentMap[r][c] === 2) ctx.drawImage(gameImages.servant, tileX, tileY, TILE_SIZE, TILE_SIZE); 
+                else if (currentMap[r][c] === 9) ctx.drawImage(gameImages.gate, tileX, tileY, TILE_SIZE, TILE_SIZE);
+                // Vẽ NPC
+                else if (currentMap[r][c] === 3) {
+                    ctx.fillStyle = "#3498db"; // Màu xanh dương
+                    ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+                }
+                // Vẽ Cửa ra
+                else if (currentMap[r][c] === 8) {
+                    ctx.fillStyle = "#f1c40f"; // Màu vàng
+                    ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+                }
             }
         }
     }
@@ -325,12 +377,10 @@ function renderShop() {
     const roster = document.getElementById("selection-roster");
     roster.innerHTML = "";
 
-    // Danh sách 7 Class được phép mua
     const shopClasses = [1, 2, 3, 4, 5, 6, 7];
 
     shopClasses.forEach(classId => {
         let base = classData[classId];
-        // Xác định giá năng lượng: Assassin(4), Berserker(6), Mage(3) tốn 3 NL. Còn lại tốn 2.
         let cost = (classId === 3 || classId === 4 || classId === 6) ? 3 : 2;
 
         const card = document.createElement("div");
@@ -345,11 +395,9 @@ function renderShop() {
 
         card.onclick = () => {
             if (selectedClasses.includes(classId)) {
-                // Bỏ chọn (Hoàn lại năng lượng)
                 selectedClasses = selectedClasses.filter(id => id !== classId);
                 soulEnergy += cost;
             } else {
-                // Mua (Chiêu mộ)
                 if (selectedClasses.length >= 3) {
                     alert("Chỉ được chọn tối đa 3 Servant để xuất chiến!");
                     return;
@@ -360,9 +408,9 @@ function renderShop() {
                 }
                 selectedClasses.push(classId);
                 soulEnergy -= cost;
-                playSFX('collect'); // Bật tiếng khi mua thành công
+                playSFX('collect'); 
             }
-            renderShop(); // Vẽ lại để cập nhật số năng lượng và viền vàng
+            renderShop(); 
         };
         roster.appendChild(card);
     });
@@ -372,7 +420,6 @@ function renderShop() {
 }
 
 function confirmTeamAndBattle() {
-    // Chuyển mảng selectedClasses thành mảng object team để đánh nhau
     team = selectedClasses.map(classId => {
         let base = classData[classId];
         return {
@@ -676,7 +723,6 @@ async function bossAction() {
         if (isUsingSkill && boss.energy >= 50) {
             boss.energy -= 50;
             
-            // Nếu chưa đủ 2 lính -> Triệu hồi thêm
             if (activeMinions < 2) {
                 logBoss("🔮 KỸ NĂNG: Summoner dùng 50 năng lượng triệu hồi Binh Lính và thao túng linh hồn!");
                 let toSummon = 2 - activeMinions;
@@ -692,7 +738,6 @@ async function bossAction() {
                     logSystem(`⚠️ CẢNH BÁO: ${mindControlTarget.name} đã bị Summoner thao túng và phản bội đội!`);
                 }
             } 
-            // Nếu đã có đủ 2 lính -> Dùng AOE
             else {
                 logBoss("🔮 KỸ NĂNG: Summoner giải phóng ma thuật Hắc Ám diện rộng (AOE)!");
                 aliveTargets.forEach(t => {
@@ -704,16 +749,13 @@ async function bossAction() {
                 });
             }
         } 
-        // Đánh thường
         else {
             logBoss("👹 Summoner ra lệnh tổng tấn công!");
             
-            // 1. Boss đánh
             let bDmg = Math.floor(effectiveAtk); if(target.defending) bDmg = Math.floor(bDmg*0.5);
             target.hp -= bDmg; 
             popDamageText(cards[targetIndex], bDmg, false, false, true);
 
-            // 2. Binh lính đánh
             enemies.forEach(e => {
                 if (e.name === "Binh Lính" && e.hp > 0) {
                     let alive = team.filter(s => s.hp > 0 && !s.controlled);
@@ -728,7 +770,6 @@ async function bossAction() {
                 }
             });
 
-            // 3. Kẻ bị thao túng đánh phe ta
             if (controlledServant && controlledServant.hp > 0) {
                 let alive = team.filter(s => s.hp > 0 && !s.controlled);
                 if (alive.length > 0) {
@@ -839,16 +880,42 @@ function victory() {
             { name: "The Nightmare Soul", text: "Nó đến từ Abyss, thứ ma thuật lấy linh hồn kẻ khác làm sức mạnh của ngươi." },
             { name: "The Nightmare Soul", text: "Ha ha ha, rồi thì chính tâm trí ngươi sẽ dần bị tha hóa không khác gì chúng ta." },
             { name: "???", text: "Ta hiểu nhưng..." },
-            { name: "Hệ Thống", text: "🎉 CHIẾN THẮNG! Bạn đã bảo vệ thành công thế giới khỏi The Abyss!" }
+            { name: "Hệ Thống", text: "🎉 BOSS ĐÃ BỊ TIÊU DIỆT! Không gian xung quanh đang thay đổi..." }
         ]);
 
         let checkDialog = setInterval(() => {
             if (!isDialogueActive) {
                 clearInterval(checkDialog);
-                alert("🎉 CHIẾN THẮNG! BOSS ĐÃ BỊ TIÊU DIỆT!");
+                enterPostBossRoom(); // CHUYỂN ĐẾN HÀM CHUYỂN CẢNH
             }
         }, 500);
     } 
+}
+
+// --- HÀM MỚI: CHUYỂN CẢNH SAU KHI ĐÁNH BOSS ---
+function enterPostBossRoom() {
+    // Ẩn màn hình chiến đấu, hiện lại màn hình platformer
+    document.getElementById("battle-screen").style.display = "none";
+    document.getElementById("platformer-screen").style.display = "block";
+    
+    // Đổi sang Map căn phòng
+    currentMap = roomMap;
+    
+    // Reset lại vị trí người chơi sang góc trái map mới
+    playerObj.x = 80; 
+    playerObj.y = 400;
+    playerObj.vx = 0; 
+    playerObj.vy = 0;
+    
+    isExploring = true;
+    npcTalked = false; // Đặt lại trạng thái chưa nói chuyện NPC
+
+    showDialogue("Hệ Thống", [
+        "Bạn đã được dịch chuyển đến một hầm mộ bằng đá...",
+        "Có một người đang đứng gần đó. Hãy thử đi lại gần để xem."
+    ]);
+    
+    requestAnimationFrame(updatePlatformer);
 }
 
 function checkLose() {
