@@ -223,6 +223,9 @@ function startExploration() {
     
     window.addEventListener("keydown", (e) => { 
         if (e.key === 'x' || e.key === 'X') { if (isDialogueActive) nextDialogue(); } 
+        else if (e.key === 'e' || e.key === 'E') {
+        interactNPC();
+        }
         else { if (!isDialogueActive && keys.hasOwnProperty(e.code)) keys[e.code] = true; }
     });
     window.addEventListener("keyup", (e) => { 
@@ -238,7 +241,33 @@ function startExploration() {
     ]);
     requestAnimationFrame(updatePlatformer);
 }
+function interactNPC() {
+    if (!isExploring || isDialogueActive) return;
+    let centerX = Math.floor((playerObj.x + playerObj.width / 2) / TILE_SIZE);
+    let centerY = Math.floor((playerObj.y + playerObj.height / 2) / TILE_SIZE);
+    
+    if (currentMap[centerY] !== undefined && currentMap[centerY][centerX] !== undefined) {
+        let currentTile = currentMap[centerY][centerX];
 
+        if (currentTile === 4) {
+            playerObj.vx = 0;
+            showDialogue("Cô bán bánh mì", ["Con mua bánh mì đi con, con không mua cô với chú chặng đường đấy!", "Đùa thôi nha con."]);
+        } else if (currentTile === 5) {
+            playerObj.vx = 0;
+            showDialogue("Cơm chiên Vũ Sigma", ["Em đến ăn cơm à?", "Tiếc quá, anh lại đống cửa rồi."]);
+
+        } else if (currentTile === 6) {
+            playerObj.vx = 0;
+             showDialogue("", [
+            { name: "Chủ tiệm tạp hóa", text: "Lô iem, lại mua mì tôm à" },
+            { name: "Sơn", text: "Dạ cho em 2 gối mì 1 xúc xích và 5k nước đá ạ." },
+            { name: "Chủ tiệm tạp hóa", text: "Ok, đây em." },
+            { name: "Sơn", text: "chuyển khoản." }
+            
+        ]);
+        }
+    }
+}
 function updatePlatformer() {
     if (!isExploring) return;
     const canvas = document.getElementById("gameCanvas");
