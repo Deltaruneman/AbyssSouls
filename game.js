@@ -355,11 +355,20 @@ function updatePlatformer() {
         ]);
             }
 
-            if (currentTile === 8) {
-                isExploring = false;
-                alert("Bạn đã thoát ra ngoài ánh sáng thành công. HẾT GAME!");
-                return;
-            }
+           if (currentTile === 8) {
+    if (currentMap === roomMap) {
+        currentMap = townMap;
+        playerObj.x = 80; 
+        playerObj.y = 400;
+        showDialogue("Hệ Thống", ["Bạn đã được dịch chuyển đến Thị Trấn.", "Hãy lại gần các NPC và nhấn phím [E] để trò chuyện."]);
+    } else {
+        currentMap = roomMap;
+        playerObj.x = 600; 
+        playerObj.y = 400;
+       
+        return;
+    }
+}
         }
     }
 
