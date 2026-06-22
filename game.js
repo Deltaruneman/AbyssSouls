@@ -11,7 +11,6 @@ const audioAssets = {
     collect: 'assets/sfx/collect.mp3', 
     gate: 'assets/sfx/gate.mp3'
 };
-
 for (let i = 1; i <= 7; i++) {
     audioAssets[`attack_${i}`] = `assets/sfx/attack_${i}.mp3`;
     audioAssets[`skill_${i}`] = `assets/sfx/skill_${i}.mp3`;
@@ -138,7 +137,7 @@ const roomMap = [
     [1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
     [1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
     [1,1,1,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-    [1,0,0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,8,0,1],
+    [1,0,0,0,7,0,0,0,0,0,3,0,0,0,0,0,0,8,0,1],
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ];
@@ -156,7 +155,7 @@ const townMap = [
     [1,1,1,1,1,0,0,0,0,1,1,1,1,1,0,0,0,1,1,1],
     [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
     [1,1,0,0,1,1,1,0,0,0,1,1,1,0,0,0,0,1,1,1],
-    [1,0,0,4,0,0,0,0,5,0,0,0,0,6,0,0,0,8,0,1], 
+    [1,0,0,4,0,0,0,0,5,0,0,0,0,6,0,0,7,8,0,1], 
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ];
@@ -263,8 +262,14 @@ function interactNPC() {
             { name: "Sơn", text: "Dạ cho em 2 gối mì 1 xúc xích và 5k nước đá ạ." },
             { name: "Chủ tiệm tạp hóa", text: "Ok, đây em." },
             { name: "Sơn", text: "chuyển khoản." }
-            
+          
         ]);
+        }else if (currentTile === 7) {
+            playerObj.vx = 0;
+            showDialogue("Sơn", ["... Chết tiệt, mana tiêu hao quá nhiều rồi. Mình thật sự không chịu nổi nữa..."]);
+            showDialogue("Sơn", ["Mình cần linh hồn con người. Chết tiệt!!"]);
+            showDialogue("Sơn", ["..(Tự đâm bản thân để giữ bình tĩnh)"]);
+            showDialogue("Sơn", ["Phù phù. Mình cần ăn thôi."]);
         }
     }
 }
