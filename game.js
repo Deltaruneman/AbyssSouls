@@ -266,8 +266,8 @@ function interactNPC() {
         ]);
         }else if (currentTile === 7) {
             playerObj.vx = 0;
-            showDialogue("Sơn", ["... Chết tiệt, mana tiêu hao quá nhiều rồi. Mình thật sự không chịu nổi nữa..."]);
-            showDialogue("Sơn", ["Mình cần linh hồn con người. Chết tiệt!!"]);
+            showDialogue("Sơn", ["... Chết tiệt, mana tiêu hao quá nhiều rồi. Mình thật sự không chịu nổi nữa...","Mình cần linh hồn con người. Chết tiệt!!"]);
+           playSFX("attack", 2); 
             showDialogue("Sơn", ["..(Tự đâm bản thân để giữ bình tĩnh)"]);
             showDialogue("Sơn", ["Phù phù. Mình cần ăn thôi."]);
         }
@@ -760,7 +760,7 @@ async function bossAction() {
         currentTurn = 0; document.getElementById("action-panel").style.pointerEvents = "auto"; highlightTurn(); return;
     }
 
-    let isUsingSkill = Math.random() < 0.25;
+    let isUsingSkill = Math.random() < 0.35;
     let target = aliveTargets[Math.floor(Math.random() * aliveTargets.length)];
     let targetIndex = team.findIndex(s => s.uid === target.uid);
     let effectiveAtk = boss.atk * (boss.atkDebuffTurn > 0 ? (1 - boss.atkDebuff) : 1);
@@ -874,7 +874,7 @@ async function bossAction() {
         } else {
             playSFX("boss_attack");
             let damage = Math.floor(effectiveAtk * modifier);
-            if (target.defending) damage = Math.floor(damage * 0.3);
+            if (target.defending) damage = Math.floor(damage * 0.5);
             target.hp -= damage;
             logBoss(`👹 Boss đánh thường ${target.name} gây ${damage} sát thương.`);
             popDamageText(cards[targetIndex], damage, false, false, true); 
@@ -964,9 +964,9 @@ function enterPostBossRoom() {
     isExploring = true;
     npcTalked = false; // Đặt lại trạng thái chưa nói chuyện NPC
 
-    showDialogue("Hệ Thống", [
-        "Bạn đã được dịch chuyển đến một hầm mộ bằng đá...",
-        "Có một người đang đứng gần đó. Hãy thử đi lại gần để xem."
+    showDialogue("???", [
+        "Mình kiệt sứ rồi...",
+        "Phải về ngay thôi!"
     ]);
     
     requestAnimationFrame(updatePlatformer);
