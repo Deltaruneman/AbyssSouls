@@ -264,12 +264,6 @@ function interactNPC() {
             { name: "Sơn", text: "chuyển khoản." }
           
         ]);
-        }else if (currentTile === 7) {
-            playerObj.vx = 0;
-            showDialogue("Sơn", ["... Chết tiệt, mana tiêu hao quá nhiều rồi. Mình thật sự không chịu nổi nữa...","Mình cần linh hồn con người. Chết tiệt!!"]);
-           playSFX("attack", 2); 
-            showDialogue("Sơn", ["..(Tự đâm bản thân để giữ bình tĩnh)"]);
-            showDialogue("Sơn", ["Phù phù. Mình cần ăn thôi."]);
         }
     }
 }
@@ -354,14 +348,22 @@ function updatePlatformer() {
             { name: "Trọng", text: "... nghi ngờ vcl" }
         ]);
             }
+if(currentTile === 7&& npcTalked) {
 
+            playerObj.vx = 0;
+            showDialogue("Sơn", ["... Chết tiệt, mana tiêu hao quá nhiều rồi. Mình thật sự không chịu nổi nữa...","Mình cần linh hồn con người. Chết tiệt!!"]);
+           playSFX("attack", 2); 
+            showDialogue("Sơn", ["..(Tự đâm bản thân để giữ bình tĩnh)"]);
+            showDialogue("Sơn", ["Phù phù. Mình cần ăn thôi."]);
+
+}
            if (currentTile === 8) {
     if (currentMap === roomMap) {
         currentMap = townMap;
         playerObj.x = 80; 
         playerObj.y = 400;
         showDialogue("Hệ Thống", ["Bạn đã được dịch chuyển đến Thị Trấn.", "Hãy lại gần các NPC và nhấn phím [E] để trò chuyện."]);
-    } else {
+    } else if ( currentMap === townMap) {
         currentMap = roomMap;
         playerObj.x = 600; 
         playerObj.y = 400;
@@ -393,6 +395,18 @@ function updatePlatformer() {
                 // Vẽ NPC
                 else if (currentMap[r][c] === 3) {
                     ctx.fillStyle = "#6edb34"; 
+                    ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+                }
+                else if (currentMap[r][c] === 4) {
+                    ctx.fillStyle = "#dbcd34"; 
+                    ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+                }
+                else if (currentMap[r][c] === 5) {
+                    ctx.fillStyle = "#344ddb"; 
+                    ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+                }
+                else if (currentMap[r][c] === 6) {
+                    ctx.fillStyle = "#db3490"; 
                     ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
                 }
                 // Vẽ Cửa ra
@@ -971,7 +985,7 @@ function enterPostBossRoom() {
     playerObj.vy = 0;
     
     isExploring = true;
-    npcTalked = false; // Đặt lại trạng thái chưa nói chuyện NPC
+    npcTalked = false; 
 
     showDialogue("???", [
         "Mình kiệt sứ rồi...",
