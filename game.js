@@ -300,7 +300,7 @@ function interactNPC() {
             { name: "Chủ tiệm tạp hóa", text: "Lô iem, lại mua mì tôm à" },
             { name: "Sơn", text: "Dạ cho em 2 gối mì 1 xúc xích và 5k nước đá ạ." },
             { name: "Chủ tiệm tạp hóa", text: "Ok, đây em." },
-            { name: "Sơn", text: "chuyển khoản." }
+            { name: "Sơn", text: "(chuyển khoản)." }
           
         ]);
         }
@@ -384,14 +384,13 @@ function updatePlatformer() {
             { name: "Sơn", text: "Ờ, tao sẽ chú ý. Mà đi ăn sáng không." },
             { name: "Trọng", text: "Nah tao có mì tôm rồi" },
             { name: "Sơn", text: "Ờ vậy tao đi trước đây" },
-            { name: "Trọng", text: "... nghi ngờ vcl" }
+            { name: "Trọng", text: "... (nghi ngờ )" }
         ]);
             }
 if(currentTile === 7&& npcTalked) {
 
             playerObj.vx = 0;
             showDialogue("Sơn", ["... Chết tiệt, mana tiêu hao quá nhiều rồi. Mình thật sự không chịu nổi nữa...","Mình cần linh hồn con người. Chết tiệt!!"]);
-           playSFX("attack", 2); 
             showDialogue("Sơn", ["..(Tự đâm bản thân để giữ bình tĩnh)"]);
             showDialogue("Sơn", ["Phù phù. Mình cần ăn thôi."]);
 
