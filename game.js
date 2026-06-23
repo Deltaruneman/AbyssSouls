@@ -54,14 +54,13 @@ document.addEventListener("DOMContentLoaded", () => {
    GAME COMPATIBILITY & CONFIGURATION
    ========================================================================== */
 const classData = {
-    1:{ id:1, name:"Knight", icon:"🛡️", spd:60, hp:550, atk:40 },
-    2:{ id:2, name:"Archer", icon:"🏹", spd:90, hp:250, atk:60 },
-    3:{ id:3, name:"Mage", icon:"🔥", spd:70, hp:320, atk:55 },
-    4:{ id:4, name:"Assassin", icon:"🗡️", spd:100, hp:280, atk:65 },
-    5:{ id:5, name:"Healer", icon:"💚", spd:40, hp:400, atk:20 },
-    6:{ id:6, name:"Berserker", icon:"💀", spd:50, hp:220, atk:85 },
-    7:{ id:7, name:"Lancer", icon:"🔱", spd:80, hp:450, atk:48 },
-    8:{ id:8, name:"Summoner", icon:"🔮", spd:30, hp:300, atk:50 } 
+    1:{ id:1, name:"Knight", icon:"🛡️", spd:60, hp:550, atk:40, npGain: 15 },      
+    2:{ id:2, name:"Archer", icon:"🏹", spd:90, hp:250, atk:60, npGain: 25 },     
+    3:{ id:3, name:"Mage", icon:"🔥", spd:70, hp:320, atk:55, npGain: 35 },       
+    4:{ id:4, name:"Assassin", icon:"🗡️", spd:100, hp:280, atk:65, npGain: 30 },   
+    5:{ id:5, name:"Healer", icon:"💚", spd:40, hp:400, atk:20, npGain: 25 },       
+    7:{ id:7, name:"Lancer", icon:"🔱", spd:80, hp:450, atk:48, npGain: 20 },      
+    8:{ id:8, name:"Summoner", icon:"🔮", spd:30, hp:300, atk:50, npGain: 30 }     
 };
 let battleQueue = [];
 let queueIndex = 0;
@@ -739,7 +738,11 @@ function highlightTurn() {
     renderTeam();
 }
 
-function gainNP(servant) { servant.np = Math.min(100, servant.np + 25); }
+function gainNP(servant) {
+    let gainAmount = classData[servant.classId]?.npGain || 25;
+    servant.np = Math.min(100, servant.np + gainAmount);
+    logSystem(`✨ ${servant.icon} ${servant.name} tích lũy thêm +${gainAmount} NP.`);
+}
 
 function revealBossCheck() {
     if (!boss.revealed && boss.hp <= boss.maxHp * 0.7) {
