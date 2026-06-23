@@ -969,16 +969,12 @@ function victory() {
     } 
 }
 
-// --- HÀM MỚI: CHUYỂN CẢNH SAU KHI ĐÁNH BOSS ---
 function enterPostBossRoom() {
     // Ẩn màn hình chiến đấu, hiện lại màn hình platformer
     document.getElementById("battle-screen").style.display = "none";
     document.getElementById("platformer-screen").style.display = "block";
     
-    // Đổi sang Map căn phòng
     currentMap = roomMap;
-    
-    // Reset lại vị trí người chơi sang góc trái map mới
     playerObj.x = 80; 
     playerObj.y = 400;
     playerObj.vx = 0; 
@@ -988,7 +984,7 @@ function enterPostBossRoom() {
     npcTalked = false; 
 
     showDialogue("???", [
-        "Mình kiệt sứ rồi...",
+        "Mình kiệt sức rồi...",
         "Phải về ngay thôi!"
     ]);
     

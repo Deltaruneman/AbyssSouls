@@ -92,6 +92,82 @@
     </section>
 </div>
 
+<div id="esc-menu" class="modal-overlay" style="display: none;">
+    <div class="esc-menu-content">
+        <h2>⏸️ TẠM DỪNG</h2>
+        <button class="menu-btn" onclick="toggleESCMenu()">TIẾP TỤC</button>
+        <button class="menu-btn" onclick="openTutorial()">HƯỚNG DẪN CHI TIẾT</button>
+        <button class="menu-btn" onclick="openSettings()">CÀI ĐẶT</button>
+        <button class="menu-btn quit-btn" onclick="returnToMain()">MÀN HÌNH CHÍNH</button>
+    </div>
+</div>
+<div id="tutorial-overlay" class="modal-overlay" style="display: none;">
+    <div class="tutorial-content">
+        <div class="tutorial-header">
+            <h2>📜 CẨM NANG VỰC THẲM (TUTORIAL)</h2>
+            <button class="close-btn" onclick="closeTutorial()">✕ CĐNG</button>
+        </div>
+        <div class="tutorial-body">
+            <h3>1. ⏳ HỆ THỐNG TỐC ĐỘ & LƯỢT ĐÁNH (MỚI)</h3>
+            <p>Trận chiến không còn chia theo lượt phe Ta/Địch riêng rẽ. Tất cả các đơn vị trên chiến trường (bao gồm 3 Anh Linh và Boss/Quái vật) sẽ được xếp chung vào <strong>Hành Trình Lượt Đánh</strong> dựa theo chỉ số Tốc độ (Speed).</p>
+            <p>Đơn vị có tốc độ cao nhất sẽ xuất chiêu đầu tiên. Thứ tự phân cấp tốc độ cố định từ cao đến thấp:</p>
+            <div class="speed-tier-box">
+                <span class="tier spd-1">⚡ Assassin (Tốc 100)</span> ➔ 
+                <span class="tier spd-2">🏹 Archer (Tốc 90)</span> ➔ 
+                <span class="tier spd-3">🔱 Lancer (Tốc 80)</span> ➔ 
+                <span class="tier spd-4">🔥 Mage (Tốc 70)</span> ➔ 
+                <span class="tier spd-5">🛡️ Knight (Tốc 60)</span> ➔ 
+                <span class="tier spd-6">💀 Berserker (Tốc 50)</span> ➔ 
+                <span class="tier spd-7">💚 Healer (Tốc 40)</span> ➔ 
+                <span class="tier spd-8">🔮 Summoner [Boss] (Tốc 30)</span>
+            </div>
+            <p>💡 <em>Mẹo chiến thuật:</em> Sở hữu các lớp nhân vật tốc độ cao giúp bạn hạ gục quái triệu hồi của Boss trước khi chúng kịp hành động!</p>
+
+            <h3>2. ⚔️ HỆ THỐNG TƯƠNG KHẮC CLASS</h3>
+            <p>Gây thêm <strong>+30% sát thương</strong> nếu khắc hệ, ngược lại giảm <strong>-20% sát thương</strong> nếu bị khắc hệ:</p>
+            <ul>
+                <li>🛡️ <strong>Knight</strong> khắc 🗡️ <strong>Assassin</strong></li>
+                <li>🗡️ <strong>Assassin</strong> khắc 🔥 <strong>Mage</strong></li>
+                <li>🔥 <strong>Mage</strong> khắc 💀 <strong>Berserker</strong></li>
+                <li>💀 <strong>Berserker</strong> khắc 🏹 <strong>Archer</strong></li>
+                <li>🏹 <strong>Archer</strong> khắc 💚 <strong>Healer</strong></li>
+                <li>💚 <strong>Healer</strong> khắc 🛡️ <strong>Knight</strong></li>
+                <li>🔱 <strong>Lancer</strong> khắc 🏹 <strong>Archer</strong> nhưng bị khắc bởi 🏹 <strong>Archer</strong> ở chiều ngược lại (Tương khắc đặc biệt).</li>
+            </ul>
+
+            <h3>3. 🗺️ THÁM HIỂM & CHIÊU MỘ</h3>
+            <ul>
+                <li>Dùng các phím <strong>Mũi tên</strong> để di chuyển và Nhảy/Nhảy đúp trong hầm ngục. Nhấn <strong>[E]</strong> để tương tác với NPC tại thị trấn.</li>
+                <li>Thu thập các Khối linh hồn (Soul Energy) trên bản đồ. Bạn cần tối thiểu <strong>6 Năng lượng</strong> để mở Cổng Boss và chiêu mộ đủ tổ đội 3 người.</li>
+            </ul>
+
+            <h3>4. ✨ KỸ NĂNG & TUYỆT KỸ (NP)</h3>
+            <ul>
+                <li><strong>Đánh thường:</strong> Gây sát thương cơ bản và hồi <strong>25 NP</strong>.</li>
+                <li><strong>Skill (-20 NP):</strong> Tiêu hao lượng nhỏ năng lượng để kích hoạt kỹ năng đặc trưng (Ví dụ: Healer hồi máu đội, Knight bật phản đòn).</li>
+                <li><strong>Noble Phantasm (100% NP):</strong> Giải phóng Tuyệt kỹ tối thượng với lượng sát thương khổng lồ hoặc hiệu ứng thay đổi cục diện trận đấu!</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div id="settings-overlay" class="modal-overlay" style="display: none;">
+    <div class="esc-menu-content settings-box">
+        <h2>⚙️ CÀI ĐẶT GAME</h2>
+        <div class="setting-row">
+            <label>Âm lượng SFX:</label>
+            <input type="range" min="0" max="100" value="80" id="sfx-volume" onchange="updateVolume(this.value)">
+        </div>
+        <div class="setting-row">
+            <label>Chế độ đồ họa:</label>
+            <select>
+                <option>Sắc nét (High)</option>
+                <option>Mượt mà (Performance)</option>
+            </select>
+        </div>
+        <button class="menu-btn" onclick="closeSettings()">LƯU & ĐÓNG</button>
+    </div>
+</div>
 <template id="character-template">
     <div class="servant-card">
         <div class="servant-name"></div>
