@@ -42,7 +42,7 @@ document.addEventListener("DOMContentLoaded", () => {
         startBtn.style.cursor = "wait";
 
         preloadAllAudio().then(() => {
-            startBtn.innerText = "BẮT ĐẦU KHÁM PHÁ";
+            startBtn.innerText = "BẮT ĐẦU";
             startBtn.disabled = false;
             startBtn.style.opacity = "1";
             startBtn.style.cursor = "pointer";
