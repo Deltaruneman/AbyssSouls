@@ -9,7 +9,9 @@ const audioAssets = {
     boss_attack: 'assets/sfx/boss_attack.mp3',
     boss_np: 'assets/sfx/boss_np.mp3',
     collect: 'assets/sfx/collect.mp3', 
-    gate: 'assets/sfx/gate.mp3'
+    gate: 'assets/sfx/gate.mp3',
+ 
+
 };
 for (let i = 1; i <= 7; i++) {
     audioAssets[`attack_${i}`] = `assets/sfx/attack_${i}.mp3`;
@@ -97,11 +99,13 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 /* ==========================================================================
    PLATFORMER ENGINE 
    ========================================================================== */
-const gameImages = { wall: new Image(), servant: new Image(), gate: new Image(), player: new Image() };
+const gameImages = { wall: new Image(), servant: new Image(), gate: new Image(), player: new Image(), mapBG: new Image(), townBG: new Image() };
 gameImages.wall.src = 'assets/images/wall.png';       
 gameImages.servant.src = 'assets/images/soul.png'; 
 gameImages.gate.src = 'assets/images/gate.png';      
 gameImages.player.src = 'assets/images/player.png';   
+gameImages.mapBG.src = 'assets/images/map_bg.png';   
+gameImages.townBG.src = 'assets/images/town_bg.png';
 
 const TILE_SIZE = 40;
 const map2D = [
@@ -418,6 +422,11 @@ if(currentTile === 7&& npcTalked) {
     camera.y = Math.max(0, Math.min(playerObj.y + (playerObj.height / 2) - (viewHeight / 2), (currentMap.length * TILE_SIZE) - viewHeight));
     
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (currentMap === map2D) {
+    ctx.drawImage(gameImages.mapBG, 0, 0, canvas.width, canvas.height);
+} else if (currentMap === townMap) {
+    ctx.drawImage(gameImages.townBG, 0, 0, canvas.width, canvas.height);
+}
     ctx.save(); ctx.scale(zoomLevel, zoomLevel);
     
     for (let r = 0; r < currentMap.length; r++) {
