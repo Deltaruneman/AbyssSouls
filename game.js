@@ -9,10 +9,7 @@ const audioAssets = {
     boss_attack: 'assets/sfx/boss_attack.mp3',
     boss_np: 'assets/sfx/boss_np.mp3',
     collect: 'assets/sfx/collect.mp3', 
-    gate: 'assets/sfx/gate.mp3',
-    mapBD: 'assets/sfx/mapBD.mp3',
-    townBD: 'assets/sfx/townBD.mp3',
-
+    gate: 'assets/sfx/gate.mp3'
 };
 for (let i = 1; i <= 7; i++) {
     audioAssets[`attack_${i}`] = `assets/sfx/attack_${i}.mp3`;
