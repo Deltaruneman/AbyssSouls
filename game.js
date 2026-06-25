@@ -613,10 +613,10 @@ function startBattle() {
     logSystem("⚔️ Trận chiến bắt đầu! Vòng tuần hoàn tốc độ đã thiết lập.");
     renderBoss(); renderTeam();
     generateBattleQueue();
-    showDialogue("", [
-        { name: "The Nightmare Soul", text: "Chết tiệt, thế quái nào sức mạnh của cả UIT lại mạnh đến như vậy?" },
-        { name: "The Nightmare Soul", text: "Không sao, Abyss Gate sẽ được mở ra một lần nữa!" },
-        { name: "???", text: "Triệu hồi Anh Linh!!! Hãy tiến lên theo thứ tự tốc độ!" }
+    showDialogue("The Nightmare Soul", [
+        "Chết tiệt, thế quái nào sức mạnh của cả UIT lại mạnh đến như vậy?",
+        "Không sao, Abyss Gate sẽ được mở ra một lần nữa!",
+        "Triệu hồi Anh Linh!!! Hãy tiến lên theo thứ tự tốc độ!"
     ]);
     nextTurnInQueue();
 }
