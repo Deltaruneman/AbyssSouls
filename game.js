@@ -58,7 +58,8 @@ const classData = {
     2:{ id:2, name:"Archer", icon:"🏹", spd:90, hp:250, atk:60, npGain: 25 },     
     3:{ id:3, name:"Mage", icon:"🔥", spd:70, hp:320, atk:55, npGain: 35 },       
     4:{ id:4, name:"Assassin", icon:"🗡️", spd:100, hp:280, atk:65, npGain: 30 },   
-    5:{ id:5, name:"Healer", icon:"💚", spd:40, hp:400, atk:20, npGain: 25 },       
+    5:{ id:5, name:"Healer", icon:"💚", spd:40, hp:400, atk:20, npGain: 25 },  
+    6:{ id:6, name:"Berserker", icon:"🛡️", spd:50, hp:300, atk:35, npGain: 15 },     
     7:{ id:7, name:"Lancer", icon:"🔱", spd:80, hp:450, atk:48, npGain: 20 },      
     8:{ id:8, name:"Summoner", icon:"🔮", spd:30, hp:300, atk:50, npGain: 30 }     
 };
@@ -613,10 +614,10 @@ function startBattle() {
     logSystem("⚔️ Trận chiến bắt đầu! Vòng tuần hoàn tốc độ đã thiết lập.");
     renderBoss(); renderTeam();
     generateBattleQueue();
-    showDialogue("The Nightmare Soul", [
-        "Chết tiệt, thế quái nào sức mạnh của cả UIT lại mạnh đến như vậy?",
-        "Không sao, Abyss Gate sẽ được mở ra một lần nữa!",
-        "Triệu hồi Anh Linh!!! Hãy tiến lên theo thứ tự tốc độ!"
+    showDialogue("", [
+        { name: "The Nightmare Soul", text: "Chết tiệt, thế quái nào sức mạnh của cả UIT lại mạnh đến như vậy?" },
+        { name: "The Nightmare Soul", text: "Không sao, Abyss Gate sẽ được mở ra một lần nữa!" },
+        { name: "???", text: "Triệu hồi Anh Linh!!! Hãy tiến lên theo thứ tự tốc độ!" }
     ]);
     nextTurnInQueue();
 }
