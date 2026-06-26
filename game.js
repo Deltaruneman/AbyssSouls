@@ -54,15 +54,20 @@ document.addEventListener("DOMContentLoaded", () => {
    GAME COMPATIBILITY & CONFIGURATION
    ========================================================================== */
 const classData = {
-    1:{ id:1, name:"Knight", icon:"🛡️", spd:60, hp:550, atk:40, npGain: 15 },      
-    2:{ id:2, name:"Archer", icon:"🏹", spd:90, hp:250, atk:60, npGain: 25 },     
-    3:{ id:3, name:"Mage", icon:"🔥", spd:70, hp:320, atk:55, npGain: 35 },       
-    4:{ id:4, name:"Assassin", icon:"🗡️", spd:100, hp:280, atk:65, npGain: 30 },   
-    5:{ id:5, name:"Healer", icon:"💚", spd:40, hp:400, atk:20, npGain: 25 },  
-    6:{ id:6, name:"Berserker", icon:"🛡️", spd:50, hp:300, atk:35, npGain: 15 },     
-    7:{ id:7, name:"Lancer", icon:"🔱", spd:80, hp:450, atk:48, npGain: 20 },      
-    8:{ id:8, name:"Summoner", icon:"🔮", spd:30, hp:300, atk:50, npGain: 30 }     
+    // def = giáp chống vật lí, res = giáp chống phép. dmgType = loại sát thương class này gây ra.
+    1:{ id:1, name:"Knight", icon:"🛡️", spd:60, hp:550, atk:40, npGain: 15, def:35, res:15, dmgType:"physical" },
+    2:{ id:2, name:"Archer", icon:"🏹", spd:90, hp:250, atk:60, npGain: 25, def:10, res:10, dmgType:"physical" },
+    3:{ id:3, name:"Mage", icon:"🔥", spd:70, hp:320, atk:55, npGain: 35, def:8,  res:30, dmgType:"magic" },
+    4:{ id:4, name:"Assassin", icon:"🗡️", spd:100, hp:280, atk:65, npGain: 30, def:12, res:8,  dmgType:"physical" },
+    5:{ id:5, name:"Healer", icon:"💚", spd:40, hp:400, atk:20, npGain: 25, def:18, res:28, dmgType:"magic" },
+    6:{ id:6, name:"Berserker", icon:"🛡️", spd:50, hp:300, atk:35, npGain: 15, def:10, res:10, dmgType:"physical" },
+    7:{ id:7, name:"Lancer", icon:"🔱", spd:80, hp:450, atk:48, npGain: 20, def:25, res:12, dmgType:"physical" },
+    8:{ id:8, name:"Summoner", icon:"🔮", spd:30, hp:300, atk:50, npGain: 30, def:12, res:25, dmgType:"magic" }
 };
+// Lấy loại sát thương (vật lí / phép) dựa theo classId. Mage, Healer, Summoner => phép, còn lại => vật lí.
+function getDmgType(classId) {
+    return (classData[classId] && classData[classId].dmgType) || "physical";
+}
 let battleQueue = [];
 let queueIndex = 0;
 let isMenuOpen = false;
@@ -85,9 +90,12 @@ let gameOver = false;
 let bossTurnCount = 0;
 let soulEnergy = 0; // Năng lượng
 
+let bossClassId = Math.floor(Math.random() * 8) + 1;
 let boss = {
-    name: "The Nightmare Soul", classId: Math.floor(Math.random() * 8) + 1,
-    revealed: false, maxHp: 1000, hp: 1000, atk: 65, atkDebuff: 0, atkDebuffTurn: 0, npCounter: 0, defending: false, energy: 100
+    name: "The Nightmare Soul", classId: bossClassId,
+    revealed: false, maxHp: 1000, hp: 1000, atk: 65, atkDebuff: 0, atkDebuffTurn: 0, npCounter: 0, defending: false, energy: 100,
+    def: classData[bossClassId].def, res: classData[bossClassId].res,
+    effects: { slow: 0, burn: 0 }
 };
 
 let enemies = [];
@@ -505,6 +513,8 @@ function renderShop() {
         card.innerHTML = `
             <div style="font-size: 35px;">${base.icon}</div>
             <div style="margin-top: 10px; font-weight: bold; font-size: 16px;">${base.name}</div>
+            <div style="margin-top: 6px; font-size: 12px; color: #94a3b8;">${base.dmgType === "magic" ? "✨ Sát thương Phép" : "⚔️ Sát thương Vật lí"}</div>
+            <div style="margin-top: 4px; font-size: 12px; color: #94a3b8;">🛡️DEF ${base.def} | 🔮RES ${base.res}</div>
             <div style="margin-top: 8px; color: #00d2ff; font-size: 14px; font-weight: bold;">💎 ${cost} NL</div>
         `;
 
@@ -545,12 +555,15 @@ function confirmTeamAndBattle() {
             maxHp: base.hp, 
             hp: base.hp, 
             atk: base.atk, 
+            def: base.def,
+            res: base.res,
             np: 0, 
             alive: true, 
             defending: false, 
             reflect: false, 
             status: "", 
-            controlled: false
+            controlled: false,
+            effects: { slow: 0, burn: 0 }
         };
     });
     document.getElementById("team-selection-screen").style.display = "none";
@@ -593,9 +606,54 @@ function logPlayer(text) { addLog(text, "log-player"); }
 function logBoss(text) { addLog(text, "log-boss"); }
 function logSystem(text) { addLog(text, "log-system"); }
 
-function hitEnemy(target, amount) {
+// Công thức giảm sát thương: giáp 100 sẽ giảm 50% sát thương loại tương ứng. Pierce sẽ bỏ qua bước này.
+function mitigateDamage(rawDmg, target, dmgType) {
+    let stat = (dmgType === "magic") ? (target.res || 0) : (target.def || 0);
+    let factor = 100 / (100 + stat);
+    return Math.max(1, Math.floor(rawDmg * factor));
+}
+
+// Tốc độ thực tế dùng để xếp hàng lượt đánh, có tính Slow (-30%)
+function getEffectiveSpd(unit, baseSpd) {
+    if (unit.effects && unit.effects.slow > 0) return Math.floor(baseSpd * 0.7);
+    return baseSpd;
+}
+
+// Xử lí sát thương Thiêu Đốt (Burn) khi vào lượt của 1 đơn vị. Trả về số dmg đã gây ra (0 nếu không bị Burn).
+function tickBurn(unit) {
+    if (unit.effects && unit.effects.burn > 0 && unit.hp > 0) {
+        let burnDmg = Math.max(1, Math.floor(unit.maxHp * 0.10));
+        unit.hp -= burnDmg;
+        unit.effects.burn--;
+        logSystem(`🔥 ${unit.icon ? unit.icon + " " : ""}${unit.name} chịu ${burnDmg} sát thương từ Thiêu Đốt (Burn)!`);
+        return burnDmg;
+    }
+    return 0;
+}
+
+// Chuỗi icon hiệu ứng đang tồn tại trên 1 đơn vị, dùng để hiển thị UI
+function effectIcons(unit) {
+    if (!unit.effects) return "";
+    let parts = [];
+    if (unit.effects.slow > 0) parts.push(`🐌Slow(${unit.effects.slow})`);
+    if (unit.effects.burn > 0) parts.push(`🔥Burn(${unit.effects.burn})`);
+    return parts.join(" ");
+}
+
+// Sát thương từ Player -> Enemy (Boss/Minion). pierce = true sẽ bỏ qua def/res của mục tiêu.
+function hitEnemy(target, amount, dmgType = "physical", pierce = false) {
     let finalDmg = Math.floor(amount);
+    if (!pierce) finalDmg = mitigateDamage(finalDmg, target, dmgType);
     if (target.defending) finalDmg = Math.floor(finalDmg * 0.25); 
+    target.hp -= finalDmg;
+    return finalDmg;
+}
+
+// Sát thương từ Enemy (Boss/Minion) -> Player. pierce = true sẽ bỏ qua def/res của mục tiêu.
+function hitPlayer(target, amount, dmgType = "physical", pierce = false) {
+    let finalDmg = Math.floor(amount);
+    if (!pierce) finalDmg = mitigateDamage(finalDmg, target, dmgType);
+    if (target.defending) finalDmg = Math.floor(finalDmg * 0.5);
     target.hp -= finalDmg;
     return finalDmg;
 }
@@ -625,11 +683,13 @@ function startBattle() {
 function generateBattleQueue() {
     battleQueue = [];
     queueIndex = 0;
-    team.forEach(s => { if (s.hp > 0) battleQueue.push({ type: 'player', ref: s, spd: classData[s.classId].spd }); });
-    enemies.forEach(e => { if (e.hp > 0) battleQueue.push({ type: 'enemy', ref: e, spd: e.spd || 30 }); });
+    team.forEach(s => { if (s.hp > 0) battleQueue.push({ type: 'player', ref: s, spd: getEffectiveSpd(s, classData[s.classId].spd) }); });
+    enemies.forEach(e => { if (e.hp > 0) battleQueue.push({ type: 'enemy', ref: e, spd: getEffectiveSpd(e, e.spd || 30) }); });
     battleQueue.sort((a, b) => b.spd - a.spd);
     let orderStr = battleQueue.map(item => `${item.ref.name} (${item.spd})`).join(" ➔ ");
     logSystem(`⏳ <b>Vòng đấu mới bắt đầu! Thứ tự:</b> ${orderStr}`);
+    // Giảm thời gian Slow còn lại sau khi đã dùng nó để tính thứ tự lượt của vòng này
+    [...team, ...enemies].forEach(u => { if (u.effects && u.effects.slow > 0) u.effects.slow--; });
 }
 async function nextTurnInQueue() {
     if (gameOver) return;
@@ -642,6 +702,24 @@ async function nextTurnInQueue() {
         nextTurnInQueue();
         return;
     }
+
+    // Hiệu ứng Thiêu Đốt (Burn) kích hoạt vào đầu lượt của đơn vị
+    let burnedUnit = currentUnit.ref;
+    let burnDmgDealt = tickBurn(burnedUnit);
+    if (burnDmgDealt > 0) {
+        if (currentUnit.type === 'player') renderTeam(); else renderBoss();
+        if (burnedUnit.hp <= 0) {
+            if (currentUnit.type === 'player') {
+                if (checkLose()) return;
+            } else if (burnedUnit === boss) {
+                victory(); return;
+            }
+            queueIndex++;
+            nextTurnInQueue();
+            return;
+        }
+    }
+
     if (currentUnit.type === 'player') {
         let servant = currentUnit.ref;
         if (servant.controlled) {
@@ -681,7 +759,16 @@ function renderBoss() {
     const hpPercent = (boss.hp / boss.maxHp) * 100;
     document.getElementById("boss-hp-fill").style.width = Math.max(0, hpPercent) + "%";
     document.getElementById("boss-hp-text").innerText = `${Math.max(0, Math.floor(boss.hp))}/${boss.maxHp}`;
-    if (boss.revealed) document.getElementById("boss-name").innerText = `${boss.name} (${classData[boss.classId].name})`;
+    if (boss.revealed) {
+        document.getElementById("boss-name").innerText = `${boss.name} (${classData[boss.classId].name})`;
+        const bossStatsEl = document.getElementById("boss-stats");
+        if (bossStatsEl) {
+            let dmgLabel = getDmgType(boss.classId) === "magic" ? "✨ Sát thương Phép" : "⚔️ Sát thương Vật lí";
+            bossStatsEl.innerText = `${dmgLabel} | 🛡️DEF ${boss.def} | 🔮RES ${boss.res}`;
+        }
+    }
+    const statusEl = document.getElementById("boss-status-effects");
+    if (statusEl) statusEl.innerText = effectIcons(boss);
     const dots = document.querySelectorAll("#boss-charge-dots .dot");
     dots.forEach((dot, idx) => { if (idx < boss.npCounter) dot.classList.add("filled"); else dot.classList.remove("filled"); });
 
@@ -691,10 +778,12 @@ function renderBoss() {
         enemies.forEach(e => {
             if (e !== boss && e.hp > 0) {
                 let mHp = Math.max(0, Math.floor(e.hp));
+                let mEffects = effectIcons(e);
                 minionZone.innerHTML += `
                     <div class="minion-card">
                         <div>⚔️ ${e.name}</div>
                         <div class="bar-container hp"><div class="bar-fill hp-fill" style="width:${(e.hp/e.maxHp)*100}%"></div><span class="bar-text">${mHp}/${Math.floor(e.maxHp)}</span></div>
+                        ${mEffects ? `<div class="minion-effects">${mEffects}</div>` : ""}
                     </div>`;
             }
         });
@@ -712,13 +801,16 @@ function renderTeam() {
         if (servant.controlled) card.classList.add("controlled"); 
 
         template.querySelector(".servant-name").innerHTML = `${servant.icon} ${servant.name}`;
+        let dmgLabel = getDmgType(servant.classId) === "magic" ? "✨ Phép" : "⚔️ Vật lí";
+        template.querySelector(".servant-stats").innerText = `${dmgLabel} | 🛡️DEF ${servant.def} | 🔮RES ${servant.res}`;
         template.querySelector(".servant-hp-text").innerText = `HP: ${Math.max(0, Math.floor(servant.hp))}/${servant.maxHp}`;
         template.querySelector(".servant-np-text").innerText = `NP: ${servant.np}/100`;
         template.querySelector(".hp-fill").style.width = (Math.max(0, servant.hp) / servant.maxHp) * 100 + "%";
         const npFill = template.querySelector(".np-fill");
         npFill.style.width = servant.np + "%";
         if (servant.np >= 100) npFill.classList.add("np-ready");
-        template.querySelector(".servant-status").innerText = servant.status;
+        let statusParts = [servant.status, effectIcons(servant)].filter(Boolean);
+        template.querySelector(".servant-status").innerText = statusParts.join(" ");
         container.appendChild(card);
     });
 }
@@ -763,17 +855,18 @@ async function playerAction(action) {
     if (aliveEnemies.length === 0) return;
     if (action === "attack") {
         playSFX("attack", servant.classId); 
+        let dmgType = getDmgType(servant.classId);
         if (servant.classId === 3) { 
             aliveEnemies.forEach(e => {
                 let raw = randomDamage(servant.atk) * (1 + getModifier(servant.classId, e.classId || 0));
-                let dmg = hitEnemy(e, raw);
+                let dmg = hitEnemy(e, raw, dmgType);
                 popDamageText(document.getElementById("boss-zone"), dmg, false);
             });
             logPlayer(`🔥 ${servant.name} dùng ma thuật đánh thường toàn bộ kẻ địch.`);
         } else {
             let target = aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)];
             let raw = randomDamage(servant.atk) * (1 + getModifier(servant.classId, target.classId || 0));
-            let dmg = hitEnemy(target, raw);
+            let dmg = hitEnemy(target, raw, dmgType);
             logPlayer(`⚔️ ${servant.name} tấn công ${target.name} gây ${dmg} sát thương.`);
             popDamageText(document.getElementById("boss-zone"), dmg, false);
         }
@@ -802,12 +895,13 @@ function useSkill(servant) {
         case 1: servant.defending = true; servant.status = "🛡️ Phản đòn"; logPlayer("Knight bật khiên phòng thủ."); break;
         case 2: 
             let hits = Math.floor(Math.random() * 5) + 1;
-            logPlayer(`🏹 Archer giương cung, xả ${hits} mũi tên liên hoàn!`);
+            let archerSkillPierce = Math.random() < 0.2;
+            logPlayer(`🏹 Archer giương cung, xả ${hits} mũi tên liên hoàn!${archerSkillPierce ? " (Xuyên Giáp!)" : ""}`);
             for (let i = 0; i < hits; i++) {
                 let curAlive = enemies.filter(e => e.hp > 0);
                 if (curAlive.length > 0) {
                     let t = curAlive[Math.floor(Math.random() * curAlive.length)];
-                    let d = hitEnemy(t, servant.atk * 1.5 * (1 + getModifier(servant.classId, t.classId || 0)));
+                    let d = hitEnemy(t, servant.atk * 1.5 * (1 + getModifier(servant.classId, t.classId || 0)), "physical", archerSkillPierce);
                     popDamageText(document.getElementById("boss-zone"), d, false);
                 }
             }
@@ -815,15 +909,32 @@ function useSkill(servant) {
         case 3: 
             logPlayer(`🔥 Mage giải phóng ma thuật, thiêu đốt toàn bộ chiến trường (AOE)!`);
             aliveEnemies.forEach(e => {
-                let d = hitEnemy(e, servant.atk * 2 * (1 + getModifier(servant.classId, e.classId || 0)));
+                let d = hitEnemy(e, servant.atk * 2 * (1 + getModifier(servant.classId, e.classId || 0)), "magic");
                 if (e === boss) { boss.atkDebuff = 0.20; boss.atkDebuffTurn = 2; }
                 popDamageText(document.getElementById("boss-zone"), d, false);
+                if (e.hp > 0 && Math.random() < 0.3) {
+                    e.effects.burn = 2;
+                    logSystem(`🔥 ${e.name} bị Thiêu Đốt (Burn) bởi ma thuật của Mage!`);
+                }
             });
             break;
-        case 4: dmg = hitEnemy(target, servant.atk * (Math.random() < 0.4 ? 3 : 1)); logPlayer(`Assassin đâm lén ${target.name} gây ${dmg} sát thương.`); popDamageText(document.getElementById("boss-zone"), dmg, false); break;
+        case 4: dmg = hitEnemy(target, servant.atk * (Math.random() < 0.4 ? 3 : 1), "physical"); logPlayer(`Assassin đâm lén ${target.name} gây ${dmg} sát thương.`); popDamageText(document.getElementById("boss-zone"), dmg, false); break;
         case 5: team.forEach(a => { if (a.hp > 0 && !a.controlled) a.hp = Math.min(a.maxHp, a.hp + 80); }); logPlayer("Healer hồi 80 HP cho toàn đội."); popDamageText(document.getElementById("player-team"), "+80", false, true); break;
-        case 6: dmg = hitEnemy(target, servant.atk * 2.5); servant.hp -= 30; logPlayer(`Berserker hi sinh 30 HP chém mạnh ${target.name} gây ${dmg} sát thương.`); popDamageText(document.getElementById("boss-zone"), dmg, false); break;
-        case 7: dmg = hitEnemy(target, Math.floor(servant.atk * 1.8 * (1 + getModifier(servant.classId, target.classId || 0)))); logPlayer(`Lancer đâm xuyên giáp ${target.name} gây ${dmg} sát thương.`); popDamageText(document.getElementById("boss-zone"), dmg, false); break;
+        case 6: 
+            dmg = hitEnemy(target, servant.atk * 2.5, "physical"); servant.hp -= 30; 
+            logPlayer(`Berserker hi sinh 30 HP chém mạnh ${target.name} gây ${dmg} sát thương.`); 
+            popDamageText(document.getElementById("boss-zone"), dmg, false); 
+            if (target.hp > 0 && Math.random() < 0.2) {
+                target.effects.slow = 2;
+                logSystem(`🐌 ${target.name} bị Làm Chậm (Slow) bởi cú chém của Berserker!`);
+            }
+            break;
+        case 7: 
+            let lancerSkillPierce = Math.random() < 0.5;
+            dmg = hitEnemy(target, Math.floor(servant.atk * 1.8 * (1 + getModifier(servant.classId, target.classId || 0))), "physical", lancerSkillPierce); 
+            logPlayer(`Lancer đâm xuyên giáp ${target.name} gây ${dmg} sát thương.${lancerSkillPierce ? " (Xuyên Giáp hoàn toàn!)" : ""}`); 
+            popDamageText(document.getElementById("boss-zone"), dmg, false); 
+            break;
     }
 }
 
@@ -838,14 +949,19 @@ function useNP(servant) {
 
     switch(servant.classId) {
         case 1: team.forEach(a => { if(a.hp > 0 && !a.controlled) { a.defending = true; a.status = "🏰 Avalon"; }}); window.teamProtectionTurn = 2; break;
-        case 2: hitEnemy(target, 350); popDamageText(document.getElementById("boss-zone"), 350, true); break;
+        case 2: 
+            let archerNpPierce = Math.random() < 0.2;
+            let d2 = hitEnemy(target, 350, "physical", archerNpPierce); 
+            popDamageText(document.getElementById("boss-zone"), d2, true); 
+            if (archerNpPierce) logSystem("🏹 Mũi tên Tuyệt Kỹ xuyên giáp hoàn toàn!");
+            break;
         case 3: 
-            aliveEnemies.forEach(e => { hitEnemy(e, 350); popDamageText(document.getElementById("boss-zone"), 350, true); });
+            aliveEnemies.forEach(e => { let d = hitEnemy(e, 350, "magic"); popDamageText(document.getElementById("boss-zone"), d, true); });
             boss.atkDebuff = 0.30; boss.atkDebuffTurn = 3; break;
-        case 4: let d = hitEnemy(target, Math.random() < 0.5 ? 600 : 250); popDamageText(document.getElementById("boss-zone"), d, true); break;
+        case 4: let d = hitEnemy(target, Math.random() < 0.5 ? 600 : 250, "physical"); popDamageText(document.getElementById("boss-zone"), d, true); break;
         case 5: team.forEach(a => { if(a.hp > 0 && !a.controlled) { a.hp = a.maxHp; a.np = 50; }}); break;
-        case 6: hitEnemy(target, 700); servant.hp = 1; popDamageText(document.getElementById("boss-zone"), 700, true); break;
-        case 7: hitEnemy(target, 500); popDamageText(document.getElementById("boss-zone"), 500, true); break;
+        case 6: hitEnemy(target, 700, "physical"); servant.hp = 1; popDamageText(document.getElementById("boss-zone"), 700, true); break;
+        case 7: hitEnemy(target, 500, "physical"); popDamageText(document.getElementById("boss-zone"), 500, true); break;
     }
 }
 
@@ -1003,11 +1119,12 @@ function bossNP() {
     logBoss("💥 TUYỆT KỸ BOSS PHÁT ĐỘNG!");
     let aoe = Math.random() < 0.5;
     const cards = document.querySelectorAll(".servant-card");
+    let bossDmgType = getDmgType(boss.classId);
     
     if (aoe) {
         team.forEach((s, idx) => {
             if (s.hp > 0 && !s.controlled) { 
-                let d = s.defending ? 80 : 150; s.hp -= d; 
+                let d = hitPlayer(s, 150, bossDmgType);
                 popDamageText(cards[idx], d, true, false, true); 
             }
         });
@@ -1016,8 +1133,7 @@ function bossNP() {
         if (aliveTargets.length > 0) {
             let target = aliveTargets[Math.floor(Math.random() * aliveTargets.length)];
             let targetIndex = team.findIndex(s => s.uid === target.uid);
-            let d = target.defending ? 150 : 300; 
-            target.hp -= d; 
+            let d = hitPlayer(target, 300, bossDmgType); 
             popDamageText(cards[targetIndex], d, true, false, true); 
         }
     }
@@ -1117,6 +1233,7 @@ async function executeBossTurn() {
     if (boss.atkDebuffTurn > 0) boss.atkDebuffTurn--;
     const cards = document.querySelectorAll(".servant-card");
     let modifier = 1 + getModifier(boss.classId, target.classId);
+    let bossDmgType = getDmgType(boss.classId); // Mage/Healer/Summoner -> magic, còn lại -> vật lí
 
     if (boss.classId === 8) {
         let activeMinions = enemies.filter(e => e.name === "Binh Lính" && e.hp > 0).length;
@@ -1127,7 +1244,7 @@ async function executeBossTurn() {
                 logBoss("🔮 KỸ NĂNG: Summoner triệu hồi thêm Binh Lính bảo vệ!");
                 let toSummon = 2 - activeMinions;
                 for (let i=0; i<toSummon; i++) {
-                    enemies.push({ name: "Binh Lính", maxHp: boss.maxHp/3, hp: boss.maxHp/3, atk: boss.atk/3, classId: 0, spd: 45, defending: false });
+                    enemies.push({ name: "Binh Lính", maxHp: boss.maxHp/3, hp: boss.maxHp/3, atk: boss.atk/3, classId: 0, spd: 45, defending: false, def: 8, res: 5, effects: { slow: 0, burn: 0 } });
                 }
                 if (!controlledServant && aliveTargets.length > 0) {
                     let mindControlTarget = aliveTargets[Math.floor(Math.random() * aliveTargets.length)];
@@ -1140,16 +1257,13 @@ async function executeBossTurn() {
                 logBoss("🔮 KỸ NĂNG: Summoner tung ma thuật Hắc Ám diện rộng (AOE)!");
                 aliveTargets.forEach(t => {
                     let tIdx = team.findIndex(s => s.uid === t.uid);
-                    let aoeDmg = Math.floor(effectiveAtk * 1.5);
-                    if (t.defending) aoeDmg = Math.floor(aoeDmg * 0.5);
-                    t.hp -= aoeDmg;
+                    let aoeDmg = hitPlayer(t, effectiveAtk * 1.5, bossDmgType);
                     popDamageText(cards[tIdx], aoeDmg, false, false, true);
                 });
             }
         } else {
             logBoss("👹 Summoner ra lệnh tấn công đơn mục tiêu!");
-            let bDmg = Math.floor(effectiveAtk); if(target.defending) bDmg = Math.floor(bDmg*0.5);
-            target.hp -= bDmg; 
+            let bDmg = hitPlayer(target, effectiveAtk, bossDmgType);
             popDamageText(cards[targetIndex], bDmg, false, false, true);
         }
     } 
@@ -1159,36 +1273,50 @@ async function executeBossTurn() {
             let dmg = 0;
             switch(boss.classId) {
                 case 1: boss.defending = true; logBoss("🛡️ KỸ NĂNG: Boss bật Khiên Hắc Ám!"); break;
-                case 2:
-                    dmg = Math.floor(effectiveAtk * 3 * modifier); if (target.defending) dmg = Math.floor(dmg * 0.5);
-                    target.hp -= dmg; logBoss(`🏹 KỸ NĂNG: Boss xả Mưa Tên vào ${target.name} gây ${dmg} ST!`); 
+                case 2: {
+                    let bossArcherPierce = Math.random() < 0.2;
+                    dmg = hitPlayer(target, effectiveAtk * 3 * modifier, bossDmgType, bossArcherPierce);
+                    logBoss(`🏹 KỸ NĂNG: Boss xả Mưa Tên vào ${target.name} gây ${dmg} ST!${bossArcherPierce ? " (Xuyên Giáp!)" : ""}`); 
                     popDamageText(cards[targetIndex], dmg, true, false, true); break;
-                case 3:
-                    dmg = Math.floor(effectiveAtk * 4 * modifier); if (target.defending) dmg = Math.floor(dmg * 0.5);
-                    target.hp -= dmg; logBoss(`🔥 KỸ NĂNG: Boss Lửa Hỏa Ngục thiêu đốt ${target.name} gây ${dmg} ST!`); 
-                    popDamageText(cards[targetIndex], dmg, true, false, true); break;
+                }
+                case 3: {
+                    dmg = hitPlayer(target, effectiveAtk * 4 * modifier, bossDmgType);
+                    logBoss(`🔥 KỸ NĂNG: Boss Lửa Hỏa Ngục thiêu đốt ${target.name} gây ${dmg} ST!`); 
+                    popDamageText(cards[targetIndex], dmg, true, false, true);
+                    if (target.hp > 0 && Math.random() < 0.3) {
+                        target.effects.burn = 2;
+                        logSystem(`🔥 ${target.name} bị Thiêu Đốt (Burn) bởi lửa của Boss!`);
+                    }
+                    break;
+                }
                 case 4:
-                    dmg = Math.floor(effectiveAtk * (Math.random() < 0.4 ? 6 : 2) * modifier); if (target.defending) dmg = Math.floor(dmg * 0.5);
-                    target.hp -= dmg; logBoss(`🗡️ KỸ NĂNG: Boss đâm lén trúng ${target.name} gây ${dmg} ST!`); 
+                    dmg = hitPlayer(target, effectiveAtk * (Math.random() < 0.4 ? 6 : 2) * modifier, bossDmgType);
+                    logBoss(`🗡️ KỸ NĂNG: Boss đâm lén trúng ${target.name} gây ${dmg} ST!`); 
                     popDamageText(cards[targetIndex], dmg, true, false, true); break;
                 case 5:
                     let heal = 400; boss.hp = Math.min(boss.maxHp, boss.hp + heal);
                     logBoss(`💚 KỸ NĂNG: Boss hồi phục ${heal} HP!`); popDamageText(document.getElementById("boss-zone"), `+${heal}`, false, true); break;
-                case 6:
-                    dmg = Math.floor(effectiveAtk * 5 * modifier); if (target.defending) dmg = Math.floor(dmg * 0.5);
-                    boss.hp -= 60; target.hp -= dmg;
+                case 6: {
+                    dmg = hitPlayer(target, effectiveAtk * 5 * modifier, bossDmgType);
+                    boss.hp -= 60;
                     logBoss(`💀 KỸ NĂNG: Boss hiến tế HP chém Huyết Lệ vào ${target.name} gây ${dmg} ST!`); 
+                    popDamageText(cards[targetIndex], dmg, true, false, true);
+                    if (target.hp > 0 && Math.random() < 0.2) {
+                        target.effects.slow = 2;
+                        logSystem(`🐌 ${target.name} bị Làm Chậm (Slow) bởi cú chém của Boss!`);
+                    }
+                    break;
+                }
+                case 7: {
+                    let bossLancerPierce = Math.random() < 0.5;
+                    dmg = hitPlayer(target, effectiveAtk * 3.6 * modifier, bossDmgType, bossLancerPierce);
+                    logBoss(`🔱 KỸ NĂNG: Giáo Tuyệt Vọng xuyên thủng ${target.name} gây ${dmg} ST!${bossLancerPierce ? " (Xuyên Giáp hoàn toàn!)" : ""}`); 
                     popDamageText(cards[targetIndex], dmg, true, false, true); break;
-                case 7:
-                    dmg = Math.floor(effectiveAtk * 3.6 * modifier); if (target.defending) dmg = Math.floor(dmg * 0.5);
-                    target.hp -= dmg; logBoss(`🔱 KỸ NĂNG: Giáo Tuyệt Vọng xuyên thủng ${target.name} gây ${dmg} ST!`); 
-                    popDamageText(cards[targetIndex], dmg, true, false, true); break;
+                }
             }
         } else {
             playSFX("boss_attack");
-            let damage = Math.floor(effectiveAtk * modifier);
-            if (target.defending) damage = Math.floor(damage * 0.5);
-            target.hp -= damage;
+            let damage = hitPlayer(target, effectiveAtk * modifier, bossDmgType);
             logBoss(`👹 Boss đánh thường ${target.name} gây ${damage} sát thương.`);
             popDamageText(cards[targetIndex], damage, false, false, true); 
         }
@@ -1207,9 +1335,7 @@ async function executeMinionTurn(minion) {
         let tIdx = team.findIndex(s => s.uid === t.uid);
         const cards = document.querySelectorAll(".servant-card");
         
-        let mDmg = Math.floor(minion.atk);
-        if (t.defending) mDmg = Math.floor(mDmg * 0.5);
-        t.hp -= mDmg;
+        let mDmg = hitPlayer(t, minion.atk, "physical");
         
         logBoss(`🗡️ Binh Lính hành động! Vung kiếm chém ${t.name} gây ${mDmg} ST.`);
         popDamageText(cards[tIdx], mDmg, false, false, true);
