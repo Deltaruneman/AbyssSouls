@@ -66,10 +66,12 @@
                 <div class="boss-ui">
                     <h2 id="boss-name">The Nightmare Soul (???)</h2>
                     <div class="boss-class-hint" id="boss-hint"></div>
+                    <div class="boss-stats" id="boss-stats"></div>
                     <div class="bar-container hp">
                         <div class="bar-fill" id="boss-hp-fill"></div>
                         <span class="bar-text" id="boss-hp-text">0/0</span>
                     </div>
+                    <div class="boss-status-effects" id="boss-status-effects"></div>
                     <div class="boss-charge-container">
                         <span class="charge-label">CHARGE</span>
                         <div class="charge-dots" id="boss-charge-dots">
@@ -142,6 +144,29 @@
                 <li>🔱 <strong>Lancer</strong> khắc 🏹 <strong>Archer</strong> nhưng bị khắc bởi 🏹 <strong>Archer</strong> ở chiều ngược lại (Tương khắc đặc biệt).</li>
             </ul>
 
+            <h3>2.5 🛡️ GIÁP & LOẠI SÁT THƯƠNG (MỚI)</h3>
+            <p>Mỗi đơn vị có 2 chỉ số giáp: <strong>DEF</strong> (chống sát thương Vật lí ⚔️) và <strong>RES</strong> (chống sát thương Phép ✨). Giáp 100 sẽ giảm khoảng 50% lượng sát thương loại tương ứng nhận vào.</p>
+            <ul>
+                <li>✨ Gây <strong>sát thương Phép:</strong> Mage, Healer, Summoner [Boss].</li>
+                <li>⚔️ Gây <strong>sát thương Vật lí:</strong> Knight, Archer, Assassin, Berserker, Lancer.</li>
+                <li>Sát thương Phép bị RES của mục tiêu cản, sát thương Vật lí bị DEF của mục tiêu cản.</li>
+            </ul>
+
+            <h3>2.6 🌀 HIỆU ỨNG TRẠNG THÁI (MỚI)</h3>
+            <ul>
+                <li>🐌 <strong>Slow (Làm Chậm):</strong> Giảm 30% Tốc độ trong các vòng đấu kế tiếp.</li>
+                <li>🔥 <strong>Burn (Thiêu Đốt):</strong> Mất 10% HP tối đa ngay khi vào lượt của chính mình, trong vài lượt liên tiếp.</li>
+                <li>🗡️ <strong>Pierce (Xuyên Giáp):</strong> Đòn đánh bỏ qua hoàn toàn DEF/RES của mục tiêu.</li>
+            </ul>
+            <p>💡 <em>Tỉ lệ kích hoạt khi dùng Skill/NP:</em></p>
+            <ul>
+                <li>💀 <strong>Berserker</strong> dùng Skill: 20% gây <strong>Slow</strong> lên kẻ địch trúng đòn.</li>
+                <li>🔥 <strong>Mage</strong> dùng Skill: 30% gây <strong>Burn</strong> lên kẻ địch trúng đòn.</li>
+                <li>🔱 <strong>Lancer</strong> dùng Skill: 50% kích hoạt <strong>Pierce</strong> cho đòn đó.</li>
+                <li>🏹 <strong>Archer</strong> dùng Skill hoặc NP: 20% kích hoạt <strong>Pierce</strong> cho đòn đó.</li>
+                <li>Boss cũng áp dụng đúng các tỉ lệ trên nếu class của Boss trùng với class kỹ năng tương ứng!</li>
+            </ul>
+
             <h3>3. 🗺️ THÁM HIỂM & CHIÊU MỘ</h3>
             <ul>
             
@@ -178,6 +203,7 @@
 <template id="character-template">
     <div class="servant-card">
         <div class="servant-name"></div>
+        <div class="servant-stats"></div>
         <div class="bar-container hp">
             <div class="bar-fill hp-fill"></div>
             <span class="bar-text servant-hp-text"></span>
