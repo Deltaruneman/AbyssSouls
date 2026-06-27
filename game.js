@@ -11,7 +11,7 @@ const audioAssets = {
     collect: 'assets/sfx/collect.mp3', 
     gate: 'assets/sfx/gate.mp3'
 };
-for (let i = 1; i <= 7; i++) {
+for (let i = 1; i <= 8; i++) {
     audioAssets[`attack_${i}`] = `assets/sfx/attack_${i}.mp3`;
     audioAssets[`skill_${i}`] = `assets/sfx/skill_${i}.mp3`;
     audioAssets[`np_${i}`] = `assets/sfx/np_${i}.mp3`;
@@ -134,6 +134,12 @@ const map2D = [
 let currentMap = map2D; 
 let npcTalked = false; 
 
+// ====== PHASE 2: SƠN (SUMMONER) BỊ THƯƠNG, CHỈ TRIỆU HỒI THÊM ĐƯỢC 1 SERVANT ======
+let secondPhaseUnlocked = false;   // true sau khi xem hội thoại mới ở tile 8 (Thị Trấn -> Room)
+let secondGateLockedMsgShown = false; // chỉ hiện gợi ý "cổng đang đóng" 1 lần
+let isSecondPhase = false;         // true khi đang ở giai đoạn chiêu mộ/chiến đấu lần 2
+function getMaxRecruit() { return isSecondPhase ? 1 : 3; }
+
 const roomMap = [
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
     [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
@@ -147,7 +153,7 @@ const roomMap = [
     [1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
     [1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
     [1,1,1,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-    [1,0,0,0,7,0,0,0,0,0,3,0,0,0,0,0,0,8,0,1],
+    [1,0,0,0,7,0,0,0,0,0,3,0,0,10,0,0,0,8,0,1],
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ];
@@ -413,10 +419,48 @@ if(currentTile === 7&& npcTalked) {
         currentMap = roomMap;
         playerObj.x = 600; 
         playerObj.y = 400;
-       
+
+        if (!secondPhaseUnlocked) {
+            secondPhaseUnlocked = true;
+            showDialogue("Sơn", [
+                "Phải rồi... sức mạnh của mình đều đến từ việc triệu hồi linh hồn người khác.",
+                "Trận chiến vừa rồi đã vắt cạn gần hết mana, vết thương vẫn còn rất đau.",
+                "Nhưng Abyss vẫn chưa biến mất hoàn toàn. Mình không thể dừng lại ở đây.",
+                "Chắc giờ mình chỉ còn đủ sức triệu hồi thêm 1 Anh Linh nữa thôi...",
+                "Phải tìm đến cánh cổng linh hồn trong phòng để chuẩn bị."
+            ]);
+        }
         return;
     }
 }
+
+            // XỬ LÝ CỔNG TRIỆU HỒI LẦN 2 (Tile 10) - chỉ hoạt động sau hội thoại mở khóa ở Thị Trấn
+            if (currentTile === 10 && currentMap === roomMap) {
+                if (!secondPhaseUnlocked) {
+                    if (!secondGateLockedMsgShown) {
+                        secondGateLockedMsgShown = true;
+                        playerObj.vx = 0;
+                        showDialogue("Sơn", ["Cánh cổng này... cảm giác kỳ lạ thật. Có lẽ mình cần biết thêm điều gì đó trước khi mở nó ra."]);
+                    }
+                } else if (!isSecondPhase) {
+                    isExploring = false;
+                    isSecondPhase = true;
+                    soulEnergy = Math.max(soulEnergy, 3);
+                    playSFX('gate');
+                    showDialogue("Sơn", [
+                        "Vết thương vẫn còn đau, mana trong người cũng đã cạn gần hết...",
+                        "Nhưng mình vẫn còn đủ sức triệu hồi thêm 1 Anh Linh nữa.",
+                        "Lần này phải cẩn trọng hơn."
+                    ]);
+                    let waitClose = setInterval(() => {
+                        if (!isDialogueActive) {
+                            clearInterval(waitClose);
+                            openSelectionScreen();
+                        }
+                    }, 500);
+                    return;
+                }
+            }
         }
     }
 
@@ -460,6 +504,14 @@ if(currentTile === 7&& npcTalked) {
                     ctx.fillStyle = "#f1c40f"; 
                     ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
                 }
+                // Vẽ Cổng Triệu Hồi Lần 2 (chỉ có trong roomMap)
+                else if (currentMap[r][c] === 10) {
+                    ctx.fillStyle = secondPhaseUnlocked ? "#9b59b6" : "#3b2540";
+                    ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+                    ctx.strokeStyle = "#e0aaff";
+                    ctx.lineWidth = 1.5;
+                    ctx.strokeRect(tileX + 2, tileY + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+                }
             }
         }
     }
@@ -491,7 +543,17 @@ function openSelectionScreen() {
     document.getElementById("platformer-screen").style.display = "none";
     document.getElementById("team-selection-screen").style.display = "block";
     document.body.style.overflow = "auto";
-    
+
+    const titleEl = document.getElementById("team-select-title");
+    const descEl = document.getElementById("team-select-desc");
+    if (isSecondPhase) {
+        if (titleEl) titleEl.innerText = "Triệu Hồi Anh Linh Cuối Cùng";
+        if (descEl) descEl.innerText = "Sơn (Summoner) đã bị thương và sẽ luôn tham chiến cùng đội. Vết thương khiến mana cạn kiệt, giờ chỉ còn đủ sức triệu hồi thêm 1 Anh Linh duy nhất.";
+    } else {
+        if (titleEl) titleEl.innerText = "Chiêu Mộ Đội Hình";
+        if (descEl) descEl.innerText = "Sử dụng Năng Lượng Linh Hồn để chiêu mộ Anh Linh. Click để chọn (mua) hoặc bỏ chọn (hoàn năng lượng).";
+    }
+
     renderShop(); 
 }
 
@@ -499,6 +561,7 @@ function renderShop() {
     document.getElementById("energy-display").innerText = soulEnergy;
     const roster = document.getElementById("selection-roster");
     roster.innerHTML = "";
+    const maxRecruit = getMaxRecruit();
 
     const shopClasses = [1, 2, 3, 4, 5, 6, 7];
 
@@ -523,8 +586,8 @@ function renderShop() {
                 selectedClasses = selectedClasses.filter(id => id !== classId);
                 soulEnergy += cost;
             } else {
-                if (selectedClasses.length >= 3) {
-                    alert("Chỉ được chọn tối đa 3 Servant để xuất chiến!");
+                if (selectedClasses.length >= maxRecruit) {
+                    alert(`Chỉ được chọn tối đa ${maxRecruit} Servant để xuất chiến!`);
                     return;
                 }
                 if (soulEnergy < cost) {
@@ -540,8 +603,8 @@ function renderShop() {
         roster.appendChild(card);
     });
 
-    document.getElementById("selection-count").innerText = `Đã chọn: ${selectedClasses.length}/3`;
-    document.getElementById("confirm-team-btn").disabled = selectedClasses.length !== 3;
+    document.getElementById("selection-count").innerText = `Đã chọn: ${selectedClasses.length}/${maxRecruit}`;
+    document.getElementById("confirm-team-btn").disabled = selectedClasses.length !== maxRecruit;
 }
 
 function confirmTeamAndBattle() {
@@ -566,8 +629,51 @@ function confirmTeamAndBattle() {
             effects: { slow: 0, burn: 0 }
         };
     });
+
+    if (isSecondPhase) {
+        // Sơn (Summoner) bị thương nhưng vẫn luôn ra trận cùng đội, đứng đầu hàng ngũ
+        let sonBase = classData[8];
+        team.unshift({
+            uid: Date.now() + Math.random(),
+            classId: 8,
+            name: "Sơn",
+            icon: sonBase.icon,
+            maxHp: sonBase.hp,
+            hp: sonBase.hp,
+            atk: sonBase.atk,
+            def: sonBase.def,
+            res: sonBase.res,
+            np: 0,
+            alive: true,
+            defending: false,
+            reflect: false,
+            status: "",
+            controlled: false,
+            effects: { slow: 0, burn: 0 }
+        });
+        spawnNewBoss();
+    }
+
     document.getElementById("team-selection-screen").style.display = "none";
     startBattle();
+}
+
+// Sinh Boss mới cho trận chiến lần 2 (boss cũ đã bị tiêu diệt nên không thể tái sử dụng)
+function spawnNewBoss() {
+    bossClassId = Math.floor(Math.random() * 8) + 1;
+    boss = {
+        name: "The Nightmare Soul", classId: bossClassId,
+        revealed: false, maxHp: 1000, hp: 1000, atk: 65, atkDebuff: 0, atkDebuffTurn: 0, npCounter: 0, defending: false, energy: 100,
+        def: classData[bossClassId].def, res: classData[bossClassId].res,
+        effects: { slow: 0, burn: 0 }
+    };
+    gameOver = false;
+    bossTurnCount = 0;
+    queueIndex = 0;
+    battleQueue = [];
+    controlledServant = null;
+    enemies = [];
+    window.teamProtectionTurn = 0;
 }
 
 /* ==========================================================================
@@ -672,11 +778,18 @@ function startBattle() {
     logSystem("⚔️ Trận chiến bắt đầu! Vòng tuần hoàn tốc độ đã thiết lập.");
     renderBoss(); renderTeam();
     generateBattleQueue();
-    showDialogue("", [
-        { name: "The Nightmare Soul", text: "Chết tiệt, thế quái nào sức mạnh của cả UIT lại mạnh đến như vậy?" },
-        { name: "The Nightmare Soul", text: "Không sao, Abyss Gate sẽ được mở ra một lần nữa!" },
-        { name: "???", text: "Triệu hồi Anh Linh!!! Hãy tiến lên theo thứ tự tốc độ!" }
-    ]);
+    if (isSecondPhase) {
+        showDialogue("", [
+            { name: "The Nightmare Soul", text: "Một linh hồn khác đã thức tỉnh... Lần này ngươi sẽ không thoát được nữa!" },
+            { name: "Sơn", text: "Lần này chỉ còn lại tôi và một Anh Linh duy nhất... nhưng tôi sẽ không lùi bước!" }
+        ]);
+    } else {
+        showDialogue("", [
+            { name: "The Nightmare Soul", text: "Chết tiệt, thế quái nào sức mạnh của cả UIT lại mạnh đến như vậy?" },
+            { name: "The Nightmare Soul", text: "Không sao, Abyss Gate sẽ được mở ra một lần nữa!" },
+            { name: "???", text: "Triệu hồi Anh Linh!!! Hãy tiến lên theo thứ tự tốc độ!" }
+        ]);
+    }
     nextTurnInQueue();
 }
 
@@ -935,6 +1048,12 @@ function useSkill(servant) {
             logPlayer(`Lancer đâm xuyên giáp ${target.name} gây ${dmg} sát thương.${lancerSkillPierce ? " (Xuyên Giáp hoàn toàn!)" : ""}`); 
             popDamageText(document.getElementById("boss-zone"), dmg, false); 
             break;
+        case 8: 
+            dmg = hitEnemy(target, servant.atk * 2 * (1 + getModifier(servant.classId, target.classId || 0)), "magic"); 
+            if (target === boss) { boss.atkDebuff = 0.20; boss.atkDebuffTurn = 2; }
+            logPlayer(`🔮 Sơn dùng Linh Hồn Áp Chế lên ${target.name}, gây ${dmg} sát thương và giảm 20% ATK của hắn trong 2 lượt!`); 
+            popDamageText(document.getElementById("boss-zone"), dmg, false); 
+            break;
     }
 }
 
@@ -962,6 +1081,12 @@ function useNP(servant) {
         case 5: team.forEach(a => { if(a.hp > 0 && !a.controlled) { a.hp = a.maxHp; a.np = 50; }}); break;
         case 6: hitEnemy(target, 700, "physical"); servant.hp = 1; popDamageText(document.getElementById("boss-zone"), 700, true); break;
         case 7: hitEnemy(target, 500, "physical"); popDamageText(document.getElementById("boss-zone"), 500, true); break;
+        case 8: 
+            logPlayer(`🔮 Sơn triệu hồi Đại Quân Vong Hồn, gây sát thương diện rộng và tiếp thêm năng lượng cho đồng đội!`);
+            aliveEnemies.forEach(e => { let d = hitEnemy(e, 400, "magic"); popDamageText(document.getElementById("boss-zone"), d, true); });
+            boss.atkDebuff = 0.25; boss.atkDebuffTurn = 2;
+            team.forEach(a => { if (a.hp > 0 && !a.controlled) a.np = Math.min(100, a.np + 20); });
+            break;
     }
 }
 
@@ -1151,6 +1276,21 @@ function victory() {
         gameOver = true; 
         document.getElementById("action-panel").style.display = "none";
         logSystem(`🎉 CHIẾN THẮNG! BOSS ĐÃ BỊ TIÊU DIỆT!`);
+
+        if (isSecondPhase) {
+            showDialogue("", [
+                { name: "The Nightmare Soul", text: "Không... không thể nào... Cánh cổng Abyss... đang khép lại..." },
+                { name: "Sơn", text: "(thở dốc) ...Xong rồi. Lần này thật sự đã xong rồi." },
+                { name: "Hệ Thống", text: "🎉 ABYSS GATE ĐÃ BỊ PHONG ẤN HOÀN TOÀN! HÀNH TRÌNH CỦA SƠN ĐẾN ĐÂY LÀ KẾT THÚC." }
+            ]);
+            let checkEnd = setInterval(() => {
+                if (!isDialogueActive) {
+                    clearInterval(checkEnd);
+                    setTimeout(() => alert("🎉 KẾT THÚC: Sơn đã phong ấn hoàn toàn Abyss Gate. Cảm ơn bạn đã chơi Abyss Souls!"), 300);
+                }
+            }, 500);
+            return;
+        }
 
        showDialogue("", [
             { name: "The Nightmare Soul", text: "Khục... Không thể nào... Vực thẳm... sẽ không bao giờ... lụi tàn..." },
