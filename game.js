@@ -405,8 +405,7 @@ if(currentTile === 7&& npcTalked) {
 
             playerObj.vx = 0;
             showDialogue("Sơn", ["... Chết tiệt, mana tiêu hao quá nhiều rồi. Mình thật sự không chịu nổi nữa...","Mình cần linh hồn con người. Chết tiệt!!"]);
-            showDialogue("Sơn", ["..(Tự đâm bản thân để giữ bình tĩnh)"]);
-            showDialogue("Sơn", ["Phù phù. Mình cần ăn thôi."]);
+       
 
 }
            if (currentTile === 8) {
