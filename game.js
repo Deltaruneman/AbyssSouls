@@ -171,7 +171,7 @@ const townMap = [
     [1,1,1,1,1,0,0,0,0,1,1,1,1,1,0,0,0,1,1,1],
     [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
     [1,1,0,0,1,1,1,0,0,0,1,1,1,0,0,0,0,1,1,1],
-    [1,0,0,4,0,0,0,0,5,0,0,0,0,6,0,0,7,8,0,1], 
+    [1,0,0,4,0,0,0,0,5,0,0,0,0,6,0,0,0,8,0,1], 
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ];
@@ -401,13 +401,7 @@ function updatePlatformer() {
             { name: "Trọng", text: "... (nghi ngờ )" }
         ]);
             }
-if(currentTile === 7&& npcTalked) {
 
-            playerObj.vx = 0;
-            showDialogue("Sơn", ["... Chết tiệt, mana tiêu hao quá nhiều rồi. Mình thật sự không chịu nổi nữa...","Mình cần linh hồn con người. Chết tiệt!!"]);
-       
-
-}
            if (currentTile === 8) {
     if (currentMap === roomMap) {
         currentMap = townMap;
