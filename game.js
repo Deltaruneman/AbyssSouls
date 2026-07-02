@@ -533,7 +533,6 @@ function updatePlatformer() {
                 { name: "Trọng", text: "Vậy thì đi thôi, tao theo mày tới cùng." }
             ]);
         }
-        return;
     }
 }
 
