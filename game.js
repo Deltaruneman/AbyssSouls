@@ -135,14 +135,18 @@ let currentMap = map2D;
 let npcTalked = false; 
 
 // ====== PHASE 2: SƠN (SUMMONER) BỊ THƯƠNG, CHỈ TRIỆU HỒI THÊM ĐƯỢC 1 SERVANT ======
-let secondPhaseUnlocked = false;   // true sau khi xem hội thoại mới ở tile 8 (Thị Trấn -> Room)
-let secondGateLockedMsgShown = false; // chỉ hiện gợi ý "cổng đang đóng" 1 lần
+let secondPhaseUnlocked = false;   // true sau khi gặp và team up với Trọng (tile 8: Thị Trấn -> Room)
+let secondGateVisible = false;     // Cổng triệu hồi lần 2 (tile 10) bị ẩn cho tới khi rời Room ra Thị Trấn rồi quay lại Room 1 lần nữa
 let isSecondPhase = false;         // true khi đang ở giai đoạn chiêu mộ/chiến đấu lần 2
 function getMaxRecruit() { return isSecondPhase ? 1 : 3; }
 
 // ====== TRỌNG (ASSASSIN CỐ ĐỊNH - TEAM UP TẠI TILE 8 CỦA ROOM) ======
 let trongJoined = false;           // true sau khi Trọng chất vấn Sơn và quyết định team up
-let permanentAllies = [];          // danh sách đồng đội cố định (hiển thị trong Menu Team [L])
+// permanentAllies: danh sách CON NGƯỜI cố định trong đội (Sơn, Trọng, ...) - dùng cho Menu Team [L].
+// Đây KHÔNG phải danh sách Anh Linh/servant (được chiêu mộ tạm thời tại Cổng Linh Hồn mỗi trận).
+let permanentAllies = [
+    { name: "Sơn", icon: "🔮", role: "Summoner (Nhân vật chính)" }
+];
 let isTeamMenuOpen = false;
 
 // Tạo 1 bản thể chiến đấu mới của Trọng cho mỗi trận (hồi đầy HP/NP mỗi khi vào trận).
@@ -270,20 +274,13 @@ function toggleTeamMenu() {
     openTeamMenu();
 }
 
-function buildTeamMenuCardHTML(unit, isFixed) {
-    let hpPct = unit.maxHp ? Math.max(0, (unit.hp / unit.maxHp) * 100) : 100;
-    let npPct = typeof unit.np === 'number' ? unit.np : 0;
-    let roleLabel = unit.role || (classData[unit.classId] ? classData[unit.classId].name : "");
+function buildTeamMenuCardHTML(unit) {
+    let roleLabel = unit.role || "";
     return `
-        <div class="roster-card" style="cursor:default; width: 160px;">
+        <div class="roster-card" style="cursor:default; width: 150px;">
             <div style="font-size: 32px;">${unit.icon || "❔"}</div>
-            <div style="margin-top: 8px; font-weight: bold; font-size: 15px;">${unit.name}${isFixed ? " 🔒" : ""}</div>
+            <div style="margin-top: 8px; font-weight: bold; font-size: 15px;">${unit.name} 🔒</div>
             <div style="margin-top: 4px; font-size: 11px; color: #94a3b8;">${roleLabel}</div>
-            ${unit.maxHp ? `
-            <div class="bar-container hp" style="margin-top:10px;"><div class="bar-fill" style="width:${hpPct}%"></div><span class="bar-text">${Math.max(0, Math.floor(unit.hp))}/${unit.maxHp}</span></div>
-            <div class="bar-container np"><div class="bar-fill" style="width:${npPct}%"></div><span class="bar-text">NP ${npPct}/100</span></div>
-            ` : `<div style="margin-top:10px; font-size:11px; color:#f1c40f;">Đồng đội cố định</div>`}
-            ${isFixed ? `<div style="margin-top:6px; font-size:10px; color:#a855f7;">Class cố định - không thể thay đổi</div>` : ""}
         </div>`;
 }
 
@@ -291,16 +288,9 @@ function openTeamMenu() {
     isTeamMenuOpen = true;
     keys.ArrowLeft = keys.ArrowRight = keys.ArrowUp = false;
 
-    let cardsHTML = "";
-
-    if (team.length > 0) {
-        team.forEach(s => { cardsHTML += buildTeamMenuCardHTML(s, !!s.fixedClass); });
-    } else {
-        permanentAllies.forEach(a => { cardsHTML += buildTeamMenuCardHTML(a, true); });
-        if (permanentAllies.length === 0) {
-            cardsHTML = `<div style="color:#94a3b8; padding: 20px; text-align:center;">Chưa có đồng đội nào. Hãy chiêu mộ Anh Linh tại Cổng Linh Hồn!</div>`;
-        }
-    }
+    // Menu Team chỉ để xem SỐ NGƯỜI (đồng đội cố định) hiện có trong đội, không phải danh sách
+    // Anh Linh/servant (những nhân vật đó chỉ được chiêu mộ tạm thời tại Cổng Linh Hồn, mỗi trận đấu).
+    let cardsHTML = permanentAllies.map(buildTeamMenuCardHTML).join("");
 
     const overlay = document.createElement("div");
     overlay.className = "modal-overlay";
@@ -308,6 +298,7 @@ function openTeamMenu() {
     overlay.innerHTML = `
         <div class="esc-menu-content" style="width: 640px; max-width: 90vw;">
             <h2>📋 ĐỘI HÌNH HIỆN TẠI</h2>
+            <p style="color:#94a3b8; margin-bottom: 15px; font-size: 14px;">Tổng số thành viên cố định: <strong style="color:#fff;">${permanentAllies.length}</strong></p>
             <div class="roster-grid" style="margin-bottom: 20px;">${cardsHTML}</div>
             <button class="menu-btn" id="close-team-menu-btn">Đóng [L]</button>
         </div>`;
@@ -510,6 +501,8 @@ function updatePlatformer() {
         playerObj.y = 400;
 
         if (!secondPhaseUnlocked) {
+            // Lần đầu quay lại Room sau khi rời Thị Trấn: gặp Trọng, team up.
+            // Cổng triệu hồi lần 2 (tile 10) VẪN CHƯA xuất hiện ở lần này.
             secondPhaseUnlocked = true;
             trongJoined = true;
             permanentAllies.push({ name: "Trọng", icon: "🗡️", role: "Assassin (Cố định) - Sát Thương & Hút Máu" });
@@ -525,25 +518,28 @@ function updatePlatformer() {
                 { name: "Trọng", text: "Vậy nên mày cứ lén lút đi một mình à? Từ giờ có tao rồi." },
                 { name: "Sơn", text: "Nguy hiểm lắm đó Trọng, mày chắc chắn muốn dính vào không?" },
                 { name: "Trọng", text: "Càng nguy hiểm càng cần có tao bên cạnh. Team up thôi, đừng hỏi nhiều." },
-                { name: "Trọng", text: "Cánh cổng linh hồn trong phòng này... để tao mở nó ra." },
-                { name: "Trọng", text: "Nếu may mắn, nó sẽ giúp bọn mình lần ra được nguồn phát tán của Abyss Gate." },
+                { name: "Sơn", text: "Cánh cổng linh hồn trong phòng này... hình như đang im lìm, không cảm nhận được gì cả." },
+                { name: "Trọng", text: "Chắc nó cần thời gian. Cứ ra ngoài Thị Trấn nghỉ ngơi đã, lát quay lại xem sao." },
                 { name: "Hệ Thống", text: "🗡️ Trọng đã gia nhập đội hình vĩnh viễn! (Assassin cố định - Kỹ năng độc quyền: Sát Thương & Hút Máu)" },
                 { name: "Hệ Thống", text: "💡 Nhấn phím [L] để mở Menu Team bất cứ lúc nào trong lúc khám phá." }
+            ]);
+        } else if (!secondGateVisible) {
+            // Lần quay lại Room KẾ TIẾP (sau khi đã gặp Trọng): cổng triệu hồi lần 2 mới thực sự xuất hiện.
+            secondGateVisible = true;
+            playSFX('gate');
+            showDialogue("", [
+                { name: "Trọng", text: "Sơn, nhìn kìa... Cánh cổng linh hồn vừa phát sáng trở lại." },
+                { name: "Sơn", text: "Nó đã sẵn sàng rồi. Đây có lẽ là cách để lần ra nguồn phát tán của Abyss Gate." },
+                { name: "Trọng", text: "Vậy thì đi thôi, tao theo mày tới cùng." }
             ]);
         }
         return;
     }
 }
 
-            // XỬ LÝ CỔNG TRIỆU HỒI LẦN 2 (Tile 10) - chỉ hoạt động sau hội thoại mở khóa ở Thị Trấn
-            if (currentTile === 10 && currentMap === roomMap) {
-                if (!secondPhaseUnlocked) {
-                    if (!secondGateLockedMsgShown) {
-                        secondGateLockedMsgShown = true;
-                        playerObj.vx = 0;
-                        showDialogue("Sơn", ["Cánh cổng này... cảm giác kỳ lạ thật. Có lẽ mình cần biết thêm điều gì đó trước khi mở nó ra."]);
-                    }
-                } else if (!isSecondPhase) {
+            // XỬ LÝ CỔNG TRIỆU HỒI LẦN 2 (Tile 10) - ẩn hoàn toàn cho đến khi secondGateVisible = true
+            if (currentTile === 10 && currentMap === roomMap && secondGateVisible) {
+                if (!isSecondPhase) {
                     isExploring = false;
                     isSecondPhase = true;
                     soulEnergy = Math.max(soulEnergy, 3);
@@ -605,14 +601,15 @@ function updatePlatformer() {
                     ctx.fillStyle = "#f1c40f"; 
                     ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
                 }
-                // Vẽ Cổng Triệu Hồi Lần 2 (chỉ có trong roomMap)
-                else if (currentMap[r][c] === 10) {
-                    ctx.fillStyle = secondPhaseUnlocked ? "#9b59b6" : "#3b2540";
+                // Vẽ Cổng Triệu Hồi Lần 2 (chỉ có trong roomMap) - ẨN HOÀN TOÀN cho đến khi secondGateVisible = true
+                else if (currentMap[r][c] === 10 && secondGateVisible) {
+                    ctx.fillStyle = "#9b59b6";
                     ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
                     ctx.strokeStyle = "#e0aaff";
                     ctx.lineWidth = 1.5;
                     ctx.strokeRect(tileX + 2, tileY + 2, TILE_SIZE - 4, TILE_SIZE - 4);
                 }
+                // (Nếu secondGateVisible === false, tile 10 không được vẽ gì cả -> trông như nền trống, hoàn toàn ẩn)
             }
         }
     }
