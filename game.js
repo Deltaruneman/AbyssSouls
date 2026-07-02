@@ -1600,4 +1600,5 @@ async function executeMinionTurn(minion) {
     }
     queueIndex++;
     nextTurnInQueue();
+    
 }
