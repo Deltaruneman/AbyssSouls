@@ -210,7 +210,23 @@ const townMap = [
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ];
-
+const soulsWorldMap = [
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,1,1,0,0,0,1,1,1,1,0,0,0,0,0,1,1,1,1,0,0,0,1,1,1,1,1,1,0,0,0,1,1,1,1,1,1,0,0,0,0,1],
+    [1,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,2,0,0,1,1,0,0,0,0,0,0,0,0,0,0,2,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,9,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,1,1,1,1,1,0,0,0,0,0,0,1,1,1,0,0,1,1,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,1,1,0,0,0,0,0,2,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,1,1,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,1,1,0,0,0,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1,1,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,2,0,0,0,0,0,0,1],
+    [1,0,0,0,0,1,1,0,0,0,0,0,0,0,0,1,1,0,0,1,1,1,1,0,0,0,0,0,0,1,1,1,1,0,0,1,1,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,2,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,2,0,0,0,0,0,0,2,0,0,0,0,2,0,0,0,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+];
 let playerObj = { stepTimer: 0, x: 100, y: 400, width: 30, height: 30, vx: 0, vy: 0, speed: 5, jumpPower: -11, grounded: false, maxJumps: 2, jumpsLeft: 2, canJump: true };
 let camera = { x: 0, y: 0 };
 let keys = { ArrowLeft: false, ArrowRight: false, ArrowUp: false };
@@ -387,7 +403,15 @@ function interactNPC() {
     
     if (currentMap[centerY] !== undefined && currentMap[centerY][centerX] !== undefined) {
         let currentTile = currentMap[centerY][centerX];
-
+if (currentTile === 3 && currentMap === soulsWorldMap) {
+            playerObj.vx = 0;
+            showDialogue("Trọng", [
+                "Bản đồ thế giới này chia làm 3 khu lớn: Khu Rừng Linh Hồn (nơi chúng ta đang đứng), Vực Thẳm Thử Thách (khu nhảy Parkour ở giữa) và Điện Thờ Cổ Đại phía cuối cùng.",
+                "Hãy di chuyển thật khéo léo về phía bên phải để vượt qua vực sâu. Cổng Boss (Tile 9) ẩn mình ở tận cùng Điện Thờ!",
+                "Đừng quên nhặt các tinh thể năng lượng (Tile 2) dọc đường để có đủ tài nguyên chuẩn bị cho trận chiến khốc liệt sắp tới."
+            ]);
+            return;
+        }
         if (currentTile === 4) {
             playerObj.vx = 0;
             showDialogue("Cô bán bánh mì", ["Con mua bánh mì đi con, con không mua cô với chú chặng đường đấy!", "Đùa thôi nha con."]);
@@ -473,68 +497,56 @@ function updatePlatformer() {
                 }
             }
             
-            // XỬ LÝ NPC TRONG PHÒNG MỚI (Tile 3)
-            if (currentTile === 3 && !npcTalked) {
+            if (currentTile === 3 && currentMap === roomMap && !npcTalked) {
                 npcTalked = true;
                 playerObj.vx = 0; 
                 showDialogue("", [
-            { name: " Hàng sớm", text: "Oi Sơn, tối qua mày đi đâu à?" },
-            { name: "Sơn", text: "À ở tối qua tao có đi giải quyết chút chuyện, có chuyện gì sao Trọng ?" },
-            { name: "Trọng", text: "Ờ thì tao có nghe nói bên trường tối qua có gì đó quỷ dị, tao cũng không tin lắm đâu nhưng mà phòng thì vẫn hơn." },
-            { name: "Trọng", text: "Mà chắc chẳng sao đâu, nhớ chú ý buổi tối là được." },
-            { name: "Sơn", text: "Ờ, tao sẽ chú ý. Mà đi ăn sáng không." },
-            { name: "Trọng", text: "Nah tao có mì tôm rồi" },
-            { name: "Sơn", text: "Ờ vậy tao đi trước đây" },
-            { name: "Trọng", text: "... (nghi ngờ )" }
-        ]);
+                    { name: " Hàng sớm", text: "Oi Sơn, tối qua mày đi đâu à?" },
+                    { name: "Sơn", text: "À ở tối qua tao có đi giải quyết chút chuyện, có chuyện gì sao Trọng ?" },
+                    { name: "Trọng", text: "Ờ thì tao có nghe nói bên trường tối qua có gì đó quỷ dị, tao cũng không tin lắm đâu nhưng mà phòng thì vẫn hơn." },
+                    { name: "Trọng", text: "Mà chắc chẳng sao đâu, nhớ chú ý buổi tối là được." },
+                    { name: "Sơn", text: "Ờ, tao sẽ chú ý. Mà đi ăn sáng không." },
+                    { name: "Trọng", text: "Nah tao có mì tôm rồi" },
+                    { name: "Sơn", text: "Ờ vậy tao đi trước đây" },
+                    { name: "Trọng", text: "... (nghi ngờ )" }
+                ]);
             }
 
-           if (currentTile === 8) {
-    if (currentMap === roomMap) {
-        currentMap = townMap;
-        playerObj.x = 80; 
-        playerObj.y = 400;
-        showDialogue("Hệ Thống", ["Bạn đã được dịch chuyển đến Thị Trấn.", "Hãy lại gần các NPC và nhấn phím [E] để trò chuyện."]);
-    } else if ( currentMap === townMap) {
-        currentMap = roomMap;
-        playerObj.x = 600; 
-        playerObj.y = 400;
-
-        if (!secondPhaseUnlocked) {
-            // Lần đầu quay lại Room sau khi rời Thị Trấn: gặp Trọng, team up.
-            // Cổng triệu hồi lần 2 (tile 10) VẪN CHƯA xuất hiện ở lần này.
-            secondPhaseUnlocked = true;
-            trongJoined = true;
-            permanentAllies.push({ name: "Trọng", icon: "🗡️", role: "Assassin (Cố định) - Sát Thương & Hút Máu" });
-
-            showDialogue("", [
-                { name: "Trọng", text: "Sơn! Đứng lại đã, tao có chuyện muốn hỏi mày." },
-                { name: "Sơn", text: "...Trọng? Mày theo tao về tận đây làm gì?" },
-                { name: "Trọng", text: "Lúc nãy tay mày phát sáng một luồng năng lượng kỳ lạ. Đó không phải ánh sáng bình thường đâu, Sơn." },
-                { name: "Trọng", text: "Đó là mana. Tao cảm nhận được." },
-                { name: "Sơn", text: "(im lặng một lúc) ... Mày cũng có khả năng nhận ra mana sao?" },
-                { name: "Trọng", text: "Tao có lý do của tao. Giờ tới lượt mày, nói thật đi." },
-                { name: "Sơn", text: "(thở dài) Được rồi... Abyss đã lan đến đây. Tao đang cố ngăn nó lại bằng cách triệu hồi Anh Linh." },
-                { name: "Trọng", text: "Vậy nên mày cứ lén lút đi một mình à? Từ giờ có tao rồi." },
-                { name: "Sơn", text: "Nguy hiểm lắm đó Trọng, mày chắc chắn muốn dính vào không?" },
-                { name: "Trọng", text: "Càng nguy hiểm càng cần có tao bên cạnh. Team up thôi, đừng hỏi nhiều." },
-                { name: "Sơn", text: "Cánh cổng linh hồn trong phòng này... hình như đang im lìm, không cảm nhận được gì cả." },
-                { name: "Trọng", text: "Chắc nó cần thời gian. Cứ ra ngoài Thị Trấn nghỉ ngơi đã, lát quay lại xem sao." },
-                { name: "Hệ Thống", text: "🗡️ Trọng đã gia nhập đội hình vĩnh viễn! (Assassin cố định - Kỹ năng độc quyền: Sát Thương & Hút Máu)" },
-                { name: "Hệ Thống", text: "💡 Nhấn phím [L] để mở Menu Team bất cứ lúc nào trong lúc khám phá." }
-            ]);
-        } else if (!secondGateVisible) {
-            // Lần quay lại Room KẾ TIẾP (sau khi đã gặp Trọng): cổng triệu hồi lần 2 mới thực sự xuất hiện.
-            secondGateVisible = true;
-            playSFX('gate');
-            showDialogue("", [
-                { name: "Trọng", text: "Sơn, nhìn kìa... Cánh cổng linh hồn vừa phát sáng trở lại." },
-                { name: "Sơn", text: "Nó đã sẵn sàng rồi. Đây có lẽ là cách để lần ra nguồn phát tán của Abyss Gate." },
-                { name: "Trọng", text: "Vậy thì đi thôi, tao theo mày tới cùng." }
-            ]);
+          if (currentTile === 8) {
+            if (currentMap === roomMap) {
+                currentMap = townMap;
+                playerObj.x = 80; 
+                playerObj.y = 400;
+                showDialogue("Hệ Thống", ["Bạn đã được dịch chuyển đến Thị Trấn.", "Hãy lại gần các NPC và nhấn phím [E] để trò chuyện."]);
+            } else if (currentMap === townMap) {
+                // Thay đổi Concept: Tile 8 ở Town Map sẽ đưa đến Souls World thay vì quay lại phòng cũ
+                playerObj.vx = 0; // Dừng di chuyển của người chơi để đọc hội thoại
+                showDialogue("Sơn", [
+                    "Cảm giác này... Không gian xung quanh Thị Trấn bỗng nhiên vặn vẹo dữ dội!",
+                    "Một vết nứt không gian khổng lồ đang mở ra... Nó dẫn thẳng tới Linh Hồn Giới (Souls World) sao?!",
+                    "Trọng, chuẩn bị tinh thần đi, chúng ta bước qua thôi!"
+                ]);
+                
+                // Đợi người chơi bấm qua hết hội thoại rồi tiến hành dịch chuyển
+                let checkEnd = setInterval(() => {
+                    if (!isDialogueActive) {
+                        clearInterval(checkEnd);
+                        
+                        // Thay đổi bản đồ hiện tại thành Souls World
+                        currentMap = soulsWorldMap;
+                        playerObj.x = 40;   // Vị trí cột đất an toàn khởi đầu (Cột 1)
+                        playerObj.y = 320;  // Đứng trên lớp gạch vững chắc của dòng 9
+                        
+                        // Kích hoạt chuỗi hội thoại mới tại Souls World
+                        showDialogue("Trọng", [
+                            "Đến nơi rồi sao... Không khí nén chặt mana, đây chính là Linh Hồn Giới thực sự!",
+                            "Nơi này cực kỳ rộng lớn và có địa hình phức tạp hơn nhiều. Tao sẽ đi thám thính phía trước một chút.",
+                            "Tao sẽ đứng đợi mày ở Trạm Linh Hồn (Khối màu xanh lá - Tile 3) phía trước. Hãy cẩn thận nhảy qua các bệ đất và thu thập năng lượng!"
+                        ]);
+                    }
+                }, 200);
+            }
         }
-    }
-}
 
             // XỬ LÝ CỔNG TRIỆU HỒI LẦN 2 (Tile 10) - ẩn hoàn toàn cho đến khi secondGateVisible = true
             if (currentTile === 10 && currentMap === roomMap && secondGateVisible) {
