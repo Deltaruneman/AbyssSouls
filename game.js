@@ -512,41 +512,46 @@ function updatePlatformer() {
                 ]);
             }
 
-          if (currentTile === 8) {
-            if (currentMap === roomMap) {
-                currentMap = townMap;
-                playerObj.x = 80; 
-                playerObj.y = 400;
-                showDialogue("Hệ Thống", ["Bạn đã được dịch chuyển đến Thị Trấn.", "Hãy lại gần các NPC và nhấn phím [E] để trò chuyện."]);
-            } else if (currentMap === townMap) {
-                // Thay đổi Concept: Tile 8 ở Town Map sẽ đưa đến Souls World thay vì quay lại phòng cũ
-                playerObj.vx = 0; // Dừng di chuyển của người chơi để đọc hội thoại
-                showDialogue("Sơn", [
-                    "Cảm giác này... Không gian xung quanh Thị Trấn bỗng nhiên vặn vẹo dữ dội!",
-                    "Một vết nứt không gian khổng lồ đang mở ra... Nó dẫn thẳng tới Linh Hồn Giới (Souls World) sao?!",
-                    "Trọng, chuẩn bị tinh thần đi, chúng ta bước qua thôi!"
-                ]);
-                
-                // Đợi người chơi bấm qua hết hội thoại rồi tiến hành dịch chuyển
-                let checkEnd = setInterval(() => {
-                    if (!isDialogueActive) {
-                        clearInterval(checkEnd);
-                        
-                        // Thay đổi bản đồ hiện tại thành Souls World
-                        currentMap = soulsWorldMap;
-                        playerObj.x = 40;   // Vị trí cột đất an toàn khởi đầu (Cột 1)
-                        playerObj.y = 320;  // Đứng trên lớp gạch vững chắc của dòng 9
-                        
-                        // Kích hoạt chuỗi hội thoại mới tại Souls World
-                        showDialogue("Trọng", [
-                            "Đến nơi rồi sao... Không khí nén chặt mana, đây chính là Linh Hồn Giới thực sự!",
-                            "Nơi này cực kỳ rộng lớn và có địa hình phức tạp hơn nhiều. Tao sẽ đi thám thính phía trước một chút.",
-                            "Tao sẽ đứng đợi mày ở Trạm Linh Hồn (Khối màu xanh lá - Tile 3) phía trước. Hãy cẩn thận nhảy qua các bệ đất và thu thập năng lượng!"
-                        ]);
-                    }
-                }, 200);
+
+            if (currentTile === 8 && !window.isTeleporting) {
+                if (currentMap === roomMap) {
+                    currentMap = townMap;
+                    playerObj.x = 80; 
+                    playerObj.y = 400;
+                    showDialogue("Hệ Thống", ["Bạn đã được dịch chuyển đến Thị Trấn.", "Hãy lại gần các NPC và nhấn phím [E] để trò chuyện."]);
+                } else if (currentMap === townMap) {
+
+                    window.isTeleporting = true; 
+                    playerObj.vx = 0; 
+                    
+                    showDialogue("Trọng", [
+                        "Oi",
+                        "Suỵt đừng nói gì cả?!",
+                        "Sơn, chuẩn bị tinh thần đi, tao sẽ đưa mày đến một nơi!"
+                    ]);
+
+                    let checkEnd = setInterval(() => {
+                        if (!isDialogueActive) {
+                            clearInterval(checkEnd);
+
+                            currentMap = soulsWorldMap;
+                            playerObj.x = 40;   
+                            playerObj.y = 320; 
+                            showDialogue("Trọng", [
+                                "Ehem,..!",
+                                "Xin tự giới thiệu tao là Trọng, Huyết thuật sư và cũng là hàng xóm của mày.",
+                                "Tao không ở trong bất kì gia tộc nào nhưng tao đã thức tỉnh ma thuật di truyền!",
+                                "Về chuyện gia đình tao thì... nói chung là kệ đi.",
+                                "Tao đã cảm nhận được ma lực trong người mày. Rất Abyss nhỉ :))",
+                                "Tao có thể ra vào linh giới nhưng không thể kiếm soát được nó. Tao chỉ muón hỏi mày 1 câu",
+                                "Việc hôm qua có liên quan gì đến mày và liệu mày có cùng phe với chúng không? ."
+                            ]);
+
+                            window.isTeleporting = false;
+                        }
+                    }, 200);
+                }
             }
-        }
 
             // XỬ LÝ CỔNG TRIỆU HỒI LẦN 2 (Tile 10) - ẩn hoàn toàn cho đến khi secondGateVisible = true
             if (currentTile === 10 && currentMap === roomMap && secondGateVisible) {
