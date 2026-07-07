@@ -122,7 +122,8 @@ gameImages.wallBot.src = 'assets/images/wall_bot.png';
 gameImages.servant.src = 'assets/images/soul.png'; 
 gameImages.gate.src = 'assets/images/gate.png';      
 gameImages.player.src = 'assets/images/player.png';   
-gameImages.trong.src = 'assets/images/trong.png';     S   
+gameImages.trong.src = 'assets/images/trong.png';     
+    
 gameImages.servant.src = 'assets/images/soul.png'; 
 gameImages.gate.src = 'assets/images/gate.png';      
 gameImages.player.src = 'assets/images/player.png';   
@@ -204,6 +205,7 @@ const roomMap = [
     [1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
     [1,1,1,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
     [1,0,0,0,7,0,0,0,0,0,3,0,0,10,0,0,0,8,0,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ];
 
