@@ -122,8 +122,7 @@ gameImages.wallBot.src = 'assets/images/wall_bot.png';
 gameImages.servant.src = 'assets/images/soul.png'; 
 gameImages.gate.src = 'assets/images/gate.png';      
 gameImages.player.src = 'assets/images/player.png';   
-gameImages.trong.src = 'assets/images/trong.png';     
-    
+gameImages.trong.src = 'assets/images/trong.png';     S   
 gameImages.servant.src = 'assets/images/soul.png'; 
 gameImages.gate.src = 'assets/images/gate.png';      
 gameImages.player.src = 'assets/images/player.png';   
@@ -205,7 +204,6 @@ const roomMap = [
     [1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
     [1,1,1,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
     [1,0,0,0,7,0,0,0,0,0,3,0,0,10,0,0,0,8,0,1],
-    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ];
 
@@ -640,9 +638,10 @@ function updatePlatformer() {
                     ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
                 }
                 // Vẽ Cửa ra
-               else if (currentMap[r][c] === 8) {
-    ctx.drawImage(gameImages.trong, c * TILE_SIZE - camera.x, r * TILE_SIZE - camera.y, TILE_SIZE, TILE_SIZE);
-}
+                else if (currentMap[r][c] === 8) {
+                    ctx.fillStyle = "#f1c40f"; 
+                    ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+                }
                 // Vẽ Cổng Triệu Hồi Lần 2 (chỉ có trong roomMap) - ẨN HOÀN TOÀN cho đến khi secondGateVisible = true
                 else if (currentMap[r][c] === 10 && secondGateVisible) {
                     ctx.fillStyle = "#9b59b6";
