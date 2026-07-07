@@ -123,10 +123,6 @@ gameImages.servant.src = 'assets/images/soul.png';
 gameImages.gate.src = 'assets/images/gate.png';      
 gameImages.player.src = 'assets/images/player.png';   
 gameImages.trong.src = 'assets/images/trong.png';     
-gameImages.wall.src = 'assets/images/wall.png';       
-gameImages.servant.src = 'assets/images/soul.png'; 
-gameImages.gate.src = 'assets/images/gate.png';      
-gameImages.player.src = 'assets/images/player.png';   
 
 const TILE_SIZE = 40;
 const map2D = [
