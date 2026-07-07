@@ -608,10 +608,14 @@ function updatePlatformer() {
             let tileY = r * TILE_SIZE - camera.y;
             
             if (tileX > -TILE_SIZE && tileX < viewWidth && tileY > -TILE_SIZE && tileY < viewHeight) {
-                if (currentMap[r][c] === 1) {
-    let imgToDraw = gameImages.wallMid; 
+              if (currentMap[r][c] === 1) {
+    let imgToDraw = gameImages.wallMid; // Mặc định là tile giữa
+
+    // Nếu không có tile nào ở trên (hoặc là rìa map), nó là tile trên
     let isTop = (r === 0) || (currentMap[r-1][c] !== 1);
+    // Nếu không có tile nào ở dưới (hoặc là rìa map), nó là tile dưới
     let isBot = (r === currentMap.length - 1) || (currentMap[r+1][c] !== 1);
+
     if (isTop) {
         imgToDraw = gameImages.wallTop;
     } else if (isBot) {
