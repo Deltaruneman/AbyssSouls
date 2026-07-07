@@ -150,6 +150,24 @@ const map2D = [
 let currentMap = map2D; 
 let npcTalked = false; 
 
+// ====== VẼ ẢNH AN TOÀN (tránh crash khiến toàn bộ tile/nhân vật biến mất) ======
+// Nếu ảnh chưa load xong hoặc load lỗi (404, sai đường dẫn...), drawImage() sẽ
+// throw exception và làm DỪNG NGAY vòng lặp vẽ map -> mọi tile phía sau + nhân vật
+// (được vẽ SAU vòng lặp) sẽ không bao giờ hiện ra. Hàm dưới đây kiểm tra ảnh đã
+// sẵn sàng chưa trước khi vẽ, nếu chưa thì vẽ tạm 1 ô màu để không làm vỡ vòng lặp.
+function safeDrawImage(ctx, img, x, y, w, h, fallbackColor) {
+    try {
+        if (img && img.complete && img.naturalWidth > 0) {
+            ctx.drawImage(img, x, y, w, h);
+            return;
+        }
+    } catch (e) {
+        // ảnh bị lỗi (broken state) -> rơi xuống vẽ fallback bên dưới
+    }
+    ctx.fillStyle = fallbackColor || "#3a3a3a";
+    ctx.fillRect(x, y, w, h);
+}
+
 // ====== PHASE 2: SƠN (SUMMONER) BỊ THƯƠNG, CHỈ TRIỆU HỒI THÊM ĐƯỢC 1 SERVANT ======
 let secondPhaseUnlocked = false;   // true sau khi gặp và team up với Trọng (tile 8: Thị Trấn -> Room)
 let secondGateVisible = false;     // Cổng triệu hồi lần 2 (tile 10) bị ẩn cho tới khi rời Room ra Thị Trấn rồi quay lại Room 1 lần nữa
@@ -618,10 +636,10 @@ function updatePlatformer() {
         imgToDraw = gameImages.wallBot;
     }
 
-    ctx.drawImage(imgToDraw, c * TILE_SIZE - camera.x, r * TILE_SIZE - camera.y, TILE_SIZE, TILE_SIZE);
+    safeDrawImage(ctx, imgToDraw, c * TILE_SIZE - camera.x, r * TILE_SIZE - camera.y, TILE_SIZE, TILE_SIZE, "#4a4a4a");
 }
-                else if (currentMap[r][c] === 2) ctx.drawImage(gameImages.servant, tileX, tileY, TILE_SIZE, TILE_SIZE); 
-                else if (currentMap[r][c] === 9) ctx.drawImage(gameImages.gate, tileX, tileY, TILE_SIZE, TILE_SIZE);
+                else if (currentMap[r][c] === 2) safeDrawImage(ctx, gameImages.servant, tileX, tileY, TILE_SIZE, TILE_SIZE, "#2ecc71"); 
+                else if (currentMap[r][c] === 9) safeDrawImage(ctx, gameImages.gate, tileX, tileY, TILE_SIZE, TILE_SIZE, "#e67e22");
                 // Vẽ NPC
                 else if (currentMap[r][c] === 3) {
                     ctx.fillStyle = "#6edb34"; 
@@ -637,6 +655,11 @@ function updatePlatformer() {
                 }
                 else if (currentMap[r][c] === 6) {
                     ctx.fillStyle = "#db3490"; 
+                    ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+                }
+                // Vẽ Trọng (chỉ có trong roomMap)
+                else if (currentMap[r][c] === 7) {
+                    ctx.fillStyle = "#e74c3c";
                     ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
                 }
                 // Vẽ Cửa ra
@@ -668,9 +691,9 @@ function updatePlatformer() {
     if (!playerObj.facingRight) {
         ctx.translate(drawX + playerObj.width, drawY);
         ctx.scale(-1, 1);
-        ctx.drawImage(gameImages.player, 0, 0, playerObj.width, playerObj.height);
+        safeDrawImage(ctx, gameImages.player, 0, 0, playerObj.width, playerObj.height, "#00e5ff");
     } else {
-        ctx.drawImage(gameImages.player, drawX, drawY, playerObj.width, playerObj.height);
+        safeDrawImage(ctx, gameImages.player, drawX, drawY, playerObj.width, playerObj.height, "#00e5ff");
     }
     
     ctx.restore(); ctx.restore(); 
@@ -1475,6 +1498,7 @@ function enterPostBossRoom() {
     // Ẩn màn hình chiến đấu, hiện lại màn hình platformer
     document.getElementById("battle-screen").style.display = "none";
     document.getElementById("platformer-screen").style.display = "block";
+    resizeCanvas(); // đảm bảo canvas luôn đúng kích thước khi quay lại map
     
     currentMap = roomMap;
     playerObj.x = 80; 
