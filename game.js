@@ -106,7 +106,23 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 /* ==========================================================================
    PLATFORMER ENGINE 
    ========================================================================== */
-const gameImages = { wall: new Image(), servant: new Image(), gate: new Image(), player: new Image() };
+const gameImages = { 
+    wallTop: new Image(), 
+    wallMid: new Image(), 
+    wallBot: new Image(), 
+    servant: new Image(), 
+    gate: new Image(), 
+    player: new Image(),
+    trong: new Image()    
+};
+
+gameImages.wallTop.src = 'assets/images/wall_top.png';       
+gameImages.wallMid.src = 'assets/images/wall_mid.png';       
+gameImages.wallBot.src = 'assets/images/wall_bot.png';       
+gameImages.servant.src = 'assets/images/soul.png'; 
+gameImages.gate.src = 'assets/images/gate.png';      
+gameImages.player.src = 'assets/images/player.png';   
+gameImages.trong.src = 'assets/images/trong.png';     
 gameImages.wall.src = 'assets/images/wall.png';       
 gameImages.servant.src = 'assets/images/soul.png'; 
 gameImages.gate.src = 'assets/images/gate.png';      
@@ -592,7 +608,18 @@ function updatePlatformer() {
             let tileY = r * TILE_SIZE - camera.y;
             
             if (tileX > -TILE_SIZE && tileX < viewWidth && tileY > -TILE_SIZE && tileY < viewHeight) {
-                if (currentMap[r][c] === 1) ctx.drawImage(gameImages.wall, tileX, tileY, TILE_SIZE, TILE_SIZE);
+                if (currentMap[r][c] === 1) {
+    let imgToDraw = gameImages.wallMid; 
+    let isTop = (r === 0) || (currentMap[r-1][c] !== 1);
+    let isBot = (r === currentMap.length - 1) || (currentMap[r+1][c] !== 1);
+    if (isTop) {
+        imgToDraw = gameImages.wallTop;
+    } else if (isBot) {
+        imgToDraw = gameImages.wallBot;
+    }
+
+    ctx.drawImage(imgToDraw, c * TILE_SIZE - camera.x, r * TILE_SIZE - camera.y, TILE_SIZE, TILE_SIZE);
+}
                 else if (currentMap[r][c] === 2) ctx.drawImage(gameImages.servant, tileX, tileY, TILE_SIZE, TILE_SIZE); 
                 else if (currentMap[r][c] === 9) ctx.drawImage(gameImages.gate, tileX, tileY, TILE_SIZE, TILE_SIZE);
                 // Vẽ NPC
