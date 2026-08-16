@@ -15,17 +15,13 @@
       <span class="brand-mark">卡</span>
       <div class="brand-text">
         <h1>TRICKO CARDO</h1>
-        <p>Bản demo chiến thuật — dựng lại từ concept gốc để hình dung luồng chơi</p>
+        <p>Bản demo chiến thuật — vòng lặp kiểu Slay the Spire: năng lượng, rút bài, địch báo trước ý định</p>
       </div>
     </div>
     <div class="round-tracker">
       <div class="round-tracker-item">
-        <span class="rt-label">Hiệp</span>
+        <span class="rt-label">Lượt</span>
         <span class="rt-value" id="roundValue">1</span>
-      </div>
-      <div class="round-tracker-item">
-        <span class="rt-label">Phần</span>
-        <span class="rt-value" id="phaseValue">1 / 3</span>
       </div>
     </div>
     <button class="btn-ghost" id="restartBtn">Chơi lại</button>
@@ -43,8 +39,16 @@
         <div class="hp-bar"><div class="hp-fill" id="playerHpFill"></div></div>
         <span class="hp-text" id="playerHpText">100 / 100</span>
       </div>
+      <div class="energy-row">
+        <span class="energy-label">Năng lượng</span>
+        <div class="energy-orbs" id="energyOrbs"></div>
+      </div>
       <ul class="stat-list" id="playerStats"></ul>
       <div class="status-row" id="playerStatus"></div>
+      <div class="pile-row">
+        <span id="drawCount">Bốc: 0</span>
+        <span id="discardCount">Bỏ: 0</span>
+      </div>
     </aside>
 
     <!-- GRID -->
@@ -55,7 +59,7 @@
         <span class="zonelabel zl-enemy">Sân đối phương</span>
       </div>
       <div class="battle-grid" id="battleGrid"><!-- 21 cells injected by JS --></div>
-      <p class="grid-caption">Hàng được chọn khi thi triển thẻ sẽ sáng lên. Quân chỉ trúng đòn nếu đang đứng đúng hàng bị nhắm.</p>
+      <p class="grid-caption" id="gridCaption">Chọn 1 lá bài, rồi rê chuột lên bàn cờ để xem trước phạm vi — bấm vào ô để thi triển.</p>
     </section>
 
     <!-- ENEMY PANEL -->
@@ -68,6 +72,10 @@
         <div class="hp-bar"><div class="hp-fill" id="enemyHpFill"></div></div>
         <span class="hp-text" id="enemyHpText">100 / 100</span>
       </div>
+      <div class="intent-box" id="intentBox">
+        <span class="intent-label">Ý định tiếp theo</span>
+        <div class="intent-body" id="intentBody">—</div>
+      </div>
       <ul class="stat-list" id="enemyStats"></ul>
       <div class="status-row" id="enemyStatus"></div>
     </aside>
@@ -77,19 +85,11 @@
 
     <div class="hand-panel">
       <div class="hand-heading">
-        <h3>Bài trên tay <span id="handRemaining">(3 lá cho hiệp này)</span></h3>
-        <p id="phaseInstruction">Chọn 1 lá để thi triển cho phần này của hiệp.</p>
+        <h3>Bài trên tay</h3>
+        <p id="phaseInstruction">Chọn 1 lá bài để bắt đầu nhắm mục tiêu.</p>
       </div>
       <div class="hand-cards" id="handCards"><!-- cards injected --></div>
-
-      <div class="row-picker" id="rowPicker" hidden>
-        <span class="row-picker-label">Chọn hàng:</span>
-        <button class="row-btn" data-row="0">Hàng trên</button>
-        <button class="row-btn" data-row="1">Hàng giữa</button>
-        <button class="row-btn" data-row="2">Hàng dưới</button>
-      </div>
-
-      <button class="btn-primary" id="playCardBtn" disabled>Thi triển thẻ</button>
+      <button class="btn-primary" id="endTurnBtn">Kết thúc lượt</button>
     </div>
 
     <div class="log-panel">
