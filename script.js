@@ -22,6 +22,16 @@ const NPC_IMAGES = { E:"", B:"", TRONG:"" };
 const ROOM_IMAGES = {
   A:"assets/images/ToaA.png", B:"assets/images/ToaB.png", C:"assets/images/ToaC.png", D:"assets/images/ToaD.png", E:"assets/images/ToaE.png", LIB:"", CANTEEN:""
 };
+// Ảnh quái vật The TIU dùng cho pha jumpscare toàn màn hình — điền đường dẫn PNG vào đây,
+// ví dụ: 'assets/images/tiu-monster.png'. Để trống thì sẽ hiện icon dự phòng.
+const TIU_IMAGE = "assets/images/TIU.png";
+
+// Nhạc cảnh báo khi The TIU ở gần — điền đường dẫn file âm thanh vào đây,
+// ví dụ: 'assets/audio/tiu-near.mp3'. Để trống thì tính năng này sẽ tự tắt.
+const TIU_PROXIMITY_MUSIC = "assets/audio/tiu-near.mp3";
+// Từ khoảng cách (số tòa) này trở đi thì coi như The TIU đã đi xa hẳn -> nhạc tắt hẳn.
+const PROXIMITY_FAR_DISTANCE = 3;
+
 // Màu nền dự phòng khi chưa có ảnh, để mỗi phòng vẫn có nhận diện riêng.
 const ROOM_FALLBACK_GRADIENT = {
   A:"linear-gradient(135deg,#241a12,#12100e)",
@@ -44,8 +54,8 @@ const NIGHT_CFG = [
 
 const GAME_MINUTES_TOTAL = 7.5*60; // 00:00 -> 07:30
 const REAL_MS_PER_GAME_MIN = (15*60*1000) / GAME_MINUTES_TOTAL; // 1 màn ~ 15 phút thực tế
-const BASE_MOVE_COST_MIN = 22; // game-minutes per move (edge)
-const SPEED_BUFF_MULT = 0.45;
+const BASE_MOVE_COST_MIN = 10; // mỗi lượt di chuyển giữa 2 tòa liền kề LUÔN mất đúng 10 phút (game-time)
+const BUFF_MOVE_COST_MIN = 5;  // đang có buff Nước tăng lực -> mỗi lượt di chuyển chỉ mất 5 phút
 
 /* ---- Camping fix: Căn tin chỉ mở trong khung giờ cố định ---- */
 const CANTEEN_WINDOWS = [[60,120],[240,300]]; // 01:00-02:00 & 04:00-05:00 (tính bằng phút kể từ 00:00)
@@ -605,9 +615,8 @@ function onRoomClick(k){
 /* ============== MOVEMENT ============== */
 function movePlayer(dest){
   if(!S.running || S.paused) return;
-  let cost = BASE_MOVE_COST_MIN;
   const noisy = S.gameMinutes < S.speedBuffUntil;
-  if(noisy) cost *= SPEED_BUFF_MULT;
+  const cost = noisy ? BUFF_MOVE_COST_MIN : BASE_MOVE_COST_MIN; // 10 phút bình thường, 5 phút khi có buff Nước tăng lực
   S.gameMinutes += cost;
   S.playerRoom = dest;
   addLog('Bạn di chuyển đến '+ROOM_DEF[dest].name+'.','');
@@ -698,11 +707,17 @@ function advanceWorld(minutesPassed){
 }
 
 function spawnEvent(){
-  const candidates = ROOM_KEYS.filter(k=>!ROOM_DEF[k].safe && !S.activeEvents[k]);
-  if(candidates.length===0) return;
-  const room = pick(candidates);
+  // Sự cố luôn do chính The TIU gây ra: nó phải phát sinh ngay tại phòng TIU đang đứng
+  // (hoặc phòng liền kề nếu phòng đó đã có sự cố/đang an toàn) — không còn chuyện
+  // "sự cố bung ra một nơi, còn TIU lại ở tận một nẻo khác" nữa.
+  let room = (!ROOM_DEF[S.monsterRoom].safe && !S.activeEvents[S.monsterRoom]) ? S.monsterRoom : null;
+  if(!room){
+    const near = ROOM_DEF[S.monsterRoom].connects.filter(k=>!ROOM_DEF[k].safe && !S.activeEvents[k]);
+    room = near.length ? pick(near) : null;
+  }
+  if(!room) return;
   S.activeEvents[room] = {deadline: S.gameMinutes + rand(70,110)};
-  addLog('⚠ Sự cố mới tại '+ROOM_DEF[room].name+': '+eventLabel(ROOM_DEF[room].event)+'!','warn');
+  addLog('⚠ The TIU gây ra sự cố tại '+ROOM_DEF[room].name+': '+eventLabel(ROOM_DEF[room].event)+'!','warn');
 }
 
 /* Đường đi ngắn nhất trên đồ thị phòng (BFS). avoidSafe=true nghĩa là TIU sẽ không
@@ -724,6 +739,61 @@ function bfsPath(start, goal, avoidSafe){
     }
   }
   return null;
+}
+
+/* Khoảng cách ngắn nhất (số cạnh trên sơ đồ) giữa 2 phòng bất kỳ, không né khu an toàn
+   — dùng để đo The TIU đang cách người chơi bao xa cho hiệu ứng nhạc cảnh báo. */
+function roomDistance(a,b){
+  if(a===b) return 0;
+  const visited = new Set([a]);
+  let frontier = [a], dist = 0;
+  while(frontier.length){
+    dist++;
+    const next = [];
+    for(const node of frontier){
+      for(const nb of ROOM_DEF[node].connects){
+        if(nb===b) return dist;
+        if(visited.has(nb)) continue;
+        visited.add(nb);
+        next.push(nb);
+      }
+    }
+    frontier = next;
+  }
+  return Infinity;
+}
+
+/* ============== NHẠC CẢNH BÁO KHI THE TIU Ở GẦN ============== */
+let proximityAudioEl = null;
+let proximityCurVol = 0;
+function initProximityAudio(){
+  proximityAudioEl = document.getElementById('tiuProximityAudio');
+  if(proximityAudioEl && TIU_PROXIMITY_MUSIC){
+    proximityAudioEl.src = TIU_PROXIMITY_MUSIC;
+    proximityAudioEl.loop = true;
+    proximityAudioEl.volume = 0;
+  }
+}
+/* Gọi mỗi khung hình khi ván đang chạy: The TIU cách người chơi 0-1 tòa -> nhạc to nhất,
+   càng xa (tới PROXIMITY_FAR_DISTANCE tòa) thì nhạc càng nhỏ dần rồi tắt hẳn. */
+function updateProximityAudio(){
+  if(!proximityAudioEl || !TIU_PROXIMITY_MUSIC) return;
+  let target = 0;
+  if(S && S.running && !S.paused && S.gameMinutes>=S.breakerUntil){
+    const d = roomDistance(S.playerRoom, S.monsterRoom);
+    if(d<=1) target = 1;
+    else if(d>=PROXIMITY_FAR_DISTANCE) target = 0;
+    else target = 1 - (d-1)/(PROXIMITY_FAR_DISTANCE-1);
+  }
+  if(window.UIT_SOUND_MUTED) target = 0;
+  proximityCurVol += (target - proximityCurVol) * 0.06; // nhỏ dần / to dần mượt thay vì bật/tắt đột ngột
+  if(Math.abs(target-proximityCurVol)<0.004) proximityCurVol = target;
+  proximityAudioEl.volume = Math.max(0, Math.min(1, proximityCurVol));
+  if(proximityCurVol > 0.01){
+    if(proximityAudioEl.paused) proximityAudioEl.play().catch(()=>{});
+  } else if(!proximityAudioEl.paused){
+    proximityAudioEl.pause();
+  }
 }
 
 function moveMonster(){
@@ -764,9 +834,12 @@ function checkEncounter(){
 function jumpscare(){
   S.hp--;
   markActionDirty();
+  S.paused = true; // đóng băng thế giới trong lúc màn jumpscare đang hiện — người chơi phải bấm "đứng dậy" mới chơi tiếp
   // Giảm I-Frames: chỉ đủ cho đúng 1 lượt di chuyển để trốn thoát
   S.invulnUntil = S.gameMinutes + rand(15,20);
   const caughtRoom = S.playerRoom;
+  const hpLeft = S.hp;
+  const dead = hpLeft<=0;
   // relocate monster away
   const others = ROOM_KEYS.filter(r=>r!==S.playerRoom && !isRoomSafe(r));
   S.monsterRoom = pick(others.length?others:ROOM_KEYS.filter(r=>r!==S.playerRoom));
@@ -781,21 +854,47 @@ function jumpscare(){
   }
   addLog('JUMPSCARE! The TIU đã tóm được bạn tại '+ROOM_DEF[caughtRoom].name+'!','danger');
 
-  // fullscreen jumpscare display
+  // fullscreen jumpscare display: TIU lao thẳng vào màn hình, rồi hiện bảng thông báo + nút đứng dậy
   const js = document.getElementById('jumpscareOverlay');
-  const jsImg = document.getElementById('jsImg');
-  const imgUrl = ROOM_IMAGES[caughtRoom];
-  jsImg.style.backgroundImage = imgUrl ? `url('${imgUrl}')` : ROOM_FALLBACK_GRADIENT[caughtRoom];
-  document.getElementById('jsText').textContent = S.hp>0
-    ? 'THE TIU ĐÃ TÓM ĐƯỢC BẠN! ('+S.hp+' HP còn lại)'
-    : 'THE TIU ĐÃ TÓM ĐƯỢC BẠN!';
-  js.classList.remove('hidden');
-  js.classList.remove('active'); void js.offsetWidth; js.classList.add('active');
+  const jsMonster = document.getElementById('jsMonster');
+  const jsPanel = document.getElementById('jsPanel');
+  const jsPanelText = document.getElementById('jsPanelText');
+  const jsContinueBtn = document.getElementById('jsContinueBtn');
 
+  jsMonster.style.backgroundImage = TIU_IMAGE ? `url('${TIU_IMAGE}')` : '';
+  jsMonster.classList.toggle('no-img', !TIU_IMAGE);
+  jsPanel.classList.remove('show');
+  jsContinueBtn.disabled = true;
+
+  jsPanelText.innerHTML = dead
+    ? 'THE TIU ĐÃ TÓM ĐƯỢC BẠN LẦN CUỐI...<span class="jsPanelSub">Bạn gục ngã tại '+ROOM_DEF[caughtRoom].name+'.</span>'
+    : 'THE TIU ĐÃ TÓM ĐƯỢC BẠN!<span class="jsPanelSub">Còn lại '+hpLeft+' HP — vừa xảy ra tại '+ROOM_DEF[caughtRoom].name+'</span>';
+  jsContinueBtn.textContent = dead ? 'GỤC NGÃ...' : 'ĐỨNG DẬY! TIẾP TỤC CA TRỰC';
+
+  js.classList.remove('hidden');
+  js.classList.remove('active','lunge'); void js.offsetWidth;
+  js.classList.add('active','lunge');
+
+  // Sau pha lao vào màn hình mới hiện bảng thông báo, và phải chờ thêm một nhịp mới bấm được nút
+  // (tránh bấm nhầm/bấm quá nhanh trong lúc còn đang hoảng)
   setTimeout(()=>{
+    jsPanel.classList.add('show');
+    setTimeout(()=>{ jsContinueBtn.disabled = false; }, dead ? 500 : 300);
+  }, 650);
+
+  jsContinueBtn.onclick = ()=>{
+    if(jsContinueBtn.disabled) return;
     js.classList.add('hidden');
-    if(S.hp<=0) gameOver();
-  }, S.hp<=0 ? 1200 : 900);
+    js.classList.remove('active','lunge');
+    jsPanel.classList.remove('show');
+    if(dead){
+      gameOver();
+    } else {
+      S.paused = false;
+      S.lastTick = performance.now();
+      refreshAll();
+    }
+  };
 }
 
 /* ============== TICK LOOP (real time) ============== */
@@ -831,6 +930,7 @@ function tick(now){
   } else if(S){
     S.lastTick = now;
   }
+  updateProximityAudio();
   rafId = requestAnimationFrame(tick);
 }
 
@@ -1309,6 +1409,7 @@ document.getElementById('closeMapBtn').onclick=()=>{
 })();
 
 buildMap();
+initProximityAudio();
 rafId = requestAnimationFrame(tick);
 
 })();
