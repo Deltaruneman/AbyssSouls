@@ -143,3 +143,24 @@ const TRONG_DIALOGUE = {
   ],
   reward:{type:'special_trong', msg:'Trọng ban cho bạn 1 HP và 1 chai Nước tăng lực trước khi biến mất trong bóng tối.'}
 };
+
+/* ---- Hội thoại bí mật: chỉ xảy ra khi người chơi đã nhặt đủ 3 mảnh La Peace
+   (mảnh năng lượng ôn hòa) và nói chuyện với Trọng trong lần gặp duy nhất tại Nhà C,
+   đêm 3, lúc HP = 1. Chỉ kích hoạt trong chế độ chơi thường (nút BẮT ĐẦU). ---- */
+const TRONG_SECRET_DIALOGUE = {
+  lines:[
+    {spk:'Bạn', text:'"Khoan đã Trọng — trước khi mày đi, tao có thứ này."'},
+    {spk:'Bạn', text:'"(Rút ra 3 mảnh sáng lấp lánh mà mình nhặt được rải rác quanh trường)"'},
+    {spk:'TRỌNG', text:'"...Không thể nào. Ba mảnh La Peace, đủ cả ba?"'},
+    {spk:'TRỌNG', text:'"Tao đã tìm thứ này suốt bao lâu nay mà không dám tin có ai tìm đủ được."'},
+    {spk:'TRỌNG', text:'"La Peace — năng lượng ôn hòa, thứ đối nghịch hoàn toàn với bản chất của TIU."'},
+    {spk:'Bạn', text:'"Vậy giờ làm gì với nó?"'},
+    {spk:'TRỌNG', text:'"Đưa hết cho tao. Nếu ba mảnh hợp nhất ngay lúc này, có lẽ... chúng ta sẽ chấm dứt được chuyện này."'},
+    {spk:'Bạn', text:'"Chấm dứt là ý mày nói..."'},
+    {spk:'TRỌNG', text:'"Không giết nó. Hòa giải với nó. TIU sinh ra vì UIT thiếu đi phần này."'},
+    {spk:'', text:'"(Ba mảnh La Peace phát sáng, hòa vào nhau thành một luồng ánh sáng ấm áp)"'},
+    {spk:'TRỌNG', text:'"...Cảm ơn. Cuối cùng thì đêm nay cũng sẽ là đêm cuối cùng — theo một cách hoàn toàn khác."'},
+    {spk:'???', text:'"...Hahaha... ha..."'},
+    {spk:'BẠN', text:'Tiếng cười quen thuộc ấy dần tan biến, nhẹ nhàng, gần như bình yên.'}
+  ]
+};

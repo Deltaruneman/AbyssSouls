@@ -4,12 +4,14 @@
 /* ============== CONFIG ============== */
 const ROOM_DEF = {
   A:      {name:"TÒA A", sub:"Hội trường", x:30, y:76, connects:["LIB","E","B"], event:"stage"},
-  B:      {name:"TÒA B", sub:"7 tầng", x:26, y:44, connects:["A","C","E","CANTEEN"], event:"floors"},
+  B:      {name:"TÒA B", sub:"7 tầng", x:26, y:44, connects:["A","C","E","CANTEEN","PARK"], event:"floors"},
   C:      {name:"TÒA C", sub:"Tủ điện", x:58, y:44, connects:["B","D","E","CANTEEN"], event:"wire"},
-  D:      {name:"TÒA D", sub:"Ban chỉ huy", x:80, y:14, connects:["C"], event:"quiz"},
-  E:      {name:"TÒA E", sub:"11 tầng", x:56, y:70, connects:["A","C"], event:"wibu"},
-  LIB:    {name:"THƯ VIỆN", sub:"Kho sách", x:9, y:88, connects:["A"], event:"books"},
-  CANTEEN:{name:"CĂN TIN", sub:"Khu an toàn", x:44, y:20, connects:["B","C"], safe:true}
+  D:      {name:"TÒA D", sub:"Ban chỉ huy", x:80, y:14, connects:["C","FIELD"], event:"quiz"},
+  E:      {name:"TÒA E", sub:"11 tầng", x:56, y:70, connects:["A","C","FIELD"], event:"wibu"},
+  LIB:    {name:"THƯ VIỆN", sub:"Kho sách", x:9, y:88, connects:["A","PARK"], event:"books"},
+  CANTEEN:{name:"CĂN TIN", sub:"Khu an toàn", x:44, y:20, connects:["B","C"], safe:true},
+  PARK:   {name:"CHỖ GỬI XE", sub:"Bãi giữ xe", x:7, y:55, connects:["LIB","B"], event:"bikes"},
+  FIELD:  {name:"SÂN BÓNG", sub:"Sân thể thao ngoài trời", x:86, y:60, connects:["D","E"], event:"ball"}
 };
 const ROOM_KEYS = Object.keys(ROOM_DEF);
 
@@ -20,7 +22,8 @@ const NPC_IMAGES = { E:"", B:"", TRONG:"" };
 // Ảnh riêng cho từng phòng — thay các URL này bằng ảnh của bạn (đặt file vào cùng thư mục
 // với file HTML này và sửa đường dẫn bên dưới, ví dụ: A:"images/nha-a.jpg").
 const ROOM_IMAGES = {
-  A:"assets/images/ToaA.png", B:"assets/images/ToaB.png", C:"assets/images/ToaC.png", D:"assets/images/ToaD.png", E:"assets/images/ToaE.png", LIB:"assets/images/lib.png", CANTEEN:"assets/images/ct.png"
+  A:"assets/images/ToaA.png", B:"assets/images/ToaB.png", C:"assets/images/ToaC.png", D:"assets/images/ToaD.png", E:"assets/images/ToaE.png", LIB:"assets/images/lib.png", CANTEEN:"assets/images/ct.png",
+  PARK:"assets/images/park.png", FIELD:"assets/images/field.png"
 };
 // Ảnh quái vật The TIU dùng cho pha jumpscare toàn màn hình — điền đường dẫn PNG vào đây,
 // ví dụ: 'assets/images/tiu-monster.png'. Để trống thì sẽ hiện icon dự phòng.
@@ -41,7 +44,9 @@ const ROOM_FALLBACK_GRADIENT = {
   D:"linear-gradient(135deg,#241214,#120e0f)",
   E:"linear-gradient(135deg,#1c1424,#100e14)",
   LIB:"linear-gradient(135deg,#1e1a12,#100f0c)",
-  CANTEEN:"linear-gradient(135deg,#0f2418,#0c1712)"
+  CANTEEN:"linear-gradient(135deg,#0f2418,#0c1712)",
+  PARK:"linear-gradient(135deg,#1a1c14,#100f0c)",
+  FIELD:"linear-gradient(135deg,#0e2018,#0c1410)"
 };
 
 let _storedVol = 80;
@@ -93,6 +98,9 @@ let S = null;
 function freshState(night){
   const startRoom = ROOM_KEYS[Math.floor(Math.random()*ROOM_KEYS.length)];
   let monsterRoom = ROOM_KEYS.filter(r=>r!==startRoom && !ROOM_DEF[r].safe)[Math.floor(Math.random()*4)];
+  // --- La Peace: mảnh năng lượng ôn hòa, 1 mảnh ẩn xuất hiện ngẫu nhiên mỗi đêm ---
+  const peaceSpots = ROOM_KEYS.filter(r=>!ROOM_DEF[r].safe && r!==startRoom);
+  const laPeaceRoom = pick(peaceSpots.length ? peaceSpots : ROOM_KEYS.filter(r=>!ROOM_DEF[r].safe));
   return {
     night,
     gameMinutes: 0,
@@ -125,9 +133,16 @@ function freshState(night){
     paused: false,
     npcSeen: {},     // {roomKey: nightNumber đã xem}
     trongSeen: false,
-    introShown: false
+    introShown: false,
+    // --- La Peace (mảnh năng lượng ôn hòa) ---
+    laPeaceRoom: laPeaceRoom,
+    laPeaceFound: false
   };
 }
+
+/* Tổng số La Peace đã nhặt được xuyên suốt lượt chơi thường (đêm 1 -> 3).
+   Được đặt về 0 mỗi khi bắt đầu lại từ Đêm 1, giữ nguyên khi tiếp tục sang đêm sau. */
+let campaignLaPeace = 0;
 
 function rand(a,b){return a+Math.random()*(b-a);}
 function pick(arr){return arr[Math.floor(Math.random()*arr.length)];}
@@ -209,7 +224,15 @@ function getRoomNPCMeta(roomKey){
 function talkToNPC(meta){
   if(meta.key==='TRONG'){
     S.trongSeen = true;
-    playVN(TRONG_DIALOGUE.lines, ()=>{ applyVNReward(TRONG_DIALOGUE.reward); refreshActionPane(); });
+    const unlockSecret = !S.standalone && campaignLaPeace>=3;
+    playVN(TRONG_DIALOGUE.lines, ()=>{
+      applyVNReward(TRONG_DIALOGUE.reward);
+      if(unlockSecret){
+        playVN(TRONG_SECRET_DIALOGUE.lines, ()=>{ triggerSecretEnding(); });
+      } else {
+        refreshActionPane();
+      }
+    });
   } else {
     const entry = NPC_DIALOGUES[meta.key][S.night];
     S.npcSeen[meta.key] = S.night;
@@ -365,6 +388,9 @@ function updateRoomDescOnly(){
   if(def.safe && !isRoomSafe(S.playerRoom)){
     desc += ` — Căn tin chỉ mở cửa lúc 01:00-02:00 và 04:00-05:00.`;
   }
+  if(S.laPeaceRoom===S.playerRoom && !S.laPeaceFound){
+    desc += ` — ✦ Một luồng năng lượng kỳ lạ, ấm áp phảng phất đâu đây...`;
+  }
   const el = document.getElementById('roomDesc');
   if(el) el.textContent = desc;
 }
@@ -421,6 +447,9 @@ function refreshActionPane(){
   }
   if(def.safe && !safeNow){
     desc += ` — Căn tin chỉ mở cửa lúc 01:00-02:00 và 04:00-05:00.`;
+  }
+  if(S.laPeaceRoom===S.playerRoom && !S.laPeaceFound){
+    desc += ` — ✦ Một luồng năng lượng kỳ lạ, ấm áp phảng phất đâu đây...`;
   }
   document.getElementById('roomDesc').textContent = desc;
 
@@ -517,6 +546,14 @@ function refreshActionPane(){
     }
   };
   itemGroup.row.appendChild(useBreaker);
+
+  if(S.laPeaceRoom===S.playerRoom && !S.laPeaceFound){
+    const usePeace=document.createElement('button');
+    usePeace.className='btn peace';
+    usePeace.textContent='✦ Nhặt La Peace (mảnh năng lượng ôn hòa)';
+    usePeace.onclick=pickupLaPeace;
+    itemGroup.row.appendChild(usePeace);
+  }
   btnWrap.appendChild(itemGroup.g);
 
   /* ---- Nhóm 3: TƯƠNG TÁC ---- */
@@ -536,11 +573,22 @@ function refreshActionPane(){
                     <div class="itemChip">Camera SV: <b>${S.inventory.camera}</b></div>
                     <div class="itemChip">Cầu dao: <b>${S.inventory.breaker}</b></div>
                     <div class="itemChip">Buff tốc độ: <b>${S.gameMinutes<S.speedBuffUntil?'ĐANG BẬT':'—'}</b></div>
-                    <div class="itemChip">Thể lực: <b>${Math.round(Math.max(0,S.stamina))}%</b></div>`;
+                    <div class="itemChip">Thể lực: <b>${Math.round(Math.max(0,S.stamina))}%</b></div>
+                    <div class="itemChip">La Peace: <b>${campaignLaPeace}/3</b></div>`;
+}
+
+/* ============== LA PEACE (vật phẩm ẩn) ============== */
+function pickupLaPeace(){
+  if(!S || S.laPeaceFound || S.playerRoom!==S.laPeaceRoom) return;
+  S.laPeaceFound = true;
+  campaignLaPeace++;
+  addLog('✦ Bạn tìm thấy một mảnh La Peace (năng lượng ôn hòa) ẩn tại '+ROOM_DEF[S.playerRoom].name+'! ('+campaignLaPeace+'/3)', '');
+  markActionDirty();
+  refreshHud(); refreshActionPane();
 }
 
 function eventLabel(ev){
-  return {stage:'Kiểm tra sân khấu', floors:'Bật/tắt các tầng', wire:'Nối dây điện', quiz:'Trả lời câu hỏi', wibu:'Bắt Wibu Việt Nhật', books:'Sắp xếp lại sách'}[ev]||ev;
+  return {stage:'Kiểm tra sân khấu', floors:'Bật/tắt các tầng', wire:'Nối dây điện', quiz:'Trả lời câu hỏi', wibu:'Bắt Wibu Việt Nhật', books:'Sắp xếp lại sách', bikes:'Dắt xe về đúng hàng', ball:'Tìm quả bóng lạc'}[ev]||ev;
 }
 
 function onRoomClick(k){
@@ -1201,6 +1249,51 @@ function startMinigame(room){
     });
     startTimer(20, ()=>finish(false));
   }
+
+  else if(ev==='bikes'){
+    // Chỗ gửi xe bị đảo lộn: dắt xe về đúng số thứ tự từ nhỏ đến lớn trước khi hết giờ.
+    const nums = [1,2,3,4,5,6];
+    const shuffled = [...nums].sort(()=>Math.random()-0.5);
+    let expected = 1;
+    body.innerHTML = '<p style="font-size:12px;color:var(--text-dim);">Xe bị dựng lộn xộn! Bấm vào từng xe theo đúng thứ tự số từ nhỏ đến lớn để dắt về hàng.</p><div class="bookRow"></div>';
+    const row = body.querySelector('.bookRow');
+    shuffled.forEach(n=>{
+      const t=document.createElement('div'); t.className='bookTile'; t.textContent='🏍'+n;
+      t.onclick=()=>{
+        if(t.classList.contains('picked')) return;
+        if(n===expected){
+          t.classList.add('picked'); expected++;
+          if(expected>6) finish(true);
+        } else {
+          finish(false);
+        }
+      };
+      row.appendChild(t);
+    });
+    startTimer(20, ()=>finish(false));
+  }
+
+  else if(ev==='ball'){
+    // Sân bóng tối om: tìm đúng quả bóng lạc giữa một rừng bóng giả trước khi hết giờ.
+    let round=0, totalRounds=3;
+    function newRound(){
+      body.innerHTML='<p style="font-size:12px;color:var(--text-dim);">Một quả bóng thật lẫn trong đám bóng giả — tìm và bấm vào nó trước khi hết giờ!</p><div class="stageGrid"></div>';
+      const grid = body.querySelector('.stageGrid');
+      const oddIdx = Math.floor(Math.random()*20);
+      for(let i=0;i<20;i++){
+        const c=document.createElement('div');
+        c.className='stageCell'+(i===oddIdx?' odd':'');
+        c.textContent = i===oddIdx?'⚽':'●';
+        c.onclick=()=>{
+          if(i===oddIdx){ round++; if(round<totalRounds) newRound(); else finish(true); }
+          else { finish(false); }
+        };
+        grid.appendChild(c);
+      }
+    }
+    newRound();
+    startTimer(18, ()=>finish(false));
+  }
 }
 
 /* ============== SHOP (Canteen) ============== */
@@ -1275,11 +1368,28 @@ function showEndScreen(){
   document.getElementById('winScreen').classList.remove('hidden');
 }
 
+/* ============== SECRET ENDING (3 La Peace + nói chuyện với Trọng) ==============
+   Chỉ có thể kích hoạt trong chế độ chơi thường (nút BẮT ĐẦU — không phải CHỌN MÀN). */
+function triggerSecretEnding(){
+  if(!S) return;
+  S.running = false;
+  showSecretEndScreen();
+}
+function showSecretEndScreen(){
+  document.getElementById('winTitle').textContent = '✦ SECRET ENDING — HÒA GIẢI ✦';
+  document.getElementById('winSub').textContent = 'Ba mảnh La Peace hợp nhất thành một luồng sáng ấm áp. TIU và Trọng cùng tan vào ánh sáng ấy — có lẽ, đây mới là câu trả lời thật sự cho việc "đừng ngủ quên ở UIT".';
+  const nextBtn = document.getElementById('nextNightBtn');
+  nextBtn.textContent = 'VỀ MENU CHÍNH';
+  nextBtn.onclick = ()=>{ document.getElementById('winScreen').classList.add('hidden'); showTitle(); };
+  document.getElementById('winScreen').classList.remove('hidden');
+}
+
 /* ============== FLOW ============== */
 function refreshAll(){
   refreshHud(); refreshMap(); refreshActionPane();
 }
 function beginNight(n, standalone){
+  if(n===1) campaignLaPeace = 0; // mỗi lượt chơi mới (từ Đêm 1) reset lại số La Peace đã nhặt
   S = freshState(n);
   S.standalone = !!standalone;
   addLog('Ca trực '+NIGHT_CFG[n].name+' bắt đầu lúc 00:00. Bạn xuất phát tại '+ROOM_DEF[S.playerRoom].name+'.','');

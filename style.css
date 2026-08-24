@@ -182,6 +182,12 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
 .btn.danger{border-color:var(--blood);color:var(--blood-bright);}
 .btn.npc{border-color:#8a5fc9;color:#c98cff;}
 .btn.npc:hover{border-color:#c98cff;box-shadow:0 0 10px rgba(201,140,255,0.4);}
+.btn.peace{border-color:#e6cf7a;color:#f2e2a0;animation:peaceGlow 1.6s ease-in-out infinite;}
+.btn.peace:hover{border-color:#fff3c4;box-shadow:0 0 16px rgba(242,226,160,0.65);}
+@keyframes peaceGlow{
+  0%,100%{box-shadow:2px 3px 0 rgba(0,0,0,0.6),0 0 6px rgba(230,207,122,0.35);}
+  50%{box-shadow:2px 3px 0 rgba(0,0,0,0.6),0 0 16px rgba(230,207,122,0.8);}
+}
 .btn:disabled{opacity:0.35;cursor:not-allowed;}
 #invRow{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
 .itemChip{border:1px solid var(--line);padding:4px 8px;font-size:11px;border-radius:2px;color:var(--text-dim);}
