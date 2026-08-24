@@ -375,6 +375,16 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
 #bossSpriteGlyph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:64px;color:var(--blood-bright);opacity:0;text-shadow:0 0 40px rgba(230,41,63,0.9);}
 #bossSprite.no-img #bossSpriteGlyph{opacity:1;}
 #bossName{font-family:var(--font-disp);font-size:19px;letter-spacing:3px;color:#fff;margin-top:6px;text-shadow:0 0 10px rgba(230,41,63,0.6);}
+
+/* ---- TIU vỡ vụn thành từng mảnh khi party cầm cự đủ 15 lượt ---- */
+#bossSprite.dissolving{transition:opacity .35s ease .55s;opacity:0;}
+#bossShatterFx{position:fixed;z-index:99;pointer-events:none;}
+.boss-shard{position:absolute;background-repeat:no-repeat;opacity:1;box-shadow:0 0 10px rgba(230,41,63,0.35) inset;}
+.boss-shard.go{animation:bossShardFly .95s cubic-bezier(.3,.8,.4,1) forwards;}
+@keyframes bossShardFly{
+  0%{opacity:1;transform:translate(0,0) rotate(0deg) scale(1);}
+  100%{opacity:0;transform:translate(var(--tx),var(--ty)) rotate(var(--rot)) scale(.25);}
+}
 #bossHpBarOuter{width:min(360px,80vw);height:16px;background:#1c1e24;border:1px solid var(--line);margin-top:6px;position:relative;overflow:hidden;}
 #bossHpBarFill{height:100%;width:100%;background:linear-gradient(90deg,#7a0f1c,var(--blood-bright));transition:width .5s ease;}
 #bossHpText{font-size:11px;color:var(--text-dim);margin-top:2px;}
@@ -467,11 +477,22 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
 
 /* victory rainbow burst fx (thanh tẩy thành công) */
 #battleVictoryFx{position:fixed;inset:0;z-index:98;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;}
-#battleVictoryFx.go{animation:victoryFadeIn 2.2s ease-in forwards;}
+#battleVictoryFx.go{animation:victoryFadeIn 2s ease-in forwards;}
 @keyframes victoryFadeIn{0%{opacity:0;}20%{opacity:1;}100%{opacity:1;}}
+
+/* màn hình lóe sáng dần đều trong 2s ngay khi party cầm cự đủ 15 lượt */
+#whiteFlashCore{position:absolute;inset:0;z-index:0;background:radial-gradient(circle at 50% 55%, #fff 0%, rgba(255,255,255,0.85) 35%, rgba(255,255,255,0) 72%);
+  opacity:0;}
+#battleVictoryFx.go #whiteFlashCore{animation:whiteFlashGrow 2s ease-in forwards;}
+@keyframes whiteFlashGrow{
+  0%{opacity:0;transform:scale(.5);}
+  70%{opacity:.95;transform:scale(1.15);}
+  100%{opacity:1;transform:scale(1.3);}
+}
+
 #rainbowBurst{position:absolute;inset:-20%;background:conic-gradient(from 0deg,#ff5a5a,#ffd35a,#8aff5a,#5ad3ff,#a35aff,#ff5a5a);
   opacity:0;filter:blur(6px) saturate(1.6);mix-blend-mode:screen;}
-#battleVictoryFx.go #rainbowBurst{animation:rainbowSpin 2.2s ease-out forwards;}
+#battleVictoryFx.go #rainbowBurst{animation:rainbowSpin 2s ease-out forwards;}
 @keyframes rainbowSpin{
   0%{opacity:0;transform:scale(.2) rotate(0deg);}
   30%{opacity:.9;}
@@ -479,14 +500,14 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
 }
 #battleVictoryText{position:relative;z-index:2;font-family:var(--font-disp);font-size:28px;letter-spacing:4px;color:#fff;
   text-shadow:0 0 26px rgba(255,255,255,0.9);opacity:0;}
-#battleVictoryFx.go #battleVictoryText{animation:victoryTextIn 1.4s ease-out .6s forwards;}
+#battleVictoryFx.go #battleVictoryText{animation:victoryTextIn 1.3s ease-out .55s forwards;}
 
 /* ---- pha cuối (đủ 15 lượt): cột sáng trắng đâm thẳng lên + 7 màu xoáy quanh cột ---- */
 #lightColumn{position:absolute;left:50%;bottom:0;width:64px;height:0;transform:translateX(-50%);
   background:linear-gradient(to top, rgba(255,255,255,0) 0%, #fff 14%, #fff 86%, rgba(255,255,255,0) 100%);
   box-shadow:0 0 60px 20px rgba(255,255,255,0.9), 0 0 160px 70px rgba(255,255,255,0.45);
   opacity:0;z-index:1;}
-#battleVictoryFx.go #lightColumn{animation:lightColumnRise 2.2s cubic-bezier(.2,.8,.3,1) forwards;}
+#battleVictoryFx.go #lightColumn{animation:lightColumnRise 2s cubic-bezier(.2,.8,.3,1) forwards;}
 @keyframes lightColumnRise{
   0%{height:0;opacity:0;}
   15%{opacity:1;}

@@ -1635,7 +1635,27 @@ function applyBattleSkill(key){
   }
 }
 
-/* ---- Lượt của boss: chọn 1 pattern bullet-hell trong nhiều pattern khác nhau ---- */
+/* ---- Chọn CHUỖI pattern cho lượt boss hiện tại ----
+   Càng về các lượt sau, xác suất & độ dài của việc NỐI LIỀN nhiều pattern bullet-hell
+   lại với nhau thành 1 chuỗi đòn dài càng tăng. Tới đúng lượt cuối cùng (BS.maxTurn),
+   TIU dồn hết sức tàn — TẤT CẢ các pattern sẽ được nối liền lại thành 1 chuỗi duy nhất. */
+function chooseBossPatternChain(turn){
+  const all = BOSS_PATTERNS;
+  if(turn >= BS.maxTurn){
+    // lượt cuối: bung hết mọi chiêu thức, nối liền thành 1 chuỗi đòn tổng lực
+    return shuffle(all.slice());
+  }
+  const progress = (turn-1) / Math.max(1, BS.maxTurn-2); // tăng dần 0 -> ~1 khi tới gần lượt cuối
+  let chainLen = 1;
+  for(let i=0; i<all.length-1; i++){
+    if(Math.random() < 0.10 + progress*0.55) chainLen++;
+    else break; // trượt là dừng nối chuỗi, tránh việc luôn full ngay từ đầu
+  }
+  chainLen = Math.min(chainLen, all.length);
+  return shuffle(all.slice()).slice(0, chainLen);
+}
+
+/* ---- Lượt của boss: chạy lần lượt từng pattern trong chuỗi (bullet-hell nối liền nhau) ---- */
 function bossTurn(staggered){
   if(BS.boss.stunned){
     addBattleLog('TIU bị choáng, không thể ra đòn lượt này.','skill');
@@ -1646,28 +1666,51 @@ function bossTurn(staggered){
     endRound();
     return;
   }
-  const pattern = pick(BOSS_PATTERNS);
-  document.getElementById('bossPatternTag').textContent = '⚠ '+pattern.name;
-  addBattleLog('THE TIU tung chiêu: '+pattern.name+' — '+pattern.desc,'danger');
+  const chain = chooseBossPatternChain(BS.turn);
+  if(chain.length > 1){
+    const isFinal = BS.turn >= BS.maxTurn;
+    addBattleLog((isFinal ? 'TIU GIÃY GIỤA TRONG TUYỆT VỌNG — DỒN TOÀN BỘ SỨC TÀN, NỐI LIỀN CẢ '+chain.length+' CHIÊU THỨC THÀNH 1 CHUỖI ĐÒN CUỐI CÙNG: '
+      : 'THE TIU nối liền '+chain.length+' chiêu thức thành 1 CHUỖI ĐÒN DÀI: ')+chain.map(p=>p.name).join(' → '),'danger');
+  }
+  runBossChain(chain, 0, 0);
+}
+
+/* Chạy từng pattern trong chuỗi nối tiếp nhau, cộng dồn sát thương của cả chuỗi lại
+   rồi mới áp dụng 1 lần lên party khi chuỗi kết thúc. */
+function runBossChain(chain, idx, totalDmg){
+  if(idx >= chain.length){
+    applyBossChainDamage(totalDmg);
+    return;
+  }
+  const pattern = chain[idx];
+  document.getElementById('bossPatternTag').textContent = '⚠ '+pattern.name + (chain.length>1 ? ' ('+(idx+1)+'/'+chain.length+')' : '');
+  addBattleLog((idx===0 ? 'THE TIU tung chiêu: ' : '...nối liền chiêu tiếp theo: ')+pattern.name+' — '+pattern.desc, 'danger');
   runDodgePhase(pattern, (hits)=>{
-    const tauntKey = BS.order.find(k=>BS.party[k].taunting && BS.party[k].hp>0);
-    const targets = tauntKey ? [tauntKey] : BS.order.filter(k=>BS.party[k].hp>0);
-    if(hits<=0){
-      addBattleLog('Linh hồn hợp nhất né trọn vẹn cả chuỗi đòn — không ai bị thương!','warn');
-    } else {
-      targets.forEach(k=>{
-        const st = BS.party[k], def = PARTY_DEF[k];
-        let dmg = 0;
-        for(let i=0;i<hits;i++) dmg += Math.round(rand(pattern.dmg[0], pattern.dmg[1]));
-        if(st.defending) dmg = Math.round(dmg*0.75);
-        st.hp = Math.max(0, st.hp - dmg);
-        addBattleLog(def.name+' hứng chịu '+dmg+' sát thương ('+hits+' lần trúng đòn)'+(st.defending?' — đã phòng thủ':'')+'.','dmg');
-      });
-    }
-    renderBattle();
-    if(BS.order.every(k=>BS.party[k].hp<=0)){ finishBattle(false); return; }
-    endRound();
+    let segDmg = 0;
+    if(hits>0){ for(let i=0;i<hits;i++) segDmg += Math.round(rand(pattern.dmg[0], pattern.dmg[1])); }
+    else addBattleLog('Linh hồn hợp nhất né trọn chiêu "'+pattern.name+'"!', 'warn');
+    const gap = chain.length>1 ? 260 : 0; // khoảng nghỉ ngắn giữa các đòn trong chuỗi
+    setTimeout(()=>{ runBossChain(chain, idx+1, totalDmg+segDmg); }, gap);
   });
+}
+
+function applyBossChainDamage(totalDmg){
+  const tauntKey = BS.order.find(k=>BS.party[k].taunting && BS.party[k].hp>0);
+  const targets = tauntKey ? [tauntKey] : BS.order.filter(k=>BS.party[k].hp>0);
+  if(totalDmg<=0){
+    addBattleLog('Cả chuỗi đòn bị né trọn vẹn — không ai bị thương!','warn');
+  } else {
+    targets.forEach(k=>{
+      const st = BS.party[k], def = PARTY_DEF[k];
+      let dmg = totalDmg;
+      if(st.defending) dmg = Math.round(dmg*0.75);
+      st.hp = Math.max(0, st.hp - dmg);
+      addBattleLog(def.name+' hứng chịu tổng cộng '+dmg+' sát thương từ cả chuỗi đòn'+(st.defending?' — đã phòng thủ':'')+'.','dmg');
+    });
+  }
+  renderBattle();
+  if(BS.order.every(k=>BS.party[k].hp<=0)){ finishBattle(false); return; }
+  endRound();
 }
 
 /* ============== DODGE PHASE — né chuỗi đạn bằng "linh hồn hợp nhất" ==============
@@ -1919,11 +1962,14 @@ function finishBattle(won){
   document.getElementById('battleMenu').innerHTML='';
   stopBattleMusic();
   if(won){
-    addBattleLog('Trọng hoàn tất tế lễ thanh tẩy — một cột ánh sáng trắng đâm thẳng lên trời, bảy sắc cầu vồng xoáy quanh cột nuốt trọn TIU!','sys');
-    playRainbowFx(()=>{
-      document.getElementById('battleVictoryFx').classList.remove('go');
-      document.getElementById('battleOverlay').classList.add('hidden');
-      triggerSecretEnding();
+    addBattleLog('Trọng hoàn tất tế lễ thanh tẩy — hình hài TIU rạn nứt rồi vỡ tan thành từng mảnh!','sys');
+    playBossShatterFx(()=>{
+      addBattleLog('Một cột ánh sáng trắng đâm thẳng lên trời, bảy sắc cầu vồng xoáy quanh cột nuốt trọn những mảnh vỡ cuối cùng của TIU!','sys');
+      playRainbowFx(()=>{
+        document.getElementById('battleVictoryFx').classList.remove('go');
+        document.getElementById('battleOverlay').classList.add('hidden');
+        triggerSecretEnding();
+      });
     });
   } else {
     addBattleLog('Cả party gục ngã... nghi lễ thanh tẩy thất bại.','danger');
@@ -1942,7 +1988,57 @@ function playRainbowFx(cb){
   const fx = document.getElementById('battleVictoryFx');
   fx.classList.remove('go'); void fx.offsetWidth;
   fx.classList.add('go');
-  setTimeout(cb, 2200);
+  setTimeout(cb, 2000); // màn hình lóe sáng dần trong 2 giây trước khi hiện thông báo ending
+}
+
+/* ---- Hình hài TIU rạn nứt rồi vỡ tan thành từng mảnh khi party cầm cự đủ 15 lượt ---- */
+function playBossShatterFx(cb){
+  const sprite = document.getElementById('bossSprite');
+  if(!sprite){ cb && cb(); return; }
+  const rect = sprite.getBoundingClientRect();
+  const layer = document.createElement('div');
+  layer.id = 'bossShatterFx';
+  layer.style.left = rect.left+'px';
+  layer.style.top = rect.top+'px';
+  layer.style.width = rect.width+'px';
+  layer.style.height = rect.height+'px';
+  document.body.appendChild(layer);
+
+  const cols = 5, rows = 5;
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      const shard = document.createElement('div');
+      shard.className = 'boss-shard';
+      shard.style.left = (c*100/cols)+'%';
+      shard.style.top = (r*100/rows)+'%';
+      shard.style.width = (100/cols)+'%';
+      shard.style.height = (100/rows)+'%';
+      if(TIU_IMAGE){
+        shard.style.backgroundImage = `url('${TIU_IMAGE}')`;
+        shard.style.backgroundSize = (cols*100)+'% '+(rows*100)+'%';
+        shard.style.backgroundPosition = (cols<=1?0:(c*100/(cols-1)))+'% '+(rows<=1?0:(r*100/(rows-1)))+'%';
+      } else {
+        shard.style.background = 'var(--blood-bright)';
+      }
+      const cx = c-(cols-1)/2, cy = r-(rows-1)/2;
+      shard.style.setProperty('--tx', ((Math.random()-0.5)*30 + cx*26)+'vw');
+      shard.style.setProperty('--ty', ((Math.random()-0.5)*24 + cy*22)+'vh');
+      shard.style.setProperty('--rot', (Math.random()*260-130)+'deg');
+      shard.style.animationDelay = (Math.random()*0.12)+'s';
+      layer.appendChild(shard);
+    }
+  }
+
+  sprite.classList.add('dissolving');
+  void layer.offsetWidth;
+  layer.querySelectorAll('.boss-shard').forEach(s=>s.classList.add('go'));
+
+  setTimeout(()=>{
+    layer.remove();
+    sprite.classList.remove('dissolving');
+    sprite.style.backgroundImage = '';
+    cb && cb();
+  }, 950);
 }
 
 /* ============== SECRET ENDING (3 La Peace + nói chuyện với Trọng) ==============
