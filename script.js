@@ -20,7 +20,7 @@ const NPC_IMAGES = { E:"", B:"", TRONG:"" };
 // Ảnh riêng cho từng phòng — thay các URL này bằng ảnh của bạn (đặt file vào cùng thư mục
 // với file HTML này và sửa đường dẫn bên dưới, ví dụ: A:"images/nha-a.jpg").
 const ROOM_IMAGES = {
-  A:"assets/images/ToaA.png", B:"", C:"", D:"", E:"", LIB:"", CANTEEN:""
+  A:"assets/images/ToaA.png", B:"assets/images/ToaB.png", C:"assets/images/ToaC.png", D:"assets/images/ToaD.png", E:"assets/images/ToaE.png", LIB:"", CANTEEN:""
 };
 // Màu nền dự phòng khi chưa có ảnh, để mỗi phòng vẫn có nhận diện riêng.
 const ROOM_FALLBACK_GRADIENT = {
