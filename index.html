@@ -24,7 +24,7 @@
     </div>
     <div class="hud-block"><span class="hud-label">ĐIỂM</span><span class="hud-value" id="pointsHud">0</span></div>
     <div class="hud-block"><span class="hud-label">TIU LẦN CUỐI THẤY TẠI</span><span class="hud-value" id="tiuLastSeen" style="color:var(--blood-bright);">—</span></div>
-    <button id="mapBtn"><span class="dot"></span>🗺 BẢN ĐỒ</button>
+    <button id="soundToggleBtn" title="Bật/Tắt âm thanh" aria-pressed="false"><span id="soundIcon">🔊</span></button>
     <div id="nightBadge">ĐÊM 1</div>
   </div>
 
@@ -76,21 +76,30 @@
 </div>
 
 <div id="crt"></div>
+<div id="filmGrain"></div>
+<div id="neonFlicker"></div>
 <div id="vignette"></div>
 <div id="flash"></div>
 
 <div class="overlay" id="titleScreen">
-  <h1>ĐỪNG NGỦ QUÊN Ở UIT</h1>
-  <h2>THE TIU ĐANG RÌNH RẬP</h2>
-  <p>Bạn được phân công trực đêm khắp khuôn viên: Nhà A, B, C, D, E, Thư viện và Căn tin.
-  Mỗi ca trực chạy đồng hồ trong game từ 00:00 đến 07:30 (kéo dài khoảng 15 phút thực tế). Mỗi khu vực sẽ phát sinh sự cố ngẫu nhiên — bỏ lỡ hoặc làm hỏng
-  sẽ khiến <b style="color:var(--blood-bright)">The TIU</b> hoạt động mạnh hơn. Nếu bạn đứng cùng tòa với The TIU, bạn sẽ bị jumpscare
-  và mất 1 HP. Mất 3 HP là thua. <b>Căn tin chỉ an toàn khi mở cửa</b> (01:00-02:00 &amp; 04:00-05:00) — đứng yên trong đó quá lâu cũng khiến bạn cạn <b>Thể lực</b> và bị đói.
-  Khi thanh mức độ hoạt động chạm 100%, <b style="color:var(--blood-bright)">Huyết Nguyệt</b> sẽ kích hoạt và không nơi nào còn an toàn. Hãy để ý các sinh viên khác trong khuôn viên — họ có thể giúp bạn.</p>
-  <div id="menuBtnRow">
-    <button class="bigbtn" id="startBtn">BẮT ĐẦU (CHƠI CẢ 3 ĐÊM)</button>
-    <button class="bigbtn secondary" id="selectNightBtn">CHỌN MÀN</button>
-    <button class="bigbtn neutral" id="settingsBtn">CÀI ĐẶT</button>
+  <div id="titleLeft">
+    <h1>ĐỪNG NGỦ QUÊN Ở UIT</h1>
+    <h2>THE TIU ĐANG RÌNH RẬP</h2>
+    <p>Bạn được phân công trực đêm khắp khuôn viên: Nhà A, B, C, D, E, Thư viện và Căn tin.
+    Mỗi ca trực chạy đồng hồ trong game từ 00:00 đến 07:30 (kéo dài khoảng 15 phút thực tế). Mỗi khu vực sẽ phát sinh sự cố ngẫu nhiên — bỏ lỡ hoặc làm hỏng
+    sẽ khiến <b style="color:var(--blood-bright)">The TIU</b> hoạt động mạnh hơn. Nếu bạn đứng cùng tòa với The TIU, bạn sẽ bị jumpscare
+    và mất 1 HP. Mất 3 HP là thua. <b>Căn tin chỉ an toàn khi mở cửa</b> (01:00-02:00 &amp; 04:00-05:00) — đứng yên trong đó quá lâu cũng khiến bạn cạn <b>Thể lực</b> và bị đói.
+    Khi thanh mức độ hoạt động chạm 100%, <b style="color:var(--blood-bright)">Huyết Nguyệt</b> sẽ kích hoạt và không nơi nào còn an toàn. Hãy để ý các sinh viên khác trong khuôn viên — họ có thể giúp bạn.</p>
+    <div id="menuBtnRow">
+      <button class="bigbtn" id="startBtn">BẮT ĐẦU (CHƠI CẢ 3 ĐÊM)</button>
+      <button class="bigbtn secondary" id="selectNightBtn">CHỌN MÀN</button>
+      <button class="bigbtn neutral" id="settingsBtn">CÀI ĐẶT</button>
+    </div>
+  </div>
+  <div id="titleCarousel">
+    <div id="carouselTrack"></div>
+    <div id="carouselVhsBand"></div>
+    <div id="carouselLabel">—</div>
   </div>
 </div>
 

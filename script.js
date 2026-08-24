@@ -361,6 +361,18 @@ function refreshMap(){
   refreshMapInto('mini');
 }
 
+/* ============== room title glitch (Huyết Nguyệt) ============== */
+function setRoomTitleGlitch(on){
+  const el = document.getElementById('roomTitle');
+  if(!el) return;
+  const wasOn = el.classList.contains('glitch-active');
+  el.classList.toggle('glitch-active', on);
+  if(on && !wasOn){
+    // randomize the animation start point each time it kicks in so the glitch bursts feel unpredictable
+    el.style.animationDelay = (-(Math.random()*2.6)).toFixed(2)+'s';
+  }
+}
+
 /* ============== HUD ============== */
 function refreshHud(){
   document.getElementById('clockVal').textContent = formatClock(S.gameMinutes);
@@ -374,6 +386,7 @@ function refreshHud(){
     hpWrap.appendChild(d);
   }
   document.getElementById('meterFill').style.width = Math.min(100,S.meter)+'%';
+  document.getElementById('vignette').classList.toggle('critical', S.hp===1);
 
   const stFill = document.getElementById('staminaFill');
   stFill.style.width = Math.max(0,S.stamina)+'%';
@@ -800,6 +813,7 @@ function tick(now){
       checkEncounter();
       document.getElementById('blackout').classList.toggle('on', S.gameMinutes < S.breakerUntil);
       document.getElementById('meterOuter').classList.toggle('enraged', S.enraged);
+      setRoomTitleGlitch(S.enraged);
       refreshHud();
       refreshMap();
       // full action-pane rebuild only when something actually changed,
@@ -1170,6 +1184,7 @@ function beginNight(n, standalone){
   hideAllOverlays();
   document.getElementById('blackout').classList.remove('on');
   document.getElementById('meterOuter').classList.remove('enraged');
+  setRoomTitleGlitch(false);
   playVN(VN_INTRO[n], ()=>{});
 }
 function hideAllOverlays(){
@@ -1239,11 +1254,6 @@ document.getElementById('retryBtn').onclick=()=>{
 document.getElementById('menuFromGameOver').onclick = showTitle;
 document.getElementById('menuFromWin').onclick = showTitle;
 
-document.getElementById('mapBtn').onclick=()=>{
-  document.getElementById('mapModal').classList.remove('hidden');
-  buildMap();
-  refreshMap();
-};
 document.getElementById('miniMapExpand').onclick=()=>{
   document.getElementById('mapModal').classList.remove('hidden');
   buildMap();
@@ -1252,6 +1262,51 @@ document.getElementById('miniMapExpand').onclick=()=>{
 document.getElementById('closeMapBtn').onclick=()=>{
   document.getElementById('mapModal').classList.add('hidden');
 };
+
+/* ============== sound toggle (HUD) ============== */
+(function initSoundToggle(){
+  const btn = document.getElementById('soundToggleBtn');
+  const icon = document.getElementById('soundIcon');
+  if(!btn || !icon) return;
+  let muted = false;
+  try{ muted = localStorage.getItem('uit_sound_muted') === '1'; }catch(e){}
+  function apply(){
+    btn.classList.toggle('muted', muted);
+    btn.setAttribute('aria-pressed', String(muted));
+    icon.textContent = muted ? '🔇' : '🔊';
+    window.UIT_SOUND_MUTED = muted; // hook point for future SFX/music
+  }
+  apply();
+  btn.onclick = ()=>{
+    muted = !muted;
+    try{ localStorage.setItem('uit_sound_muted', muted ? '1' : '0'); }catch(e){}
+    apply();
+  };
+})();
+
+/* ============== title screen rotating building carousel ============== */
+(function initTitleCarousel(){
+  const track = document.getElementById('carouselTrack');
+  const label = document.getElementById('carouselLabel');
+  if(!track || !label) return;
+  const keys = Object.keys(ROOM_DEF);
+  const slides = keys.map(k=>{
+    const div = document.createElement('div');
+    div.className = 'carouselSlide';
+    const img = ROOM_IMAGES[k];
+    div.style.backgroundImage = img ? `url('${img}')` : (ROOM_FALLBACK_GRADIENT[k] || '');
+    track.appendChild(div);
+    return {key:k, el:div};
+  });
+  if(!slides.length) return;
+  let idx = 0;
+  function show(i){
+    slides.forEach((s,n)=>s.el.classList.toggle('active', n===i));
+    label.textContent = ROOM_DEF[slides[i].key].name;
+  }
+  show(0);
+  setInterval(()=>{ idx = (idx+1) % slides.length; show(idx); }, 3600);
+})();
 
 buildMap();
 rafId = requestAnimationFrame(tick);
