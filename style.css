@@ -313,6 +313,26 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
 #shopBody .shopItem{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);}
 #pointsVal{color:var(--scan);}
 
+/* ---------- pause menu (ESC) ---------- */
+#pauseMenu{position:fixed;inset:0;background:rgba(3,3,4,0.94);z-index:75;display:flex;align-items:center;justify-content:center;}
+#pauseMenu.hidden{display:none;}
+#pauseMenuBox{width:min(320px,90vw);display:flex;flex-direction:column;align-items:stretch;text-align:center;
+  background:var(--panel);border:2px solid var(--line);border-radius:6px;padding:26px 22px;box-shadow:0 0 40px rgba(0,0,0,0.75);}
+#pauseMenuTitle{font-family:var(--font-disp);font-size:26px;letter-spacing:4px;color:var(--amber);margin-bottom:16px;text-shadow:0 0 12px rgba(226,162,59,0.5);}
+#pauseMenuBox .bigbtn{width:100%;margin-top:10px;font-size:15px;letter-spacing:2px;padding:11px 10px;}
+
+/* ---------- volume slider row (settings) ---------- */
+.volRow{display:flex;align-items:center;gap:10px;}
+.volSlider{-webkit-appearance:none;appearance:none;width:140px;height:6px;border-radius:3px;background:#1c1e24;border:1px solid var(--line);outline:none;cursor:pointer;}
+.volSlider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;background:var(--amber);border:2px solid #12100e;box-shadow:0 0 6px rgba(226,162,59,0.7);cursor:pointer;}
+.volSlider::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--amber);border:2px solid #12100e;box-shadow:0 0 6px rgba(226,162,59,0.7);cursor:pointer;}
+.volVal{width:38px;font-size:11px;color:var(--text-dim);text-align:right;}
+
+/* ---------- wire minigame (Tòa C) ---------- */
+.wireEndpoint{transition:transform .12s,outline-color .12s;}
+.wireEndpoint:hover{transform:scale(1.12);}
+.wireEndpoint.done{cursor:default;}
+
 /* ---------- blackout (breaker item) ---------- */
 #blackout{position:fixed;inset:0;background:#000;z-index:45;pointer-events:none;opacity:0;transition:opacity .6s;}
 #blackout.on{opacity:0.94;}

@@ -5,7 +5,7 @@
 const ROOM_DEF = {
   A:      {name:"TÒA A", sub:"Hội trường", x:30, y:76, connects:["LIB","E","B"], event:"stage"},
   B:      {name:"TÒA B", sub:"7 tầng", x:26, y:44, connects:["A","C","E","CANTEEN"], event:"floors"},
-  C:      {name:"TÒA C", sub:"Bể cá", x:58, y:44, connects:["B","D","E","CANTEEN"], event:"fish"},
+  C:      {name:"TÒA C", sub:"Tủ điện", x:58, y:44, connects:["B","D","E","CANTEEN"], event:"wire"},
   D:      {name:"TÒA D", sub:"Ban chỉ huy", x:80, y:14, connects:["C"], event:"quiz"},
   E:      {name:"TÒA E", sub:"11 tầng", x:56, y:70, connects:["A","C"], event:"wibu"},
   LIB:    {name:"THƯ VIỆN", sub:"Kho sách", x:9, y:88, connects:["A"], event:"books"},
@@ -43,7 +43,12 @@ const ROOM_FALLBACK_GRADIENT = {
   CANTEEN:"linear-gradient(135deg,#0f2418,#0c1712)"
 };
 
-const SETTINGS = { shake:true, flash:true, crt:true };
+let _storedVol = 80;
+try{
+  const _v = localStorage.getItem('uit_master_volume');
+  if(_v!==null){ const n = parseInt(_v,10); if(!isNaN(n)) _storedVol = Math.max(0,Math.min(100,n)); }
+}catch(e){}
+const SETTINGS = { shake:true, flash:true, crt:true, masterVolume:_storedVol };
 
 const NIGHT_CFG = [
   null,
@@ -125,6 +130,13 @@ function freshState(night){
 
 function rand(a,b){return a+Math.random()*(b-a);}
 function pick(arr){return arr[Math.floor(Math.random()*arr.length)];}
+function shuffle(arr){
+  for(let i=arr.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+  return arr;
+}
 
 /* ============== VISUAL NOVEL ============== */
 function playVN(lines, onDone){
@@ -161,23 +173,23 @@ function playVN(lines, onDone){
 /* ---- Lời thoại mở màn / kết màn mỗi đêm ---- */
 const VN_INTRO = {
   1: [
-    {spk:'LOA THÔNG BÁO', text:'"Toàn bộ nhân viên trực đêm chú ý: ca trực bắt đầu lúc 00:00. Mọi sự cố phát sinh cần được xử lý trước khi The TIU phát hiện ra."'},
-    {spk:'BẠN', text:'Đêm đầu tiên. Nghe nói chỉ cần tránh gây ồn và làm hết việc là ổn thôi... hy vọng vậy.'}
+    {spk:'LOA THÔNG BÁO', text:'"Khuôn viên trường sẽ đóng cổng chính lúc 22:00. Sinh viên còn lại vui lòng rời khỏi trường trước giờ đóng cổng."'},
+    {spk:'BẠN', text:'Trọ của mình còn 3 ngày nữa mới dọn vào được... thôi thì tối nay lại phải lén ở lại trường một mình rồi.'}
   ],
   2: [
-    {spk:'LOA THÔNG BÁO', text:'"Đêm thứ hai. Ban quản lý ghi nhận hoạt động bất thường tại khuôn viên vào đêm qua. Hãy cẩn trọng hơn."'},
-    {spk:'BẠN', text:'The TIU hôm nay có vẻ nhanh hơn hẳn... mình không thể lười biếng như đêm qua được.'}
+    {spk:'BẠN', text:'Đêm thứ hai lén ở lại trường. Đêm qua The TIU đã phát hiện ra mình một lần, chắc tối nay nó sẽ để ý khu này hơn.'},
+    {spk:'BẠN', text:'Ráng thêm 2 đêm nữa thôi... rồi mình sẽ có chỗ ở đàng hoàng.'}
   ],
   3: [
-    {spk:'LOA THÔNG BÁO', text:'"Đêm cuối cùng của ca trực. Hãy hoàn thành nhiệm vụ và trở về an toàn."'},
-    {spk:'BẠN', text:'Chỉ còn một đêm nữa thôi... nhưng sao không khí lại nặng nề đến vậy?'}
+    {spk:'BẠN', text:'Đêm cuối cùng phải trốn ở đây. Ngày mai phòng trọ sẽ sẵn sàng — chỉ cần qua được đêm nay.'},
+    {spk:'BẠN', text:'Sao không khí đêm nay lại nặng nề đến vậy?'}
   ]
 };
 const VN_OUTRO = {
-  1: [ {spk:'BẠN', text:'7:30 sáng. Ánh nắng đầu tiên len qua cửa sổ. Đêm đầu tiên đã qua — nhưng mình có cảm giác đây chỉ là khởi đầu.'} ],
-  2: [ {spk:'BẠN', text:'Lại một đêm nữa trôi qua an toàn. Nhưng những tiếng động lạ trong bóng tối vẫn còn ám ảnh...'} ],
+  1: [ {spk:'BẠN', text:'7:30 sáng. Ánh nắng đầu tiên len qua cửa sổ. Đêm trốn đầu tiên trong khuôn viên trường đã qua — còn 2 đêm nữa mới đến ngày dọn vào trọ.'} ],
+  2: [ {spk:'BẠN', text:'Lại một đêm lén ở trường nữa trôi qua an toàn. Chỉ còn 1 đêm nữa là mình có chỗ ở hẳn hoi.'} ],
   3: [
-    {spk:'BẠN', text:'7:30 sáng, đêm thứ ba đã kết thúc. Ca trực hoàn tất.'},
+    {spk:'BẠN', text:'7:30 sáng, đêm thứ ba — cũng là đêm cuối cùng phải trốn ở trường — đã kết thúc. Từ mai mình đã có phòng trọ.'},
     {spk:'???', text:'"...Cảm ơn vì đã không ngủ quên. Hẹn gặp lại — vào một đêm nào đó."'}
   ]
 };
@@ -187,7 +199,7 @@ const NPC_DIALOGUES = {
   E: { // Wibu Việt Nhật — Tòa E
     1: {
       lines:[
-        {spk:'WIBU VIỆT NHẬT', text:'"Ơ, cậu cũng trực đêm à? Tớ trọ bị giải tỏa nên... thôi ở lại trường luôn cho tiện, hehe."'},
+        {spk:'WIBU VIỆT NHẬT', text:'"Ơ, cậu cũng phải lén ở lại trường à? Tớ trọ bị giải tỏa nên... thôi ở lại trường luôn cho tiện, hehe."'},
         {spk:'WIBU VIỆT NHẬT', text:'"Cầm lấy chai nước này đi, tớ mua dư. Chúc cậu qua đêm bình an~"'}
       ], reward:{type:'item', item:'water', qty:1, msg:'Wibu Việt Nhật tặng bạn 1 chai Nước tăng lực.'}
     },
@@ -602,7 +614,7 @@ function refreshActionPane(){
 }
 
 function eventLabel(ev){
-  return {stage:'Kiểm tra sân khấu', floors:'Bật/tắt các tầng', fish:'Cho cá ăn', quiz:'Trả lời câu hỏi', wibu:'Bắt Wibu Việt Nhật', books:'Sắp xếp lại sách'}[ev]||ev;
+  return {stage:'Kiểm tra sân khấu', floors:'Bật/tắt các tầng', wire:'Nối dây điện', quiz:'Trả lời câu hỏi', wibu:'Bắt Wibu Việt Nhật', books:'Sắp xếp lại sách'}[ev]||ev;
 }
 
 function onRoomClick(k){
@@ -763,9 +775,12 @@ function roomDistance(a,b){
   return Infinity;
 }
 
-/* ============== NHẠC CẢNH BÁO KHI THE TIU Ở GẦN ============== */
+/* ============== NHẠC CẢNH BÁO KHI THE TIU Ở GẦN (âm thanh 3D theo hướng) ============== */
 let proximityAudioEl = null;
 let proximityCurVol = 0;
+let proximityCurPan = 0;
+let audioCtx = null;
+let proximityPanner = null;
 function initProximityAudio(){
   proximityAudioEl = document.getElementById('tiuProximityAudio');
   if(proximityAudioEl && TIU_PROXIMITY_MUSIC){
@@ -773,22 +788,63 @@ function initProximityAudio(){
     proximityAudioEl.loop = true;
     proximityAudioEl.volume = 0;
   }
+  ensureAudioGraph();
+  document.addEventListener('pointerdown', resumeAudioCtx);
+  document.addEventListener('keydown', resumeAudioCtx);
+}
+/* Dựng đồ thị Web Audio: <audio> -> StereoPanner (định vị trái/phải theo hướng The TIU) -> loa.
+   Chỉ tạo một lần vì trình duyệt không cho gắn lại MediaElementSource cho cùng 1 thẻ audio. */
+function ensureAudioGraph(){
+  if(audioCtx || !proximityAudioEl) return;
+  try{
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if(!AC) return;
+    audioCtx = new AC();
+    const source = audioCtx.createMediaElementSource(proximityAudioEl);
+    if(audioCtx.createStereoPanner){
+      proximityPanner = audioCtx.createStereoPanner();
+      source.connect(proximityPanner);
+      proximityPanner.connect(audioCtx.destination);
+    } else {
+      source.connect(audioCtx.destination);
+    }
+  }catch(e){ audioCtx = null; proximityPanner = null; }
+}
+function resumeAudioCtx(){
+  if(audioCtx && audioCtx.state==='suspended') audioCtx.resume().catch(()=>{});
+}
+/* Hướng của The TIU so với người chơi trên sơ đồ (trái/phải), dùng tọa độ x của từng phòng
+   để tính pan sang trái (-1) hay phải (+1) -> giúp người chơi định vị The TIU đang ở hướng nào. */
+function computeProximityPan(){
+  if(!S) return 0;
+  const p = ROOM_DEF[S.playerRoom], m = ROOM_DEF[S.monsterRoom];
+  if(!p || !m || p===m) return 0;
+  const dx = m.x - p.x;
+  const pan = dx / 45; // ~nửa chiều rộng sơ đồ -> pan gần full trái/phải khi ở 2 đầu bản đồ
+  return Math.max(-1, Math.min(1, pan));
 }
 /* Gọi mỗi khung hình khi ván đang chạy: The TIU cách người chơi 0-1 tòa -> nhạc to nhất,
-   càng xa (tới PROXIMITY_FAR_DISTANCE tòa) thì nhạc càng nhỏ dần rồi tắt hẳn. */
+   càng xa (tới PROXIMITY_FAR_DISTANCE tòa) thì nhạc càng nhỏ dần rồi tắt hẳn.
+   Đồng thời pan nhạc sang trái/phải theo hướng The TIU đang ở so với người chơi. */
 function updateProximityAudio(){
   if(!proximityAudioEl || !TIU_PROXIMITY_MUSIC) return;
   let target = 0;
+  let targetPan = 0;
   if(S && S.running && !S.paused && S.gameMinutes>=S.breakerUntil){
     const d = roomDistance(S.playerRoom, S.monsterRoom);
     if(d<=1) target = 1;
     else if(d>=PROXIMITY_FAR_DISTANCE) target = 0;
     else target = 1 - (d-1)/(PROXIMITY_FAR_DISTANCE-1);
+    targetPan = computeProximityPan();
   }
+  const masterVol = SETTINGS.masterVolume/100;
   if(window.UIT_SOUND_MUTED) target = 0;
+  target *= masterVol;
   proximityCurVol += (target - proximityCurVol) * 0.06; // nhỏ dần / to dần mượt thay vì bật/tắt đột ngột
   if(Math.abs(target-proximityCurVol)<0.004) proximityCurVol = target;
   proximityAudioEl.volume = Math.max(0, Math.min(1, proximityCurVol));
+  proximityCurPan += (targetPan - proximityCurPan) * 0.08;
+  if(proximityPanner) proximityPanner.pan.value = Math.max(-1, Math.min(1, proximityCurPan));
   if(proximityCurVol > 0.01){
     if(proximityAudioEl.paused) proximityAudioEl.play().catch(()=>{});
   } else if(!proximityAudioEl.paused){
@@ -1032,72 +1088,100 @@ function startMinigame(room){
     startTimer(28, ()=>finish(false));
   }
 
-  else if(ev==='fish'){
-    // Bể cá có 3 con, mỗi con đói theo tốc độ khác nhau và bơi lượn ngẫu nhiên trong bể —
-    // bấm trực tiếp vào con cá đang bơi để cho nó ăn.
-    const FISH_COUNT = 3;
-    const fish = Array.from({length:FISH_COUNT}, (_,i)=>({
-      id:i, hunger: rand(55,75), rate: rand(3.5,6.5), emoji: pick(['🐟','🐠','🐡'])
-    }));
+  else if(ev==='wire'){
+    // Tủ điện bị đấu lộn dây: nối đúng cặp dây cùng màu giữa cột trái và cột phải
+    // trước khi hết giờ. Bấm 1 đầu dây bên trái rồi bấm đầu dây cùng màu bên phải.
+    const ALL_COLORS = [
+      {id:'red',    hex:'#e6293f', name:'ĐỎ'},
+      {id:'green',  hex:'#3ddc84', name:'XANH LÁ'},
+      {id:'amber',  hex:'#c9962f', name:'VÀNG'},
+      {id:'blue',   hex:'#3aa0c9', name:'XANH DƯƠNG'},
+      {id:'purple', hex:'#a662d9', name:'TÍM'},
+      {id:'white',  hex:'#e8e2d4', name:'TRẮNG'}
+    ];
+    const wireCount = Math.min(ALL_COLORS.length, 4 + (S.night-1));
+    const colors = shuffle(ALL_COLORS.slice()).slice(0, wireCount);
+    const leftOrder = shuffle(colors.slice());
+    let rightOrder;
+    do{ rightOrder = shuffle(colors.slice()); }
+    while(wireCount>1 && rightOrder.every((c,i)=>c.id===leftOrder[i].id));
+
+    const rowH = 44, rowGap = 12, boardH = wireCount*(rowH+rowGap)-rowGap;
     body.innerHTML = `
-      <p style="font-size:12px;color:var(--text-dim);">Giữ mức no của cả 3 con cá trên 25%. Bấm vào con cá đang bơi để cho ăn — đừng để con nào đói!</p>
-      <div id="fishTank" style="position:relative;height:170px;border:1px solid var(--line);border-radius:6px;
-        background:linear-gradient(180deg,#0d2a33,#0a1a22);overflow:hidden;margin-bottom:12px;"></div>
-      <div id="fishBars"></div>`;
-    const tank = body.querySelector('#fishTank');
-    const barsWrap = body.querySelector('#fishBars');
+      <p style="font-size:12px;color:var(--text-dim);">Tủ điện bị đấu lộn dây! Bấm 1 đầu dây bên trái rồi bấm đầu dây <b>cùng màu</b> bên phải để nối lại — nối sai sẽ làm chập mạch ngay lập tức.</p>
+      <div id="wireBoardWrap" style="position:relative;height:${boardH}px;margin:6px auto 4px;max-width:340px;">
+        <svg id="wireSvg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;"></svg>
+        <div id="wireLeftCol" style="position:absolute;left:0;top:0;display:flex;flex-direction:column;gap:${rowGap}px;"></div>
+        <div id="wireRightCol" style="position:absolute;right:0;top:0;display:flex;flex-direction:column;gap:${rowGap}px;"></div>
+      </div>`;
+    const wrapEl = body.querySelector('#wireBoardWrap');
+    const leftCol = body.querySelector('#wireLeftCol');
+    const rightCol = body.querySelector('#wireRightCol');
+    const svg = body.querySelector('#wireSvg');
 
-    fish.forEach(f=>{
-      const el=document.createElement('div');
-      el.textContent=f.emoji;
-      el.style.cssText='position:absolute;font-size:26px;cursor:pointer;transition:left 0.85s ease,top 0.85s ease;user-select:none;filter:drop-shadow(0 0 4px rgba(0,0,0,0.6));';
-      el.style.left = rand(5,80)+'%';
-      el.style.top = rand(8,75)+'%';
-      tank.appendChild(el);
-      f.el = el;
+    let selectedLeft = null;
+    let selectedLeftEl = null;
+    let connected = 0;
+    const leftEls = {}, rightEls = {};
 
-      const row=document.createElement('div');
-      row.style.cssText='margin-bottom:8px;';
-      row.innerHTML = `<div style="font-size:10px;color:var(--text-dim);margin-bottom:2px;">${f.emoji} Cá ${f.id+1}</div>
-        <div class="fishBarOuter"><div class="fishBarFill" id="fishFill${f.id}"></div></div>`;
-      barsWrap.appendChild(row);
-      f.barEl = row.querySelector('.fishBarFill');
-      f.barEl.style.width = f.hunger+'%';
+    function mkEndpoint(c){
+      const d = document.createElement('div');
+      d.className = 'wireEndpoint';
+      d.title = c.name;
+      d.style.cssText = `width:${rowH}px;height:${rowH}px;border-radius:50%;background:${c.hex};
+        border:3px solid #12100e;cursor:pointer;box-shadow:2px 3px 0 rgba(0,0,0,0.6);outline:3px solid transparent;`;
+      return d;
+    }
 
-      el.onclick=()=>{
-        f.hunger = Math.min(100, f.hunger+22);
-        f.barEl.style.width = f.hunger+'%';
-        el.style.transform='scale(1.35)';
-        setTimeout(()=>{ el.style.transform='scale(1)'; },150);
+    leftOrder.forEach(c=>{
+      const d = mkEndpoint(c);
+      d.onclick = ()=>{
+        if(d.classList.contains('done')) return;
+        if(selectedLeftEl) selectedLeftEl.style.outlineColor = 'transparent';
+        selectedLeft = c.id;
+        selectedLeftEl = d;
+        d.style.outlineColor = '#fff';
       };
+      leftCol.appendChild(d);
+      leftEls[c.id] = d;
+    });
+    rightOrder.forEach(c=>{
+      const d = mkEndpoint(c);
+      d.onclick = ()=>{
+        if(!selectedLeft || d.classList.contains('done')) return;
+        if(selectedLeft === c.id){
+          drawWireLine(leftEls[selectedLeft], d, true);
+          leftEls[selectedLeft].classList.add('done');
+          leftEls[selectedLeft].style.outlineColor = 'transparent';
+          leftEls[selectedLeft].style.opacity = '0.35';
+          d.classList.add('done');
+          d.style.opacity = '0.35';
+          connected++;
+          selectedLeft = null; selectedLeftEl = null;
+          if(connected >= wireCount) finish(true);
+        } else {
+          drawWireLine(leftEls[selectedLeft], d, false);
+          finish(false);
+        }
+      };
+      rightCol.appendChild(d);
+      rightEls[c.id] = d;
     });
 
-    // random swimming
-    const swimHandle = setInterval(()=>{
-      fish.forEach(f=>{
-        f.el.style.left = rand(4,82)+'%';
-        f.el.style.top = rand(6,78)+'%';
-      });
-    }, 900);
+    function drawWireLine(elA, elB, ok){
+      const wrapRect = wrapEl.getBoundingClientRect();
+      const ra = elA.getBoundingClientRect(), rb = elB.getBoundingClientRect();
+      const x1 = ra.left + ra.width/2 - wrapRect.left, y1 = ra.top + ra.height/2 - wrapRect.top;
+      const x2 = rb.left + rb.width/2 - wrapRect.left, y2 = rb.top + rb.height/2 - wrapRect.top;
+      const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('x1',x1); line.setAttribute('y1',y1);
+      line.setAttribute('x2',x2); line.setAttribute('y2',y2);
+      line.setAttribute('stroke', ok ? 'var(--scan)' : 'var(--blood-bright)');
+      line.setAttribute('stroke-width','3');
+      svg.appendChild(line);
+    }
 
-    timeLeft = 24;
-    timerEl.textContent='Thời gian còn lại: '+timeLeft+'s';
-    timerHandle = setInterval(()=>{
-      let anyStarved=false;
-      fish.forEach(f=>{
-        f.hunger = Math.max(0, f.hunger - f.rate);
-        if(f.barEl) f.barEl.style.width = f.hunger+'%';
-        if(f.hunger<=0) anyStarved=true;
-      });
-      timeLeft--;
-      timerEl.textContent='Thời gian còn lại: '+timeLeft+'s';
-      if(anyStarved){
-        clearInterval(timerHandle); clearInterval(swimHandle); finish(false);
-      } else if(timeLeft<=0){
-        clearInterval(timerHandle); clearInterval(swimHandle);
-        finish(fish.every(f=>f.hunger>25));
-      }
-    },1000);
+    startTimer(14 + wireCount*3, ()=>finish(false));
   }
 
   else if(ev==='quiz'){
@@ -1110,7 +1194,7 @@ function startMinigame(room){
       {q:'Khu vực an toàn để mua vật phẩm là?', opts:['Nhà E','Căn tin','Nhà C'], a:1},
       {q:'Vật phẩm nào giúp hồi 1 HP?', opts:['Nước tăng lực','Bim Bim','Thẻ ra vào'], a:1},
       {q:'The TIU di chuyển nhanh hơn khi nào?', opts:['Thanh meter cao','Trời sáng','Bạn đứng yên'], a:0},
-      {q:'Nhà nào có bể cá cần cho ăn?', opts:['Nhà B','Nhà C','Nhà D'], a:1},
+      {q:'Nhà nào có tủ điện cần nối lại dây?', opts:['Nhà B','Nhà C','Nhà D'], a:1},
     ];
     const q = pick(QUESTIONS);
     body.innerHTML = `<p style="font-size:14px;margin-bottom:10px;">${q.q}</p>`;
@@ -1259,12 +1343,12 @@ function showEndScreen(){
     document.getElementById('nextNightBtn').onclick=()=>{ document.getElementById('winScreen').classList.add('hidden'); beginNight(S.night,true); };
   } else if(S.night>=3){
     document.getElementById('winTitle').textContent='BẠN ĐÃ SỐNG SÓT QUA 3 ĐÊM';
-    document.getElementById('winSub').textContent='Ca trực kết thúc. The TIU tạm thời im lặng... cho đến đêm sau.';
+    document.getElementById('winSub').textContent='Phòng trọ giờ đã sẵn sàng để dọn vào. The TIU tạm thời im lặng... cho đến đêm sau.';
     document.getElementById('nextNightBtn').textContent='CHƠI LẠI TỪ ĐẦU';
     document.getElementById('nextNightBtn').onclick=()=>{ document.getElementById('winScreen').classList.add('hidden'); showTitle(); };
   } else {
     document.getElementById('winTitle').textContent='ĐÃ ĐẾN 7:30 SÁNG';
-    document.getElementById('winSub').textContent=NIGHT_CFG[S.night].name+' hoàn thành với '+S.hp+' HP còn lại. Chuẩn bị cho đêm tiếp theo — The TIU sẽ hung hãn hơn.';
+    document.getElementById('winSub').textContent=NIGHT_CFG[S.night].name+' hoàn thành với '+S.hp+' HP còn lại. Chuẩn bị cho đêm lẩn trốn tiếp theo — The TIU sẽ hung hãn hơn.';
     document.getElementById('nextNightBtn').textContent='BẮT ĐẦU ĐÊM '+(S.night+1);
     document.getElementById('nextNightBtn').onclick=()=>{ document.getElementById('winScreen').classList.add('hidden'); beginNight(S.night+1); };
   }
@@ -1282,6 +1366,7 @@ function beginNight(n, standalone){
   buildMap();
   refreshAll();
   hideAllOverlays();
+  document.getElementById('pauseMenu').classList.add('hidden');
   document.getElementById('blackout').classList.remove('on');
   document.getElementById('meterOuter').classList.remove('enraged');
   setRoomTitleGlitch(false);
@@ -1322,6 +1407,25 @@ function buildSettings(){
     {key:'crt', label:'Hiệu ứng CRT / nhiễu', desc:'Lớp phủ quét dòng kiểu camera an ninh.'},
   ];
   wrap.innerHTML='';
+
+  const volRow=document.createElement('div');
+  volRow.className='settingRow';
+  volRow.innerHTML = `<div><div class="slabel">Âm lượng tổng</div><div class="sdesc">Chỉnh âm lượng chung của trò chơi (nhạc cảnh báo The TIU, v.v.).</div></div>
+    <div class="volRow">
+      <input type="range" class="volSlider" id="masterVolumeSlider" min="0" max="100" value="${SETTINGS.masterVolume}">
+      <span class="volVal" id="masterVolumeVal">${SETTINGS.masterVolume}%</span>
+    </div>`;
+  wrap.appendChild(volRow);
+  const volSlider = volRow.querySelector('#masterVolumeSlider');
+  const volVal = volRow.querySelector('#masterVolumeVal');
+  volSlider.oninput = ()=>{
+    const v = parseInt(volSlider.value,10);
+    SETTINGS.masterVolume = v;
+    volVal.textContent = v+'%';
+    try{ localStorage.setItem('uit_master_volume', String(v)); }catch(e){}
+    resumeAudioCtx();
+  };
+
   rows.forEach(r=>{
     const row=document.createElement('div');
     row.className='settingRow';
@@ -1336,23 +1440,75 @@ function buildSettings(){
   });
 }
 
+let settingsOrigin = 'title'; // 'title' | 'pause' — controls where the "back" button on the Settings screen returns to
+
 document.getElementById('startBtn').onclick=()=>{ hideAllOverlays(); beginNight(1,false); };
 document.getElementById('selectNightBtn').onclick=()=>{
   hideAllOverlays(); buildNightSelect();
   document.getElementById('nightSelectScreen').classList.remove('hidden');
 };
 document.getElementById('settingsBtn').onclick=()=>{
+  settingsOrigin = 'title';
   hideAllOverlays(); buildSettings();
   document.getElementById('settingsScreen').classList.remove('hidden');
 };
 document.getElementById('backFromSelect').onclick = showTitle;
-document.getElementById('backFromSettings').onclick = showTitle;
+document.getElementById('backFromSettings').onclick = ()=>{
+  document.getElementById('settingsScreen').classList.add('hidden');
+  if(settingsOrigin==='pause'){
+    document.getElementById('pauseMenu').classList.remove('hidden');
+  } else {
+    showTitle();
+  }
+};
 document.getElementById('retryBtn').onclick=()=>{
   document.getElementById('gameOverScreen').classList.add('hidden');
   beginNight(S.night, S.standalone);
 };
 document.getElementById('menuFromGameOver').onclick = showTitle;
 document.getElementById('menuFromWin').onclick = showTitle;
+
+/* ============== PAUSE MENU (ESC) ============== */
+function isBlockingOverlayOpen(){
+  return ['mgModal','mapModal','vnOverlay','jumpscareOverlay','gameOverScreen','winScreen','settingsScreen']
+    .some(id=>!document.getElementById(id).classList.contains('hidden'));
+}
+function openPauseMenu(){
+  if(!S || !S.running) return;
+  if(isBlockingOverlayOpen()) return;
+  S.paused = true;
+  document.getElementById('pauseMenu').classList.remove('hidden');
+}
+function closePauseMenu(){
+  document.getElementById('pauseMenu').classList.add('hidden');
+  if(!S) return;
+  S.paused = false;
+  S.lastTick = performance.now();
+}
+document.getElementById('pauseResumeBtn').onclick = closePauseMenu;
+document.getElementById('pauseSettingsBtn').onclick = ()=>{
+  document.getElementById('pauseMenu').classList.add('hidden');
+  settingsOrigin = 'pause';
+  buildSettings();
+  document.getElementById('settingsScreen').classList.remove('hidden');
+};
+document.getElementById('pauseMainMenuBtn').onclick = ()=>{
+  document.getElementById('pauseMenu').classList.add('hidden');
+  if(S) S.running = false;
+  showTitle();
+};
+document.addEventListener('keydown', (e)=>{
+  if(e.key !== 'Escape') return;
+  if(!S || !S.running) return;
+  const pauseMenuOpen = !document.getElementById('pauseMenu').classList.contains('hidden');
+  if(pauseMenuOpen){
+    e.preventDefault();
+    closePauseMenu();
+  } else if(!isBlockingOverlayOpen()){
+    e.preventDefault();
+    openPauseMenu();
+  }
+});
 
 document.getElementById('miniMapExpand').onclick=()=>{
   document.getElementById('mapModal').classList.remove('hidden');

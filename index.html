@@ -85,13 +85,15 @@
   <div id="titleLeft">
     <h1>ĐỪNG NGỦ QUÊN Ở UIT</h1>
     <h2>THE TIU ĐANG RÌNH RẬP</h2>
-    <p>Bạn được phân công trực đêm khắp khuôn viên: Nhà A, B, C, D, E, Thư viện và Căn tin.
-    Mỗi ca trực chạy đồng hồ trong game từ 00:00 đến 07:30 (kéo dài khoảng 15 phút thực tế). Mỗi khu vực sẽ phát sinh sự cố ngẫu nhiên — bỏ lỡ hoặc làm hỏng
-    sẽ khiến <b style="color:var(--blood-bright)">The TIU</b> hoạt động mạnh hơn. Nếu bạn đứng cùng tòa với The TIU, bạn sẽ bị jumpscare
-    và mất 1 HP. Mất 3 HP là thua. <b>Căn tin chỉ an toàn khi mở cửa</b> (01:00-02:00 &amp; 04:00-05:00) — đứng yên trong đó quá lâu cũng khiến bạn cạn <b>Thể lực</b> và bị đói.
-    Khi thanh mức độ hoạt động chạm 100%, <b style="color:var(--blood-bright)">Huyết Nguyệt</b> sẽ kích hoạt và không nơi nào còn an toàn. Hãy để ý các sinh viên khác trong khuôn viên — họ có thể giúp bạn.</p>
+    <p>Phòng trọ của bạn phải <b>3 ngày nữa mới dọn vào được</b>, nên tối nay bạn đành lén ở lại trong khuôn viên trường để chờ qua ngày.
+    Bạn phải sống sót qua các khu vực: Nhà A, B, C, D, E, Thư viện và Căn tin.
+    Mỗi đêm trôi qua từ 00:00 đến 07:30 (kéo dài khoảng 15 phút thực tế). Mỗi khu vực sẽ phát sinh sự cố ngẫu nhiên — bỏ lỡ hoặc làm hỏng
+    sẽ khiến <b style="color:var(--blood-bright)">The TIU</b> hoạt động mạnh hơn và dễ phát hiện ra bạn hơn. Nếu bạn đứng cùng tòa với The TIU, bạn sẽ bị jumpscare
+    và mất 1 HP. Mất 3 HP là thua. <b>Căn tin chỉ an toàn khi mở cửa</b> (01:00-02:00 &amp; 04:00-05:00) — nán lại đó quá lâu cũng khiến bạn cạn <b>Thể lực</b> và bị đói.
+    Khi thanh mức độ hoạt động chạm 100%, <b style="color:var(--blood-bright)">Huyết Nguyệt</b> sẽ kích hoạt và không nơi nào còn an toàn. Hãy để ý các sinh viên khác cũng đang lén ở lại trong khuôn viên — họ có thể giúp bạn.
+    Bấm <b>ESC</b> khi đang chơi để mở bảng tạm dừng.</p>
     <div id="menuBtnRow">
-      <button class="bigbtn" id="startBtn">BẮT ĐẦU (CHƠI CẢ 3 ĐÊM)</button>
+      <button class="bigbtn" id="startBtn">BẮT ĐẦU (SỐNG SÓT CẢ 3 ĐÊM)</button>
       <button class="bigbtn secondary" id="selectNightBtn">CHỌN MÀN</button>
       <button class="bigbtn neutral" id="settingsBtn">CÀI ĐẶT</button>
     </div>
@@ -159,6 +161,15 @@
     <div id="mgTimer"></div>
     <div id="mgBody"></div>
     <div id="mgFooter" style="margin-top:14px;"></div>
+  </div>
+</div>
+
+<div id="pauseMenu" class="hidden">
+  <div id="pauseMenuBox">
+    <div id="pauseMenuTitle">TẠM DỪNG</div>
+    <button class="bigbtn secondary" id="pauseResumeBtn">TIẾP TỤC CA ĐÊM</button>
+    <button class="bigbtn neutral" id="pauseSettingsBtn">CÀI ĐẶT</button>
+    <button class="bigbtn" id="pauseMainMenuBtn">VỀ MÀN HÌNH CHÍNH</button>
   </div>
 </div>
 
