@@ -170,83 +170,8 @@ function playVN(lines, onDone){
   showLine();
 }
 
-/* ---- Lời thoại mở màn / kết màn mỗi đêm ---- */
-const VN_INTRO = {
-  1: [
-    {spk:'LOA THÔNG BÁO', text:'"Khuôn viên trường sẽ đóng cổng chính lúc 22:00. Sinh viên còn lại vui lòng rời khỏi trường trước giờ đóng cổng."'},
-    {spk:'BẠN', text:'Trọ của mình còn 3 ngày nữa mới dọn vào được... thôi thì tối nay lại phải lén ở lại trường một mình rồi.'}
-  ],
-  2: [
-    {spk:'BẠN', text:'Đêm thứ hai lén ở lại trường. Đêm qua The TIU đã phát hiện ra mình một lần, chắc tối nay nó sẽ để ý khu này hơn.'},
-    {spk:'BẠN', text:'Ráng thêm 2 đêm nữa thôi... rồi mình sẽ có chỗ ở đàng hoàng.'}
-  ],
-  3: [
-    {spk:'BẠN', text:'Đêm cuối cùng phải trốn ở đây. Ngày mai phòng trọ sẽ sẵn sàng — chỉ cần qua được đêm nay.'},
-    {spk:'BẠN', text:'Sao không khí đêm nay lại nặng nề đến vậy?'}
-  ]
-};
-const VN_OUTRO = {
-  1: [ {spk:'BẠN', text:'7:30 sáng. Ánh nắng đầu tiên len qua cửa sổ. Đêm trốn đầu tiên trong khuôn viên trường đã qua — còn 2 đêm nữa mới đến ngày dọn vào trọ.'} ],
-  2: [ {spk:'BẠN', text:'Lại một đêm lén ở trường nữa trôi qua an toàn. Chỉ còn 1 đêm nữa là mình có chỗ ở hẳn hoi.'} ],
-  3: [
-    {spk:'BẠN', text:'7:30 sáng, đêm thứ ba — cũng là đêm cuối cùng phải trốn ở trường — đã kết thúc. Từ mai mình đã có phòng trọ.'},
-    {spk:'???', text:'"...Cảm ơn vì đã không ngủ quên. Hẹn gặp lại — vào một đêm nào đó."'}
-  ]
-};
-
-/* ---- NPC cố định trong các tòa nhà: mỗi đêm một đoạn hội thoại khác nhau ---- */
-const NPC_DIALOGUES = {
-  E: { // Wibu Việt Nhật — Tòa E
-    1: {
-      lines:[
-        {spk:'WIBU VIỆT NHẬT', text:'"Ơ, cậu cũng phải lén ở lại trường à? Tớ trọ bị giải tỏa nên... thôi ở lại trường luôn cho tiện, hehe."'},
-        {spk:'WIBU VIỆT NHẬT', text:'"Cầm lấy chai nước này đi, tớ mua dư. Chúc cậu qua đêm bình an~"'}
-      ], reward:{type:'item', item:'water', qty:1, msg:'Wibu Việt Nhật tặng bạn 1 chai Nước tăng lực.'}
-    },
-    2: {
-      lines:[
-        {spk:'WIBU VIỆT NHẬT', text:'"Đêm nay tớ nghe tiếng bước chân nặng nề ở phía... hình như là gần Nhà C thì phải."'},
-        {spk:'WIBU VIỆT NHẬT', text:'"Cẩn thận đó, The TIU hôm nay có vẻ khó chịu hơn mọi khi."'}
-      ], reward:{type:'reveal', moves:2, msg:'Wibu Việt Nhật tiết lộ hướng đi gần đây của The TIU.'}
-    },
-    3: {
-      lines:[
-        {spk:'WIBU VIỆT NHẬT', text:'"Đêm cuối rồi ha. Thật ra... tớ cũng hơi sợ, nhưng có cậu trực cùng nên đỡ hơn nhiều."'},
-        {spk:'WIBU VIỆT NHẬT', text:'"Nếu qua được đêm nay, tớ đãi cậu ăn ramen. Cố lên!"'}
-      ], reward:{type:'points', amount:20, msg:'Wibu Việt Nhật động viên bạn (+20 điểm).'}
-    }
-  },
-  B: { // Chàng Lính Ngu Lắm — Tòa B
-    1: {
-      lines:[
-        {spk:'CHÀNG LÍNH NGU LẮM', text:'*ngáp* "Ơ... mấy giờ rồi ta? Tại tui xếp TKB ngu quá nên học tới giờ này luôn..."'},
-        {spk:'CHÀNG LÍNH NGU LẮM', text:'"Cầm bịch Bim Bim này ăn tạm đi, chứ tui ngủ quên hoài chắc chết đói trước khi The TIU bắt được."'}
-      ], reward:{type:'item', item:'bimbim', qty:1, msg:'Chàng Lính Ngu Lắm chia cho bạn 1 gói Bim Bim.'}
-    },
-    2: {
-      lines:[
-        {spk:'CHÀNG LÍNH NGU LẮM', text:'"Hôm qua tui suýt bị bắt vì ngủ gật giữa hành lang... đêm nay tui cố thức đó!"'},
-        {spk:'CHÀNG LÍNH NGU LẮM', text:'"À mà lúc nãy tui thấy có bóng gì đó lướt qua phía Nhà A, cậu để ý nhé."'}
-      ], reward:{type:'reveal', moves:2, msg:'Chàng Lính Ngu Lắm kể lại nơi cậu ta vừa thấy bóng The TIU.'}
-    },
-    3: {
-      lines:[
-        {spk:'CHÀNG LÍNH NGU LẮM', text:'"Đêm cuối cùng... tui thề lần này sẽ không xếp TKB ngu như vậy nữa đâu."'},
-        {spk:'CHÀNG LÍNH NGU LẮM', text:'"Cố lên, sắp 7:30 rồi! Đừng ngủ quên như tui nha!"'}
-      ], reward:{type:'points', amount:20, msg:'Chàng Lính Ngu Lắm cổ vũ bạn (+20 điểm).'}
-    }
-  }
-};
-
-/* ---- Trọng: pháp sư bí ẩn — chỉ xuất hiện tại Nhà C, đêm 3, khi người chơi còn 1 HP ---- */
-const TRONG_DIALOGUE = {
-  lines:[
-    {spk:'TRỌNG', text:'"...Đứng lại. Ta thấy khí sắc của ngươi đã suy kiệt lắm rồi."'},
-    {spk:'TRỌNG', text:'"Ta không thuộc trường này lâu, nhưng ta biết The TIU là gì. Nhận lấy thứ này — nó sẽ giúp ngươi cầm cự."'},
-    {spk:'TRỌNG', text:'"Đi đi. Đừng để ta phải thấy ngươi lần nữa vào đêm nay."'}
-  ],
-  reward:{type:'special_trong', msg:'Trọng ban cho bạn 1 HP và 1 chai Nước tăng lực trước khi biến mất trong bóng tối.'}
-};
+/* ---- Nội dung hội thoại (VN_INTRO, VN_OUTRO, NPC_DIALOGUES, TRONG_DIALOGUE)
+   đã được chuyển sang file dialogue.js — nạp trước script.js trong index.html. ---- */
 
 function applyVNReward(reward){
   if(!reward) return;
@@ -910,36 +835,30 @@ function jumpscare(){
   }
   addLog('JUMPSCARE! The TIU đã tóm được bạn tại '+ROOM_DEF[caughtRoom].name+'!','danger');
 
-  // fullscreen jumpscare display: TIU lao thẳng vào màn hình, rồi hiện bảng thông báo + nút đứng dậy
+  // fullscreen jumpscare display: TIU lao thẳng vào màn hình, rung lắc, hiện bảng thông báo,
+  // rồi TỰ ĐỘNG chuyển tiếp — toàn bộ pha này chỉ kéo dài đúng 1 giây, không cần bấm nút.
   const js = document.getElementById('jumpscareOverlay');
   const jsMonster = document.getElementById('jsMonster');
   const jsPanel = document.getElementById('jsPanel');
   const jsPanelText = document.getElementById('jsPanelText');
-  const jsContinueBtn = document.getElementById('jsContinueBtn');
 
   jsMonster.style.backgroundImage = TIU_IMAGE ? `url('${TIU_IMAGE}')` : '';
   jsMonster.classList.toggle('no-img', !TIU_IMAGE);
   jsPanel.classList.remove('show');
-  jsContinueBtn.disabled = true;
 
   jsPanelText.innerHTML = dead
     ? 'THE TIU ĐÃ TÓM ĐƯỢC BẠN LẦN CUỐI...<span class="jsPanelSub">Bạn gục ngã tại '+ROOM_DEF[caughtRoom].name+'.</span>'
     : 'THE TIU ĐÃ TÓM ĐƯỢC BẠN!<span class="jsPanelSub">Còn lại '+hpLeft+' HP — vừa xảy ra tại '+ROOM_DEF[caughtRoom].name+'</span>';
-  jsContinueBtn.textContent = dead ? 'GỤC NGÃ...' : 'ĐỨNG DẬY! TIẾP TỤC CA TRỰC';
 
   js.classList.remove('hidden');
   js.classList.remove('active','lunge'); void js.offsetWidth;
-  js.classList.add('active','lunge');
+  js.classList.add('active','lunge'); // TIU lao thẳng vào màn hình (0.6s) + màn hình rung lắc (0.4s), chạy song song
 
-  // Sau pha lao vào màn hình mới hiện bảng thông báo, và phải chờ thêm một nhịp mới bấm được nút
-  // (tránh bấm nhầm/bấm quá nhanh trong lúc còn đang hoảng)
+  // Bảng thông báo trồi lên ngay sau pha lao vào màn hình
+  setTimeout(()=>{ jsPanel.classList.add('show'); }, 650);
+
+  // Đúng 1 giây kể từ lúc bắt đầu jumpscare: tự động đóng lại và chuyển tiếp
   setTimeout(()=>{
-    jsPanel.classList.add('show');
-    setTimeout(()=>{ jsContinueBtn.disabled = false; }, dead ? 500 : 300);
-  }, 650);
-
-  jsContinueBtn.onclick = ()=>{
-    if(jsContinueBtn.disabled) return;
     js.classList.add('hidden');
     js.classList.remove('active','lunge');
     jsPanel.classList.remove('show');
@@ -950,7 +869,7 @@ function jumpscare(){
       S.lastTick = performance.now();
       refreshAll();
     }
-  };
+  }, 1000);
 }
 
 /* ============== TICK LOOP (real time) ============== */
