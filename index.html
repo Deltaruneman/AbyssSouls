@@ -176,7 +176,15 @@
   <div id="battleBg"></div>
   <div id="battleShatter"></div>
   <div id="battleBulletLayer" class="hidden"></div>
-  <div id="battleTurnBadge">LƯỢT <span id="battleTurnNum">1</span>/10</div>
+  <div id="dodgeArena" class="hidden">
+    <div id="dodgeHint">DÙNG <b>WASD</b> HOẶC <b>MŨI TÊN</b> ĐỂ NÉ TRÁNH</div>
+    <div id="dodgeBox">
+      <div id="soulCircle"></div>
+    </div>
+    <div id="dodgeHitCounter">Trúng đòn: <span id="dodgeHitNum">0</span></div>
+  </div>
+  <div id="battleTurnBadge">LƯỢT <span id="battleTurnNum">1</span>/<span id="battleTurnMax">15</span></div>
+  <div id="battleNoKillNote">✦ THE TIU không thể bị hạ gục bằng đòn đánh — chỉ có thể thắng bằng cách CẦM CỰ ĐỦ 15 LƯỢT ✦</div>
   <div id="bossPanel">
     <div id="bossPatternTag"></div>
     <div id="bossSprite"><div id="bossSpriteGlyph">☠</div></div>
@@ -192,7 +200,17 @@
 </div>
 <div id="battleVictoryFx">
   <div id="rainbowBurst"></div>
-  <div id="battleVictoryText">✦ THANH TẨY THÀNH CÔNG ✦</div>
+  <div id="lightColumn"></div>
+  <div id="colorSwirl">
+    <span class="swirlDot c1"></span>
+    <span class="swirlDot c2"></span>
+    <span class="swirlDot c3"></span>
+    <span class="swirlDot c4"></span>
+    <span class="swirlDot c5"></span>
+    <span class="swirlDot c6"></span>
+    <span class="swirlDot c7"></span>
+  </div>
+  <div id="battleVictoryText">✦ THANH TẨY THÀNH CÔNG — 15 LƯỢT ĐÃ QUA ✦</div>
 </div>
 <audio id="battleMusicAudio" preload="auto" loop></audio>
 

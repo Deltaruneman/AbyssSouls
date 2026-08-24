@@ -1392,8 +1392,11 @@ function showEndScreen(){
 // Nhạc nền chiến đấu (rock/symphony bùng nổ) — điền đường dẫn file của bạn vào đây,
 // ví dụ: 'assets/sfx/OST/battle.mp3'. Để trống thì trận đánh sẽ diễn ra không nhạc riêng.
 const BATTLE_MUSIC = "assets/sfx/OST/battle.mp3";
-const BOSS_MAX_HP = 300;
-const BATTLE_MAX_TURN = 10;
+// TIU trong trận đánh bí mật có lượng máu khổng lồ và không bao giờ có thể bị hạ gục
+// chỉ bằng cách tấn công (xem resolveRound/finishBattle) — chiến thắng chỉ đến khi
+// party cầm cự đủ BATTLE_MAX_TURN lượt để Trọng hoàn tất nghi lễ thanh tẩy.
+const BOSS_MAX_HP = 999999;
+const BATTLE_MAX_TURN = 15;
 
 const PARTY_DEF = {
   YOU:  {name:'BẠN', avatarText:'★', avatarBg:'#2a2a2a', maxHp:150, skillName:'Vì Tao Là Người Bông', skillCd:4,
@@ -1405,11 +1408,15 @@ const PARTY_DEF = {
 };
 const BATTLE_PARTY_ORDER = ['YOU','WIBU','LINH'];
 
+// Mỗi pattern giờ phát ra NHIỀU CHUỖI đạn liên tiếp (nhiều đợt trong cùng 1 lượt boss) —
+// người chơi phải điều khiển "linh hồn hợp nhất" (hình tròn) bằng WASD/mũi tên để né trong
+// #dodgeBox. dmg là sát thương của MỖI LẦN trúng đòn (có thể trúng nhiều lần trong 1 chuỗi).
 const BOSS_PATTERNS = [
-  {name:'MƯA DỮ LIỆU LỖI', desc:'Từng dòng ký tự đỏ rực đổ xuống như mưa.', dmg:[14,22], bulletType:'rain'},
-  {name:'VÒNG XOÁY HỖN LOẠN', desc:'TIU tan thành hàng trăm mảnh vỡ xoáy quanh vòng tròn.', dmg:[18,28], bulletType:'spiral'},
-  {name:'TIA QUÉT KÝ ỨC', desc:'Một luồng sáng trắng quét ngang qua cả party.', dmg:[20,30], bulletType:'sweep'},
-  {name:'BÓNG ĐÊM NUỐT CHỬNG', desc:'Bóng tối dày đặc dồn dập lao về phía party.', dmg:[16,24], bulletType:'burst'}
+  {name:'MƯA DỮ LIỆU LỖI', desc:'Từng đợt ký tự đỏ rực đổ xuống dồn dập như mưa.', dmg:[5,9], bulletType:'rain', dodgeDuration:4600},
+  {name:'VÒNG XOÁY HỖN LOẠN', desc:'TIU tan thành hàng trăm mảnh vỡ xoáy liên hồi quanh tâm.', dmg:[5,9], bulletType:'spiral', dodgeDuration:4800},
+  {name:'TIA QUÉT KÝ ỨC', desc:'Nhiều luồng sáng trắng lần lượt quét ngang/dọc, chỉ báo trước rồi bắn thật.', dmg:[7,12], bulletType:'sweep', dodgeDuration:5000},
+  {name:'BÓNG ĐÊM NUỐT CHỬNG', desc:'Nhiều đợt sóng nổ tỏa tròn dồn dập từ tâm lao ra.', dmg:[5,9], bulletType:'burst', dodgeDuration:4600},
+  {name:'GỌNG KÌM BỐN PHÍA', desc:'Đạn ập vào liên tục từ cả bốn phía, siết chặt không gian né tránh.', dmg:[6,10], bulletType:'cross', dodgeDuration:5000}
 ];
 
 let BS = null;          // trạng thái trận đấu hiện tại
@@ -1435,6 +1442,7 @@ function startSecretBattle(){
   startBattleMusic();
   addBattleLog('Trọng dang tay truyền mana cho cả ba người — không gian vỡ tan thành từng mảnh...','sys');
   addBattleLog('THE TIU hiện nguyên hình trước party!','danger');
+  addBattleLog('Đòn đánh của party không thể hạ gục TIU — chỉ cần CẦM CỰ đủ '+BS.maxTurn+' lượt để Trọng hoàn tất nghi lễ!','warn');
   renderBattle();
   promptNextAction();
 }
@@ -1484,7 +1492,8 @@ function stopBattleMusic(){
 function renderBattle(){
   if(!BS) return;
   document.getElementById('battleTurnNum').textContent = BS.turn;
-  const bossPct = Math.max(0, BS.boss.hp/BS.boss.maxHp*100);
+  document.getElementById('battleTurnMax').textContent = BS.maxTurn;
+  const bossPct = Math.max(2, BS.boss.hp/BS.boss.maxHp*100); // thanh máu TIU không bao giờ hiện 0% — không thể bị đánh gục
   document.getElementById('bossHpBarFill').style.width = bossPct+'%';
   document.getElementById('bossHpText').textContent = Math.max(0,Math.round(BS.boss.hp))+' / '+BS.boss.maxHp;
   const bossSprite = document.getElementById('bossSprite');
@@ -1584,8 +1593,9 @@ function resolveRound(){
     if(st.action==='attack'){
       atkCount++;
       const dmg = Math.round(rand(12,20));
-      BS.boss.hp = Math.max(0, BS.boss.hp - dmg);
-      addBattleLog(def.name+' tấn công THE TIU, gây '+dmg+' sát thương.','atk');
+      // TIU được Trọng phong ấn tạm thời — sát thương chỉ mang tính "cầm chân", máu không bao giờ về 0
+      BS.boss.hp = Math.max(Math.round(BS.boss.maxHp*0.015), BS.boss.hp - dmg);
+      addBattleLog(def.name+' tấn công THE TIU, gây '+dmg+' sát thương (không đủ để hạ gục).','atk');
     } else if(st.action==='defend'){
       st.defending = true;
       addBattleLog(def.name+' thủ thế, chuẩn bị chịu đòn.','def');
@@ -1596,7 +1606,8 @@ function resolveRound(){
 
   renderBattle();
 
-  if(BS.boss.hp<=0){ finishBattle(true); return; }
+  // Lưu ý: TIU KHÔNG BAO GIỜ bị hạ gục bằng đòn đánh — chiến thắng chỉ đến ở endRound()
+  // khi party cầm cự đủ BS.maxTurn lượt. Không có finishBattle(true) ở đây.
 
   const staggerChance = atkCount*0.10;
   const staggered = Math.random() < staggerChance;
@@ -1638,46 +1649,257 @@ function bossTurn(staggered){
   const pattern = pick(BOSS_PATTERNS);
   document.getElementById('bossPatternTag').textContent = '⚠ '+pattern.name;
   addBattleLog('THE TIU tung chiêu: '+pattern.name+' — '+pattern.desc,'danger');
-  playBulletFx(pattern.bulletType, ()=>{
+  runDodgePhase(pattern, (hits)=>{
     const tauntKey = BS.order.find(k=>BS.party[k].taunting && BS.party[k].hp>0);
     const targets = tauntKey ? [tauntKey] : BS.order.filter(k=>BS.party[k].hp>0);
-    targets.forEach(k=>{
-      const st = BS.party[k], def = PARTY_DEF[k];
-      let dmg = Math.round(rand(pattern.dmg[0], pattern.dmg[1]));
-      if(st.defending) dmg = Math.round(dmg*0.75);
-      st.hp = Math.max(0, st.hp - dmg);
-      addBattleLog(def.name+' hứng chịu '+dmg+' sát thương'+(st.defending?' (đã phòng thủ)':'')+'.','dmg');
-    });
+    if(hits<=0){
+      addBattleLog('Linh hồn hợp nhất né trọn vẹn cả chuỗi đòn — không ai bị thương!','warn');
+    } else {
+      targets.forEach(k=>{
+        const st = BS.party[k], def = PARTY_DEF[k];
+        let dmg = 0;
+        for(let i=0;i<hits;i++) dmg += Math.round(rand(pattern.dmg[0], pattern.dmg[1]));
+        if(st.defending) dmg = Math.round(dmg*0.75);
+        st.hp = Math.max(0, st.hp - dmg);
+        addBattleLog(def.name+' hứng chịu '+dmg+' sát thương ('+hits+' lần trúng đòn)'+(st.defending?' — đã phòng thủ':'')+'.','dmg');
+      });
+    }
     renderBattle();
     if(BS.order.every(k=>BS.party[k].hp<=0)){ finishBattle(false); return; }
     endRound();
   });
 }
 
-/* ---- Hiệu ứng bullet-hell trên màn hình theo từng pattern ---- */
-function playBulletFx(type, cb){
-  const layer = document.getElementById('battleBulletLayer');
-  layer.innerHTML = '';
-  layer.classList.remove('hidden');
-  const count = type==='sweep' ? 1 : (type==='spiral' ? 16 : (type==='burst' ? 10 : 14));
-  for(let i=0;i<count;i++){
-    const b = document.createElement('div');
-    b.className = 'bullet '+type;
-    if(type==='rain'){
-      b.style.left = (Math.random()*100)+'%';
-      b.style.animationDelay = (Math.random()*0.4)+'s';
-    } else if(type==='spiral' || type==='burst'){
-      b.style.setProperty('--ang', ((i/count)*360)+'deg');
-    } else if(type==='sweep'){
-      b.style.top = (30+Math.random()*40)+'%';
+/* ============== DODGE PHASE — né chuỗi đạn bằng "linh hồn hợp nhất" ==============
+   Thay vì chỉ xem hiệu ứng rồi nhận sát thương cố định, người chơi điều khiển 1 hình tròn
+   (đại diện cho linh hồn hợp nhất của cả 3 người: BẠN + WIBU VIỆT NHẬT + CHÀNG LÍNH NGU LẮM)
+   bằng WASD hoặc phím mũi tên trong #dodgeBox để né các chuỗi đạn bullet-hell của TIU.
+   Mỗi pattern giờ bắn ra NHIỀU ĐỢT đạn nối tiếp nhau (chuỗi) thay vì 1 lần bắn đơn giản. */
+const DODGE_KEYS = {
+  ArrowUp:'up', ArrowDown:'down', ArrowLeft:'left', ArrowRight:'right',
+  w:'up', s:'down', a:'left', d:'right', W:'up', S:'down', A:'left', D:'right'
+};
+let DZ = null; // trạng thái runtime của pha né đạn hiện tại
+
+function runDodgePhase(pattern, cb){
+  const arena = document.getElementById('dodgeArena');
+  const box = document.getElementById('dodgeBox');
+  const soul = document.getElementById('soulCircle');
+  box.querySelectorAll('.dbullet').forEach(b=>b.remove());
+  arena.classList.remove('hidden');
+  document.getElementById('dodgeHitNum').textContent = '0';
+
+  const rect = {w: box.clientWidth || 340, h: box.clientHeight || 260};
+  const soulR = 7;
+  DZ = {
+    x: rect.w/2, y: rect.h - 26,
+    keys: {up:false,down:false,left:false,right:false},
+    bullets: [],
+    hitsTaken: 0,
+    invulnUntil: 0,
+    start: performance.now(),
+    duration: (pattern.dodgeDuration||4600) + (BS ? Math.min(600, (BS.turn-1)*30) : 0), // dài & dồn dập hơn ở lượt sau
+    spawnQueue: buildDodgeSpawnQueue(pattern, rect, BS ? BS.turn : 1),
+    rect, soulR
+  };
+
+  DZ.keydownHandler = (e)=>{
+    const dir = DODGE_KEYS[e.key];
+    if(!dir) return;
+    e.preventDefault();
+    DZ.keys[dir] = true;
+  };
+  DZ.keyupHandler = (e)=>{
+    const dir = DODGE_KEYS[e.key];
+    if(!dir) return;
+    DZ.keys[dir] = false;
+  };
+  document.addEventListener('keydown', DZ.keydownHandler);
+  document.addEventListener('keyup', DZ.keyupHandler);
+
+  soul.style.transform = `translate(${DZ.x}px, ${DZ.y}px)`;
+  soul.classList.remove('hit');
+
+  let last = DZ.start;
+  function frame(now){
+    if(!DZ) return; // pha đã bị hủy giữa chừng (vd rời trận)
+    const dt = Math.min(48, now-last); last = now;
+    const elapsed = now - DZ.start;
+
+    // di chuyển linh hồn theo phím giữ (WASD / mũi tên), giới hạn trong khung
+    const speed = 0.24; // px/ms
+    let mx=0,my=0;
+    if(DZ.keys.up) my -= 1;
+    if(DZ.keys.down) my += 1;
+    if(DZ.keys.left) mx -= 1;
+    if(DZ.keys.right) mx += 1;
+    if(mx||my){
+      const len = Math.hypot(mx,my);
+      DZ.x += (mx/len)*speed*dt;
+      DZ.y += (my/len)*speed*dt;
     }
-    layer.appendChild(b);
+    DZ.x = Math.max(DZ.soulR, Math.min(DZ.rect.w-DZ.soulR, DZ.x));
+    DZ.y = Math.max(DZ.soulR, Math.min(DZ.rect.h-DZ.soulR, DZ.y));
+    soul.style.transform = `translate(${DZ.x}px, ${DZ.y}px)`;
+
+    // phát chuỗi đạn theo lịch đã lên
+    while(DZ.spawnQueue.length && DZ.spawnQueue[0].t <= elapsed){
+      spawnDodgeBullet(DZ.spawnQueue.shift(), box);
+    }
+
+    // cập nhật từng viên đạn + kiểm tra va chạm
+    for(let i=DZ.bullets.length-1;i>=0;i--){
+      const b = DZ.bullets[i];
+      updateDodgeBullet(b, dt);
+      if(b.dead){ b.el.remove(); DZ.bullets.splice(i,1); continue; }
+      if(!b.laser) b.el.style.transform = `translate(${b.x}px, ${b.y}px)`;
+      if(now > DZ.invulnUntil && dodgeHitTest(b, DZ)){
+        DZ.hitsTaken++;
+        document.getElementById('dodgeHitNum').textContent = DZ.hitsTaken;
+        DZ.invulnUntil = now + 550;
+        soul.classList.add('hit');
+        setTimeout(()=>{ if(soul) soul.classList.remove('hit'); }, 220);
+      }
+    }
+
+    if(elapsed < DZ.duration || DZ.bullets.length || DZ.spawnQueue.length){
+      DZ.raf = requestAnimationFrame(frame);
+    } else {
+      endDodgePhase(cb);
+    }
   }
-  setTimeout(()=>{
-    layer.innerHTML='';
-    layer.classList.add('hidden');
-    cb();
-  }, 900);
+  DZ.raf = requestAnimationFrame(frame);
+}
+
+function endDodgePhase(cb){
+  if(!DZ) return;
+  document.removeEventListener('keydown', DZ.keydownHandler);
+  document.removeEventListener('keyup', DZ.keyupHandler);
+  cancelAnimationFrame(DZ.raf);
+  document.getElementById('dodgeArena').classList.add('hidden');
+  document.getElementById('dodgeBox').querySelectorAll('.dbullet').forEach(b=>b.remove());
+  const hits = DZ.hitsTaken;
+  DZ = null;
+  cb(hits);
+}
+
+/* ---- Sinh lịch phát đạn: mỗi pattern giờ gồm NHIỀU ĐỢT (chuỗi) liên tiếp, độ dồn dập
+   tăng dần theo lượt (turn) để trận đấu càng về sau càng khó né hơn ---- */
+function buildDodgeSpawnQueue(pattern, rect, turn){
+  const density = Math.max(0.62, 1 - (turn-1)*0.03); // khoảng cách giữa các đợt rút ngắn dần theo lượt
+  const gens = {
+    rain: genRainQueue, spiral: genSpiralQueue, sweep: genSweepQueue,
+    burst: genBurstQueue, cross: genCrossQueue
+  };
+  const fn = gens[pattern.bulletType] || genRainQueue;
+  return fn(rect, (pattern.dodgeDuration||4600), density);
+}
+function genRainQueue(rect, duration, density){
+  const q=[]; let t=250;
+  while(t < duration-500){
+    const cols = 5 + Math.floor(Math.random()*3);
+    for(let i=0;i<cols;i++){
+      const x = 18 + Math.random()*(rect.w-36);
+      q.push({t, kind:'fall', x, speed:0.15+Math.random()*0.09});
+    }
+    t += 420*density;
+  }
+  return q;
+}
+function genSpiralQueue(rect, duration, density){
+  const q=[]; let t=150; let ang=Math.random()*360;
+  const cx=rect.w/2, cy=rect.h/2;
+  while(t < duration-300){
+    q.push({t, kind:'radial', cx, cy, ang, speed:0.095});
+    q.push({t, kind:'radial', cx, cy, ang:ang+180, speed:0.095});
+    ang += 24;
+    t += 95*density;
+  }
+  return q;
+}
+function genSweepQueue(rect, duration, density){
+  const q=[]; let t=250; let count=0;
+  while(t < duration-500){
+    const horiz = count%2===0;
+    q.push({t, kind:'laser', horiz, pos: 18+Math.random()*((horiz?rect.h:rect.w)-36), telegraph:520});
+    t += 780*density;
+    count++;
+  }
+  return q;
+}
+function genBurstQueue(rect, duration, density){
+  const q=[]; let t=200;
+  const cx=rect.w/2, cy=rect.h/2;
+  while(t < duration-400){
+    const n = 10 + Math.floor(Math.random()*4);
+    for(let i=0;i<n;i++) q.push({t, kind:'radial', cx, cy, ang:(360/n)*i, speed:0.13});
+    t += 640*density;
+  }
+  return q;
+}
+function genCrossQueue(rect, duration, density){
+  const q=[]; let t=250;
+  while(t < duration-400){
+    for(let edge=0; edge<4; edge++){
+      q.push({t, kind:'edge', edge, offset:Math.random(), speed:0.15+Math.random()*0.05});
+    }
+    t += 520*density;
+  }
+  return q;
+}
+
+function spawnDodgeBullet(ev, box){
+  const el = document.createElement('div');
+  const b = {el, dead:false, age:0, life:6500, r:6};
+  if(ev.kind==='fall'){
+    el.className = 'dbullet t-rain';
+    b.x = ev.x; b.y = -12; b.vx = 0; b.vy = ev.speed; b.r=6;
+  } else if(ev.kind==='radial'){
+    el.className = 'dbullet t-radial';
+    const rad = ev.ang*Math.PI/180;
+    b.x = ev.cx; b.y = ev.cy; b.vx = Math.cos(rad)*ev.speed; b.vy = Math.sin(rad)*ev.speed; b.r=6;
+  } else if(ev.kind==='edge'){
+    el.className = 'dbullet t-edge';
+    const rect = DZ.rect;
+    let sx,sy,vx,vy;
+    if(ev.edge===0){ sx=ev.offset*rect.w; sy=-12; vx=0; vy=ev.speed; }
+    else if(ev.edge===1){ sx=rect.w+12; sy=ev.offset*rect.h; vx=-ev.speed; vy=0; }
+    else if(ev.edge===2){ sx=ev.offset*rect.w; sy=rect.h+12; vx=0; vy=-ev.speed; }
+    else { sx=-12; sy=ev.offset*rect.h; vx=ev.speed; vy=0; }
+    b.x=sx; b.y=sy; b.vx=vx; b.vy=vy; b.r=6;
+  } else if(ev.kind==='laser'){
+    b.laser = true; b.horiz = ev.horiz; b.pos = ev.pos;
+    b.age = -(ev.telegraph||500); b.life = (ev.telegraph||500) + 320;
+    el.className = 'dbullet '+(ev.horiz?'t-laser-h':'t-laser-v')+' telegraph';
+    if(ev.horiz){ el.style.top = ev.pos+'px'; el.style.left='0'; }
+    else { el.style.left = ev.pos+'px'; el.style.top='0'; }
+  }
+  box.appendChild(el);
+  DZ.bullets.push(b);
+}
+
+function updateDodgeBullet(b, dt){
+  b.age += dt;
+  if(b.laser){
+    if(b.age >= 0 && b.el.classList.contains('telegraph')){
+      b.el.classList.remove('telegraph');
+      b.el.classList.add('firing');
+    }
+    if(b.age > b.life) b.dead = true;
+    return;
+  }
+  b.x += b.vx*dt; b.y += b.vy*dt;
+  const rect = DZ.rect;
+  if(b.x < -30 || b.x > rect.w+30 || b.y < -30 || b.y > rect.h+30) b.dead = true;
+  if(b.age > b.life) b.dead = true;
+}
+
+function dodgeHitTest(b, dz){
+  if(b.laser){
+    if(b.el.classList.contains('telegraph')) return false; // chỉ đang cảnh báo, chưa bắn thật
+    return b.horiz ? Math.abs(dz.y - b.pos) < (9 + dz.soulR) : Math.abs(dz.x - b.pos) < (9 + dz.soulR);
+  }
+  return Math.hypot(dz.x-b.x, dz.y-b.y) < (b.r + dz.soulR - 1);
 }
 
 /* ---- Kết thúc 1 lượt (round) và kiểm tra điều kiện thắng theo mốc 10 lượt ---- */
@@ -1697,7 +1919,7 @@ function finishBattle(won){
   document.getElementById('battleMenu').innerHTML='';
   stopBattleMusic();
   if(won){
-    addBattleLog('Trọng hoàn tất tế lễ thanh tẩy — một luồng ánh sáng bảy sắc bùng lên nuốt trọn TIU!','sys');
+    addBattleLog('Trọng hoàn tất tế lễ thanh tẩy — một cột ánh sáng trắng đâm thẳng lên trời, bảy sắc cầu vồng xoáy quanh cột nuốt trọn TIU!','sys');
     playRainbowFx(()=>{
       document.getElementById('battleVictoryFx').classList.remove('go');
       document.getElementById('battleOverlay').classList.add('hidden');

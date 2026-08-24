@@ -393,6 +393,37 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
   box-shadow:0 0 24px rgba(255,255,255,0.8);animation:bulletSweep .85s ease-in-out forwards;}
 @keyframes bulletSweep{0%{transform:translateX(-10%);opacity:0;}20%{opacity:1;}100%{transform:translateX(20%);opacity:0;}}
 
+#battleNoKillNote{position:relative;z-index:2;align-self:center;margin-top:6px;font-size:10px;letter-spacing:.5px;color:var(--amber);text-align:center;max-width:520px;opacity:.85;}
+
+/* ---- Dodge arena: linh hồn hợp nhất (hình tròn) né chuỗi đạn bằng WASD / mũi tên ---- */
+#dodgeArena{position:absolute;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  background:rgba(3,2,4,0.55);backdrop-filter:blur(1px);}
+#dodgeArena.hidden{display:none;}
+#dodgeHint{font-family:var(--font-mono);font-size:11px;letter-spacing:1px;color:#fff;text-shadow:0 0 8px rgba(0,0,0,0.8);}
+#dodgeBox{position:relative;width:min(380px,86vw);height:260px;background:#0a070c;border:2px solid #fff;border-radius:6px;
+  box-shadow:0 0 24px rgba(255,255,255,0.25), inset 0 0 30px rgba(0,0,0,0.8);overflow:hidden;}
+#soulCircle{position:absolute;left:0;top:0;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%, #fff, var(--blood-bright) 60%, #7a0f1c 100%);
+  box-shadow:0 0 10px var(--blood-bright), 0 0 4px #fff;z-index:5;transition:box-shadow .15s;}
+#soulCircle.hit{background:radial-gradient(circle at 35% 30%, #fff, #ffee5a 55%, #b8860b 100%);
+  box-shadow:0 0 18px #ffee5a, 0 0 8px #fff;}
+#dodgeHitCounter{font-size:10px;color:var(--text-dim);letter-spacing:.5px;}
+
+.dbullet{position:absolute;left:0;top:0;border-radius:50%;pointer-events:none;}
+.dbullet.t-rain{width:11px;height:11px;margin:-5.5px 0 0 -5.5px;background:radial-gradient(circle,#fff,#e6293f 65%);box-shadow:0 0 8px #e6293f;}
+.dbullet.t-radial{width:12px;height:12px;margin:-6px 0 0 -6px;background:radial-gradient(circle,#fff,#c98cff 65%);box-shadow:0 0 8px #c98cff;}
+.dbullet.t-edge{width:12px;height:12px;margin:-6px 0 0 -6px;background:radial-gradient(circle,#fff,#5ad3ff 65%);box-shadow:0 0 8px #5ad3ff;}
+.dbullet.t-laser-h{left:0;width:100%;height:8px;border-radius:0;margin:-4px 0 0 0;
+  background:linear-gradient(180deg,transparent,rgba(255,90,90,0.35),transparent);}
+.dbullet.t-laser-h.telegraph{height:2px;margin-top:-1px;background:repeating-linear-gradient(90deg,rgba(255,255,255,0.9) 0 6px,transparent 6px 12px);}
+.dbullet.t-laser-h.firing{height:14px;margin-top:-7px;background:linear-gradient(180deg,transparent,#fff 35%,var(--blood-bright) 55%,#fff 65%,transparent);
+  box-shadow:0 0 16px var(--blood-bright);}
+.dbullet.t-laser-v{top:0;height:100%;width:8px;border-radius:0;margin:0 0 0 -4px;
+  background:linear-gradient(90deg,transparent,rgba(255,90,90,0.35),transparent);}
+.dbullet.t-laser-v.telegraph{width:2px;margin-left:-1px;background:repeating-linear-gradient(180deg,rgba(255,255,255,0.9) 0 6px,transparent 6px 12px);}
+.dbullet.t-laser-v.firing{width:14px;margin-left:-7px;background:linear-gradient(90deg,transparent,#fff 35%,var(--blood-bright) 55%,#fff 65%,transparent);
+  box-shadow:0 0 16px var(--blood-bright);}
+
 #battleMid{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;align-items:center;gap:10px;overflow-y:auto;padding:6px 12px;}
 #partyPanel{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;width:100%;max-width:640px;}
 .partyCard{background:rgba(20,17,16,0.85);border:2px solid var(--line);border-radius:6px;padding:8px 10px;width:150px;text-align:center;transition:border-color .2s,opacity .2s;}
@@ -449,4 +480,31 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
 #battleVictoryText{position:relative;z-index:2;font-family:var(--font-disp);font-size:28px;letter-spacing:4px;color:#fff;
   text-shadow:0 0 26px rgba(255,255,255,0.9);opacity:0;}
 #battleVictoryFx.go #battleVictoryText{animation:victoryTextIn 1.4s ease-out .6s forwards;}
+
+/* ---- pha cuối (đủ 15 lượt): cột sáng trắng đâm thẳng lên + 7 màu xoáy quanh cột ---- */
+#lightColumn{position:absolute;left:50%;bottom:0;width:64px;height:0;transform:translateX(-50%);
+  background:linear-gradient(to top, rgba(255,255,255,0) 0%, #fff 14%, #fff 86%, rgba(255,255,255,0) 100%);
+  box-shadow:0 0 60px 20px rgba(255,255,255,0.9), 0 0 160px 70px rgba(255,255,255,0.45);
+  opacity:0;z-index:1;}
+#battleVictoryFx.go #lightColumn{animation:lightColumnRise 2.2s cubic-bezier(.2,.8,.3,1) forwards;}
+@keyframes lightColumnRise{
+  0%{height:0;opacity:0;}
+  15%{opacity:1;}
+  60%{height:150vh;opacity:1;}
+  100%{height:150vh;opacity:.85;}
+}
+#colorSwirl{position:absolute;left:50%;bottom:0;width:2px;height:2px;z-index:1;opacity:0;transform:translate(-50%,0) rotate(0deg);}
+#battleVictoryFx.go #colorSwirl{animation:swirlFadeIn 1s ease-out .3s forwards, swirlSpin 3.2s linear .3s infinite;}
+@keyframes swirlFadeIn{to{opacity:1;}}
+@keyframes swirlSpin{to{transform:translate(-50%,0) rotate(360deg);}}
+.swirlDot{position:absolute;left:0;top:-140px;width:16px;height:16px;margin-left:-8px;border-radius:50%;
+  box-shadow:0 0 16px currentColor, 0 0 34px currentColor;animation:swirlBob 1.6s ease-in-out infinite;}
+.swirlDot.c1{background:#ff5a5a;color:#ff5a5a;transform:rotate(0deg) translateY(0);}
+.swirlDot.c2{background:#ff9a4d;color:#ff9a4d;transform:rotate(51.4deg) translateY(-16px);animation-delay:.1s;}
+.swirlDot.c3{background:#ffe14d;color:#ffe14d;transform:rotate(102.8deg) translateY(0);animation-delay:.2s;}
+.swirlDot.c4{background:#5aff8a;color:#5aff8a;transform:rotate(154.2deg) translateY(-16px);animation-delay:.3s;}
+.swirlDot.c5{background:#5ad3ff;color:#5ad3ff;transform:rotate(205.6deg) translateY(0);animation-delay:.4s;}
+.swirlDot.c6{background:#5a7aff;color:#5a7aff;transform:rotate(257deg) translateY(-16px);animation-delay:.5s;}
+.swirlDot.c7{background:#a35aff;color:#a35aff;transform:rotate(308.4deg) translateY(0);animation-delay:.6s;}
+@keyframes swirlBob{0%,100%{filter:brightness(1);}50%{filter:brightness(1.5);}}
 @keyframes victoryTextIn{0%{opacity:0;transform:translateY(20px) scale(.9);}100%{opacity:1;transform:translateY(0) scale(1);}}
