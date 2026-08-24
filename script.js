@@ -20,7 +20,7 @@ const NPC_IMAGES = { E:"", B:"", TRONG:"" };
 // Ảnh riêng cho từng phòng — thay các URL này bằng ảnh của bạn (đặt file vào cùng thư mục
 // với file HTML này và sửa đường dẫn bên dưới, ví dụ: A:"images/nha-a.jpg").
 const ROOM_IMAGES = {
-  A:"assets/images/ToaA.png", B:"assets/images/ToaB.png", C:"assets/images/ToaC.png", D:"assets/images/ToaD.png", E:"assets/images/ToaE.png", LIB:"assets/images/lib.png", CANTEEN:"assets/images/CanTin.png"
+  A:"assets/images/ToaA.png", B:"assets/images/ToaB.png", C:"assets/images/ToaC.png", D:"assets/images/ToaD.png", E:"assets/images/ToaE.png", LIB:"assets/images/lib.png", CANTEEN:"assets/images/ct.png"
 };
 // Ảnh quái vật The TIU dùng cho pha jumpscare toàn màn hình — điền đường dẫn PNG vào đây,
 // ví dụ: 'assets/images/tiu-monster.png'. Để trống thì sẽ hiện icon dự phòng.
