@@ -10,8 +10,8 @@ const ROOM_DEF = {
   E:      {name:"TÒA E", sub:"11 tầng", x:56, y:70, connects:["A","C","FIELD"], event:"wibu"},
   LIB:    {name:"THƯ VIỆN", sub:"Kho sách", x:9, y:88, connects:["A","PARK"], event:"books"},
   CANTEEN:{name:"CĂN TIN", sub:"Khu an toàn", x:44, y:20, connects:["B","C"], safe:true},
-  PARK:   {name:"CHỖ GỬI XE", sub:"Bãi giữ xe", x:7, y:55, connects:["LIB","B"], event:"bikes"},
-  FIELD:  {name:"SÂN BÓNG", sub:"Sân thể thao ngoài trời", x:86, y:60, connects:["D","E"], event:"ball"}
+  PARK:   {name:"CHỖ GỬI XE", sub:"Bãi giữ xe", x:7, y:55, connects:["LIB","B"], event:"bikes", noEvent:true},
+  FIELD:  {name:"SÂN BÓNG", sub:"Sân thể thao ngoài trời", x:86, y:60, connects:["D","E"], event:"ball", noEvent:true}
 };
 const ROOM_KEYS = Object.keys(ROOM_DEF);
 
@@ -98,9 +98,10 @@ let S = null;
 function freshState(night){
   const startRoom = ROOM_KEYS[Math.floor(Math.random()*ROOM_KEYS.length)];
   let monsterRoom = ROOM_KEYS.filter(r=>r!==startRoom && !ROOM_DEF[r].safe)[Math.floor(Math.random()*4)];
-  // --- La Peace: mảnh năng lượng ôn hòa, 1 mảnh ẩn xuất hiện ngẫu nhiên mỗi đêm ---
+  // --- La Peace: mảnh năng lượng ôn hòa, 1 mảnh ẩn xuất hiện ngẫu nhiên mỗi đêm.
+  // Chỗ Gửi Xe và Sân Bóng có tỉ lệ xuất hiện La Peace cao hơn hẳn các khu vực khác. ---
   const peaceSpots = ROOM_KEYS.filter(r=>!ROOM_DEF[r].safe && r!==startRoom);
-  const laPeaceRoom = pick(peaceSpots.length ? peaceSpots : ROOM_KEYS.filter(r=>!ROOM_DEF[r].safe));
+  const laPeaceRoom = weightedPeaceRoom(peaceSpots.length ? peaceSpots : ROOM_KEYS.filter(r=>!ROOM_DEF[r].safe));
   return {
     night,
     gameMinutes: 0,
@@ -146,6 +147,19 @@ let campaignLaPeace = 0;
 
 function rand(a,b){return a+Math.random()*(b-a);}
 function pick(arr){return arr[Math.floor(Math.random()*arr.length)];}
+
+/* Chỗ Gửi Xe & Sân Bóng có tỉ lệ xuất hiện La Peace cao hơn: mỗi phòng trong danh sách
+   này được nhân trọng số LA_PEACE_HOTSPOT_WEIGHT lần so với các phòng thường khác. */
+const LA_PEACE_HOTSPOTS = ['PARK','FIELD'];
+const LA_PEACE_HOTSPOT_WEIGHT = 3;
+function weightedPeaceRoom(candidates){
+  const weighted = [];
+  candidates.forEach(r=>{
+    const w = LA_PEACE_HOTSPOTS.includes(r) ? LA_PEACE_HOTSPOT_WEIGHT : 1;
+    for(let i=0;i<w;i++) weighted.push(r);
+  });
+  return pick(weighted);
+}
 function shuffle(arr){
   for(let i=arr.length-1;i>0;i--){
     const j=Math.floor(Math.random()*(i+1));
@@ -696,9 +710,10 @@ function spawnEvent(){
   // Sự cố luôn do chính The TIU gây ra: nó phải phát sinh ngay tại phòng TIU đang đứng
   // (hoặc phòng liền kề nếu phòng đó đã có sự cố/đang an toàn) — không còn chuyện
   // "sự cố bung ra một nơi, còn TIU lại ở tận một nẻo khác" nữa.
-  let room = (!ROOM_DEF[S.monsterRoom].safe && !S.activeEvents[S.monsterRoom]) ? S.monsterRoom : null;
+  // Chỗ Gửi Xe (PARK) và Sân Bóng (FIELD) được đánh dấu noEvent — không bao giờ phát sinh sự cố ở đó.
+  let room = (!ROOM_DEF[S.monsterRoom].safe && !ROOM_DEF[S.monsterRoom].noEvent && !S.activeEvents[S.monsterRoom]) ? S.monsterRoom : null;
   if(!room){
-    const near = ROOM_DEF[S.monsterRoom].connects.filter(k=>!ROOM_DEF[k].safe && !S.activeEvents[k]);
+    const near = ROOM_DEF[S.monsterRoom].connects.filter(k=>!ROOM_DEF[k].safe && !ROOM_DEF[k].noEvent && !S.activeEvents[k]);
     room = near.length ? pick(near) : null;
   }
   if(!room) return;
@@ -1881,11 +1896,12 @@ document.addEventListener('keydown', (e)=>{
   }
 });
 
-/* ---- CHEAT (dev/test): Ctrl+P nhảy thẳng vào trận đánh boss bí mật / secret ending,
+/* ---- CHEAT (dev/test): bấm phím "P" nhảy thẳng vào trận đánh boss bí mật / secret ending,
    bỏ qua yêu cầu nhặt đủ 3 La Peace và tìm gặp Trọng. Chỉ hoạt động khi đang có 1 ván
    đang chạy và chưa ở trong trận đánh khác. ---- */
 document.addEventListener('keydown', (e)=>{
-  if(!(e.ctrlKey && (e.key==='p' || e.key==='P'))) return;
+  if(e.key !== 'p' && e.key !== 'P') return;
+  if(e.ctrlKey || e.metaKey || e.altKey) return; // tránh trùng với tổ hợp phím khác của trình duyệt/OS
   e.preventDefault();
   if(!S || !S.running) return;
   if(isBlockingOverlayOpen()) return;
