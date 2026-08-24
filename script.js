@@ -28,7 +28,7 @@ const TIU_IMAGE = "assets/images/TIU.png";
 
 // Nhạc cảnh báo khi The TIU ở gần — điền đường dẫn file âm thanh vào đây,
 // ví dụ: 'assets/audio/tiu-near.mp3'. Để trống thì tính năng này sẽ tự tắt.
-const TIU_PROXIMITY_MUSIC = "assets/sfx/song/TIU.mp3";
+const TIU_PROXIMITY_MUSIC = "assets/sfx/OST/TIU.mp3";
 // Từ khoảng cách (số tòa) này trở đi thì coi như The TIU đã đi xa hẳn -> nhạc tắt hẳn.
 const PROXIMITY_FAR_DISTANCE = 3;
 
