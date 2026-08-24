@@ -54,7 +54,7 @@ const NPC_DIALOGUES = {
         {spk:'WIBU VIỆT NHẬT', text:'"Tao đoán chúng ta đã bị isekai!!."'},
         {spk:'Bạn', text:'"À không không"'},
         {spk:'Bạn', text:'"Không có chúng ta nào ở đây hết."'},
-        {spk:'WIBU VIỆT NHẬT', text:'"Ồ tiếc vậy, một lolicon trong thế giới pháp quyên này như tao..."'}
+        {spk:'WIBU VIỆT NHẬT', text:'"Ồ tiếc vậy, một lolicon trong thế giới pháp quyên này như tao..."'},
         {spk:'Bạn', text:'"(Ai đó xin hãy gọi cảnh sát)"'},
         {spk:'WIBU VIỆT NHẬT', text:'"Dù sao thì,"'},
         {spk:'WIBU VIỆT NHẬT', text:'"Cầm lấy chai nước này đi, nó sẽ có ích cho mày đó"'},
@@ -110,7 +110,7 @@ const NPC_DIALOGUES = {
     2: {
       lines:[
         {spk:'CHÀNG LÍNH NGU LẮM', text:'"Hôm qua tao suýt bị bắt vì ngủ gật giữa hành lang... !"'},
-        {spk:'CHÀNG LÍNH NGU LẮM', text:'"À mà lúc nãy tao thấy có bóng gì đó lướt qua phía Nhà A, cậu để ý nhé."'}
+        {spk:'CHÀNG LÍNH NGU LẮM', text:'"À mà lúc nãy tao thấy có bóng gì đó lướt qua phía Nhà A, cậu để ý nhé."'},
         {spk:'Bạn', text:'"Riel ko vậy ông già??"'},
         {spk:'CHÀNG LÍNH NGU LẮM', text:'"Riel nha tao lấy năng lực ra đảm bảo!"'},
         {spk:'Bạn', text:'"Typeshit lo cho cái tay bị thương của mày đi"'},
@@ -120,9 +120,9 @@ const NPC_DIALOGUES = {
     3: {
       lines:[
         {spk:'CHÀNG LÍNH NGU LẮM', text:'"Đêm nay sẽ thật dài đây"'},
-        {spk:'CHÀNG LÍNH NGU LẮM', text:'"Một cảm giác ớn lạnh chạy dọc sống lưng."'}
+        {spk:'CHÀNG LÍNH NGU LẮM', text:'"Một cảm giác ớn lạnh chạy dọc sống lưng."'},
         {spk:'CHÀNG LÍNH NGU LẮM', text:'"Tao không hy vọng gì nhiều,"'},
-        {spk:'CHÀNG LÍNH NGU LẮM', text:'"Chỉ mong là chúng ta sống sót đêm nay được chứ??."'}
+        {spk:'CHÀNG LÍNH NGU LẮM', text:'"Chỉ mong là chúng ta sống sót đêm nay được chứ??."'},
         {spk:'', text:'"*CHÀNG LÍNH NGU LẮM dúi cho bạn 20 điểm!!."'}
       ], reward:{type:'points', amount:20, msg:'Chàng Lính Ngu Lắm cổ vũ bạn (+20 điểm).'}
     }
