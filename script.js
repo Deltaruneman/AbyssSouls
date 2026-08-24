@@ -228,7 +228,7 @@ function talkToNPC(meta){
     playVN(TRONG_DIALOGUE.lines, ()=>{
       applyVNReward(TRONG_DIALOGUE.reward);
       if(unlockSecret){
-        playVN(TRONG_SECRET_DIALOGUE.lines, ()=>{ triggerSecretEnding(); });
+        playVN(TRONG_SECRET_DIALOGUE.lines, ()=>{ startSecretBattle(); });
       } else {
         refreshActionPane();
       }
@@ -1368,8 +1368,349 @@ function showEndScreen(){
   document.getElementById('winScreen').classList.remove('hidden');
 }
 
+/* ============== SECRET BOSS BATTLE ==============
+   Mở khóa khi người chơi nhặt đủ 3 mảnh La Peace và nói chuyện với Trọng (chỉ ở chế độ
+   chơi thường, xem talkToNPC). Trọng truyền mana cho 3 người để cầm cự 10 lượt trong khi
+   cậu ấy hoàn tất tế lễ thanh tẩy TIU. Giao diện chuyển hẳn sang chiến đấu theo lượt kiểu
+   JRPG cổ điển (Tấn công / Phòng thủ / Kỹ năng) với các pha tấn công kiểu bullet-hell từ boss. */
+
+// Nhạc nền chiến đấu (rock/symphony bùng nổ) — điền đường dẫn file của bạn vào đây,
+// ví dụ: 'assets/sfx/OST/battle.mp3'. Để trống thì trận đánh sẽ diễn ra không nhạc riêng.
+const BATTLE_MUSIC = "assets/sfx/OST/battle.mp3";
+const BOSS_MAX_HP = 300;
+const BATTLE_MAX_TURN = 10;
+
+const PARTY_DEF = {
+  YOU:  {name:'BẠN', avatarText:'★', avatarBg:'#2a2a2a', maxHp:150, skillName:'Vì Tao Là Người Bông', skillCd:4,
+         skillDesc:'Gây choáng khiến TIU không thể ra đòn ở lượt tấn công tiếp theo.'},
+  WIBU: {name:'WIBU VIỆT NHẬT', avatarText:'和', avatarBg:'#5a3a8a', maxHp:140, skillName:'Chúc Phúc Của Otaku', skillCd:5,
+         skillDesc:'Hồi 50 HP cho toàn đội.'},
+  LINH: {name:'CHÀNG LÍNH NGU LẮM', avatarText:'💤', avatarBg:'#2a5a3a', maxHp:170, skillName:'Siêu Hùng Bất Tử', skillCd:3,
+         skillDesc:'Dựng khiên khiêu khích — cả lượt này chỉ mình cậu ấy chịu sát thương từ TIU.'}
+};
+const BATTLE_PARTY_ORDER = ['YOU','WIBU','LINH'];
+
+const BOSS_PATTERNS = [
+  {name:'MƯA DỮ LIỆU LỖI', desc:'Từng dòng ký tự đỏ rực đổ xuống như mưa.', dmg:[14,22], bulletType:'rain'},
+  {name:'VÒNG XOÁY HỖN LOẠN', desc:'TIU tan thành hàng trăm mảnh vỡ xoáy quanh vòng tròn.', dmg:[18,28], bulletType:'spiral'},
+  {name:'TIA QUÉT KÝ ỨC', desc:'Một luồng sáng trắng quét ngang qua cả party.', dmg:[20,30], bulletType:'sweep'},
+  {name:'BÓNG ĐÊM NUỐT CHỬNG', desc:'Bóng tối dày đặc dồn dập lao về phía party.', dmg:[16,24], bulletType:'burst'}
+];
+
+let BS = null;          // trạng thái trận đấu hiện tại
+let battleMusicEl = null;
+
+function freshBattleState(){
+  const party = {};
+  BATTLE_PARTY_ORDER.forEach(k=>{
+    party[k] = {hp:PARTY_DEF[k].maxHp, maxHp:PARTY_DEF[k].maxHp, cd:0, action:null, defending:false, taunting:false};
+  });
+  return {
+    turn:1, maxTurn:BATTLE_MAX_TURN,
+    boss:{hp:BOSS_MAX_HP, maxHp:BOSS_MAX_HP, stunned:false},
+    party, order:BATTLE_PARTY_ORDER, pickIdx:0, log:[], over:false
+  };
+}
+
+function startSecretBattle(){
+  BS = freshBattleState();
+  if(S) S.paused = true;
+  document.getElementById('battleOverlay').classList.remove('hidden');
+  playShatterFx();
+  startBattleMusic();
+  addBattleLog('Trọng dang tay truyền mana cho cả ba người — không gian vỡ tan thành từng mảnh...','sys');
+  addBattleLog('THE TIU hiện nguyên hình trước party!','danger');
+  renderBattle();
+  promptNextAction();
+}
+
+/* ---- Hiệu ứng vỡ màn hình khi vào trận ---- */
+function playShatterFx(){
+  const el = document.getElementById('battleShatter');
+  el.innerHTML = '';
+  el.classList.remove('go');
+  const cols=5, rows=4;
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      const d = document.createElement('div');
+      d.className = 'shatter-shard';
+      d.style.left = (c*100/cols)+'%';
+      d.style.top = (r*100/rows)+'%';
+      d.style.width = (100/cols)+'%';
+      d.style.height = (100/rows)+'%';
+      d.style.setProperty('--tx', ((Math.random()-0.5)*140)+'vw');
+      d.style.setProperty('--ty', ((Math.random()-0.5)*140)+'vh');
+      d.style.setProperty('--rot', (Math.random()*140-70)+'deg');
+      d.style.animationDelay = (Math.random()*0.15)+'s';
+      el.appendChild(d);
+    }
+  }
+  void el.offsetWidth;
+  el.classList.add('go');
+}
+
+/* ---- Nhạc chiến đấu (rock/symphony) thay thế nhạc ambient u ám ---- */
+function startBattleMusic(){
+  battleMusicEl = document.getElementById('battleMusicAudio');
+  if(!battleMusicEl || !BATTLE_MUSIC) return;
+  try{
+    battleMusicEl.src = BATTLE_MUSIC;
+    battleMusicEl.loop = true;
+    battleMusicEl.volume = (window.UIT_SOUND_MUTED?0:1) * (SETTINGS.masterVolume/100);
+    battleMusicEl.currentTime = 0;
+    battleMusicEl.play().catch(()=>{});
+  }catch(e){}
+}
+function stopBattleMusic(){
+  if(battleMusicEl){ try{ battleMusicEl.pause(); }catch(e){} }
+}
+
+/* ---- Render trạng thái trận đấu ---- */
+function renderBattle(){
+  if(!BS) return;
+  document.getElementById('battleTurnNum').textContent = BS.turn;
+  const bossPct = Math.max(0, BS.boss.hp/BS.boss.maxHp*100);
+  document.getElementById('bossHpBarFill').style.width = bossPct+'%';
+  document.getElementById('bossHpText').textContent = Math.max(0,Math.round(BS.boss.hp))+' / '+BS.boss.maxHp;
+  const bossSprite = document.getElementById('bossSprite');
+  bossSprite.style.backgroundImage = TIU_IMAGE ? `url('${TIU_IMAGE}')` : '';
+  bossSprite.classList.toggle('no-img', !TIU_IMAGE);
+
+  const partyPanel = document.getElementById('partyPanel');
+  partyPanel.innerHTML = '';
+  BS.order.forEach(key=>{
+    const def = PARTY_DEF[key], st = BS.party[key];
+    const pct = Math.max(0, st.hp/st.maxHp*100);
+    const card = document.createElement('div');
+    card.className = 'partyCard'+(st.hp<=0?' ko':'')+(st.taunting?' taunting':'');
+    let statusHtml = '';
+    if(st.hp<=0) statusHtml = '<div class="pcStatus ko">GỤC NGÃ</div>';
+    else if(st.taunting) statusHtml = '<div class="pcStatus taunt">KHIÊU KHÍCH</div>';
+    else if(st.defending) statusHtml = '<div class="pcStatus def">PHÒNG THỦ</div>';
+    card.innerHTML = `<div class="pcAvatar" style="background:${def.avatarBg}">${def.avatarText}</div>
+      <div class="pcName">${def.name}</div>
+      <div class="pcHpBar"><div class="pcHpFill" style="width:${pct}%"></div></div>
+      <div class="pcHpText">${Math.max(0,Math.round(st.hp))}/${st.maxHp}</div>
+      <div class="pcSkillCd">${st.cd>0 ? 'Kỹ năng hồi: '+st.cd+' lượt' : 'Kỹ năng sẵn sàng'}</div>
+      ${statusHtml}`;
+    partyPanel.appendChild(card);
+  });
+}
+
+function addBattleLog(msg, cls){
+  BS.log.unshift({msg,cls});
+  if(BS.log.length>40) BS.log.pop();
+  document.getElementById('battleLogPane').innerHTML = BS.log.map(l=>`<div class="entry ${l.cls||''}">${l.msg}</div>`).join('');
+}
+
+/* ---- Chọn lệnh cho từng thành viên (Tấn công / Phòng thủ / Kỹ năng) ---- */
+function promptNextAction(){
+  while(BS.pickIdx < BS.order.length){
+    const key = BS.order[BS.pickIdx];
+    if(BS.party[key].hp<=0){ BS.pickIdx++; continue; }
+    showBattleMenu(key);
+    return;
+  }
+  resolveRound();
+}
+
+function showBattleMenu(key){
+  const def = PARTY_DEF[key], st = BS.party[key];
+  const menu = document.getElementById('battleMenu');
+  menu.innerHTML = `<div class="battleMenuHead">LƯỢT CỦA ${def.name}</div>`;
+  const row = document.createElement('div');
+  row.className = 'battleMenuRow';
+
+  const atkBtn = document.createElement('button');
+  atkBtn.className = 'battleCmdBtn atk';
+  atkBtn.textContent = '⚔ Tấn công';
+  atkBtn.onclick = ()=>chooseAction(key,'attack');
+  row.appendChild(atkBtn);
+
+  const defBtn = document.createElement('button');
+  defBtn.className = 'battleCmdBtn def';
+  defBtn.textContent = '🛡 Phòng thủ';
+  defBtn.onclick = ()=>chooseAction(key,'defend');
+  row.appendChild(defBtn);
+
+  const sklBtn = document.createElement('button');
+  sklBtn.className = 'battleCmdBtn skl';
+  sklBtn.textContent = '✦ '+def.skillName+(st.cd>0?' ('+st.cd+')':'');
+  sklBtn.disabled = st.cd>0;
+  sklBtn.onclick = ()=>chooseAction(key,'skill');
+  row.appendChild(sklBtn);
+
+  menu.appendChild(row);
+  const hint = document.createElement('div');
+  hint.className = 'battleMenuHint';
+  hint.textContent = def.skillDesc;
+  menu.appendChild(hint);
+}
+
+function chooseAction(key, action){
+  BS.party[key].action = action;
+  BS.pickIdx++;
+  promptNextAction();
+}
+
+/* ---- Xử lý lượt của party rồi tới lượt của boss ---- */
+function resolveRound(){
+  document.getElementById('battleMenu').innerHTML = '<div class="battleMenuHint">Đang xử lý lượt...</div>';
+
+  // hồi giảm cooldown kỹ năng từ lượt trước
+  BS.order.forEach(k=>{ if(BS.party[k].cd>0) BS.party[k].cd--; });
+  BS.order.forEach(k=>{ BS.party[k].defending=false; BS.party[k].taunting=false; });
+  BS.boss.stunned = false;
+
+  let atkCount = 0;
+  BS.order.forEach(key=>{
+    const st = BS.party[key], def = PARTY_DEF[key];
+    if(st.hp<=0 || !st.action) return;
+    if(st.action==='attack'){
+      atkCount++;
+      const dmg = Math.round(rand(12,20));
+      BS.boss.hp = Math.max(0, BS.boss.hp - dmg);
+      addBattleLog(def.name+' tấn công THE TIU, gây '+dmg+' sát thương.','atk');
+    } else if(st.action==='defend'){
+      st.defending = true;
+      addBattleLog(def.name+' thủ thế, chuẩn bị chịu đòn.','def');
+    } else if(st.action==='skill'){
+      applyBattleSkill(key);
+    }
+  });
+
+  renderBattle();
+
+  if(BS.boss.hp<=0){ finishBattle(true); return; }
+
+  const staggerChance = atkCount*0.10;
+  const staggered = Math.random() < staggerChance;
+  if(staggered){
+    addBattleLog('Cả party dồn dập ra đòn — TIU loạng choạng, mất lượt tấn công!','warn');
+  }
+
+  setTimeout(()=>{ bossTurn(staggered); }, 700);
+}
+
+function applyBattleSkill(key){
+  const st = BS.party[key], def = PARTY_DEF[key];
+  if(key==='YOU'){
+    BS.boss.stunned = true;
+    st.cd = def.skillCd;
+    addBattleLog('BẠN hét lên "Vì tao là người bông!!" — TIU khựng lại, choáng váng!','skill');
+  } else if(key==='WIBU'){
+    BS.order.forEach(k=>{ const p=BS.party[k]; if(p.hp>0) p.hp = Math.min(p.maxHp, p.hp+50); });
+    st.cd = def.skillCd;
+    addBattleLog('WIBU VIỆT NHẬT dùng Chúc Phúc Của Otaku — cả team hồi 50 HP!','skill');
+  } else if(key==='LINH'){
+    st.taunting = true;
+    st.cd = def.skillCd;
+    addBattleLog('CHÀNG LÍNH NGU LẮM hét "Tới tao đây!!" — dựng khiên khiêu khích TIU!','skill');
+  }
+}
+
+/* ---- Lượt của boss: chọn 1 pattern bullet-hell trong nhiều pattern khác nhau ---- */
+function bossTurn(staggered){
+  if(BS.boss.stunned){
+    addBattleLog('TIU bị choáng, không thể ra đòn lượt này.','skill');
+    endRound();
+    return;
+  }
+  if(staggered){
+    endRound();
+    return;
+  }
+  const pattern = pick(BOSS_PATTERNS);
+  document.getElementById('bossPatternTag').textContent = '⚠ '+pattern.name;
+  addBattleLog('THE TIU tung chiêu: '+pattern.name+' — '+pattern.desc,'danger');
+  playBulletFx(pattern.bulletType, ()=>{
+    const tauntKey = BS.order.find(k=>BS.party[k].taunting && BS.party[k].hp>0);
+    const targets = tauntKey ? [tauntKey] : BS.order.filter(k=>BS.party[k].hp>0);
+    targets.forEach(k=>{
+      const st = BS.party[k], def = PARTY_DEF[k];
+      let dmg = Math.round(rand(pattern.dmg[0], pattern.dmg[1]));
+      if(st.defending) dmg = Math.round(dmg*0.75);
+      st.hp = Math.max(0, st.hp - dmg);
+      addBattleLog(def.name+' hứng chịu '+dmg+' sát thương'+(st.defending?' (đã phòng thủ)':'')+'.','dmg');
+    });
+    renderBattle();
+    if(BS.order.every(k=>BS.party[k].hp<=0)){ finishBattle(false); return; }
+    endRound();
+  });
+}
+
+/* ---- Hiệu ứng bullet-hell trên màn hình theo từng pattern ---- */
+function playBulletFx(type, cb){
+  const layer = document.getElementById('battleBulletLayer');
+  layer.innerHTML = '';
+  layer.classList.remove('hidden');
+  const count = type==='sweep' ? 1 : (type==='spiral' ? 16 : (type==='burst' ? 10 : 14));
+  for(let i=0;i<count;i++){
+    const b = document.createElement('div');
+    b.className = 'bullet '+type;
+    if(type==='rain'){
+      b.style.left = (Math.random()*100)+'%';
+      b.style.animationDelay = (Math.random()*0.4)+'s';
+    } else if(type==='spiral' || type==='burst'){
+      b.style.setProperty('--ang', ((i/count)*360)+'deg');
+    } else if(type==='sweep'){
+      b.style.top = (30+Math.random()*40)+'%';
+    }
+    layer.appendChild(b);
+  }
+  setTimeout(()=>{
+    layer.innerHTML='';
+    layer.classList.add('hidden');
+    cb();
+  }, 900);
+}
+
+/* ---- Kết thúc 1 lượt (round) và kiểm tra điều kiện thắng theo mốc 10 lượt ---- */
+function endRound(){
+  BS.turn++;
+  if(BS.turn > BS.maxTurn){ finishBattle(true); return; }
+  BS.pickIdx = 0;
+  BS.order.forEach(k=>{ BS.party[k].action=null; });
+  document.getElementById('bossPatternTag').textContent='';
+  renderBattle();
+  promptNextAction();
+}
+
+/* ---- Thắng/thua trận đánh bí mật ---- */
+function finishBattle(won){
+  BS.over = true;
+  document.getElementById('battleMenu').innerHTML='';
+  stopBattleMusic();
+  if(won){
+    addBattleLog('Trọng hoàn tất tế lễ thanh tẩy — một luồng ánh sáng bảy sắc bùng lên nuốt trọn TIU!','sys');
+    playRainbowFx(()=>{
+      document.getElementById('battleVictoryFx').classList.remove('go');
+      document.getElementById('battleOverlay').classList.add('hidden');
+      triggerSecretEnding();
+    });
+  } else {
+    addBattleLog('Cả party gục ngã... nghi lễ thanh tẩy thất bại.','danger');
+    setTimeout(()=>{
+      document.getElementById('battleOverlay').classList.add('hidden');
+      if(S){
+        S.running = false;
+        document.getElementById('goSub').textContent = 'Trận chiến bí mật thất bại — TIU đã áp đảo cả party trước khi Trọng kịp hoàn thành tế lễ thanh tẩy.';
+        document.getElementById('gameOverScreen').classList.remove('hidden');
+      }
+    }, 1400);
+  }
+}
+
+function playRainbowFx(cb){
+  const fx = document.getElementById('battleVictoryFx');
+  fx.classList.remove('go'); void fx.offsetWidth;
+  fx.classList.add('go');
+  setTimeout(cb, 2200);
+}
+
 /* ============== SECRET ENDING (3 La Peace + nói chuyện với Trọng) ==============
-   Chỉ có thể kích hoạt trong chế độ chơi thường (nút BẮT ĐẦU — không phải CHỌN MÀN). */
+   Chỉ có thể kích hoạt trong chế độ chơi thường (nút BẮT ĐẦU — không phải CHỌN MÀN),
+   và chỉ sau khi cầm cự thành công qua trận đánh boss bí mật ở trên. */
 function triggerSecretEnding(){
   if(!S) return;
   S.running = false;
@@ -1500,7 +1841,7 @@ document.getElementById('menuFromWin').onclick = showTitle;
 
 /* ============== PAUSE MENU (ESC) ============== */
 function isBlockingOverlayOpen(){
-  return ['mgModal','mapModal','vnOverlay','jumpscareOverlay','gameOverScreen','winScreen','settingsScreen']
+  return ['mgModal','mapModal','vnOverlay','jumpscareOverlay','gameOverScreen','winScreen','settingsScreen','battleOverlay']
     .some(id=>!document.getElementById(id).classList.contains('hidden'));
 }
 function openPauseMenu(){
@@ -1538,6 +1879,19 @@ document.addEventListener('keydown', (e)=>{
     e.preventDefault();
     openPauseMenu();
   }
+});
+
+/* ---- CHEAT (dev/test): Ctrl+P nhảy thẳng vào trận đánh boss bí mật / secret ending,
+   bỏ qua yêu cầu nhặt đủ 3 La Peace và tìm gặp Trọng. Chỉ hoạt động khi đang có 1 ván
+   đang chạy và chưa ở trong trận đánh khác. ---- */
+document.addEventListener('keydown', (e)=>{
+  if(!(e.ctrlKey && (e.key==='p' || e.key==='P'))) return;
+  e.preventDefault();
+  if(!S || !S.running) return;
+  if(isBlockingOverlayOpen()) return;
+  if(BS && !BS.over) return;
+  campaignLaPeace = 3;
+  startSecretBattle();
 });
 
 document.getElementById('miniMapExpand').onclick=()=>{
