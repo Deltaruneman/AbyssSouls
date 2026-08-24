@@ -32,6 +32,7 @@ const TIU_PROXIMITY_MUSIC = "assets/sfx/OST/TIU.mp3";
 // Từ khoảng cách (số tòa) này trở đi thì coi như The TIU đã đi xa hẳn -> nhạc tắt hẳn.
 const PROXIMITY_FAR_DISTANCE = 3;
 
+
 // Màu nền dự phòng khi chưa có ảnh, để mỗi phòng vẫn có nhận diện riêng.
 const ROOM_FALLBACK_GRADIENT = {
   A:"linear-gradient(135deg,#241a12,#12100e)",
