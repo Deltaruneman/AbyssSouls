@@ -145,8 +145,10 @@ const TRONG_DIALOGUE = {
 };
 
 /* ---- Hội thoại bí mật: chỉ xảy ra khi người chơi đã nhặt đủ 3 mảnh La Peace
-   (mảnh năng lượng ôn hòa) và nói chuyện với Trọng trong lần gặp duy nhất tại Nhà C,
-   đêm 3, lúc HP = 1. Chỉ kích hoạt trong chế độ chơi thường (nút BẮT ĐẦU).
+   (mảnh năng lượng ôn hòa), ĐÃ nói chuyện với cả Wibu Việt Nhật (Tòa E) VÀ Chàng Lính
+   Ngu Lắm (Tòa B) trong CẢ 3 đêm (đủ 3/3 mỗi người — xem campaignNpcTalks trong script.js),
+   và nói chuyện với Trọng trong lần gặp duy nhất tại Nhà C, đêm 3, lúc HP = 1.
+   Chỉ kích hoạt trong chế độ chơi thường (nút BẮT ĐẦU).
    Đoạn hội thoại này dẫn thẳng vào trận đánh boss bí mật (xem BATTLE SYSTEM trong script.js). ---- */
 const TRONG_SECRET_DIALOGUE = {
   lines:[
@@ -165,3 +167,53 @@ const TRONG_SECRET_DIALOGUE = {
     {spk:'BẠN', text:'Không gian bỗng rung chuyển dữ dội — thực tại vỡ tan thành từng mảnh...'}
   ]
 };
+
+/* ---- Hội thoại chiến thắng của Trọng: chạy ngay sau khi party cầm cự đủ 15 lượt trong
+   trận đánh boss bí mật, trước khi triggerSecretEnding() được gọi (xem finishBattle trong
+   script.js). ---- */
+const TRONG_VICTORY_DIALOGUE = {
+  lines:[
+    {spk:'TRỌNG', text:'"...Xong rồi. Tế lễ đã hoàn tất."'},
+    {spk:'TRỌNG', text:'"La Peace đã hòa tan vào TIU — không phải để tiêu diệt nó, mà là để xoa dịu nó."'},
+    {spk:'WIBU VIỆT NHẬT', text:'"Ơ... nó biến mất thật rồi à?"'},
+    {spk:'CHÀNG LÍNH NGU LẮM', text:'"Tao... tao vẫn còn sống? TAO VẪN CÒN SỐNG!!"'},
+    {spk:'TRỌNG', text:'"Cảm ơn cả ba người. Nếu không có các cậu cầm cự đủ lâu, tế lễ này đã không thể hoàn thành."'},
+    {spk:'TRỌNG', text:'"Giờ thì... có lẽ tất cả chúng ta nên nghỉ ngơi một chút trước khi trời sáng hẳn."'},
+    {spk:'BẠN', text:'Không gian dần lắng lại. Ánh sáng ấm áp nhạt dần, nhường chỗ cho bầu trời đang ửng hồng phía chân trời.'}
+  ]
+};
+
+/* ==============================================================
+   EPILOGUE — BUỔI SÁNG SAU CÙNG
+   Chạy sau khi kết thúc thành công (đêm 3 sinh tồn bình thường HOẶC
+   thắng trận đánh boss bí mật). Người chơi lang thang tự do quanh
+   trường trong buổi sáng (15:00 -> 18:00 trên đồng hồ) trước khi đi
+   đến Thư viện, nơi hé lộ đoạn kết thật sự — xem startEpilogue() /
+   triggerEpilogueLibraryDiscovery() trong script.js.
+   ============================================================== */
+const EPILOGUE_INTRO_NORMAL = [
+  {spk:'BẠN', text:'7:30 sáng. Ba đêm lẩn trốn cuối cùng cũng qua. Nhưng thay vì về thẳng phòng trọ, có gì đó thôi thúc mình đi một vòng quanh trường lần cuối.'},
+  {spk:'BẠN', text:'Nắng đã lên cao, sân trường tấp nập người qua lại như chưa từng có chuyện gì xảy ra. Vậy mà sao mình vẫn thấy lạnh sống lưng.'}
+];
+
+const EPILOGUE_INTRO_SECRET = [
+  {spk:'BẠN', text:'The TIU đã tan biến. Trọng nói tế lễ đã hoàn tất... nhưng lòng mình vẫn chưa thấy yên hẳn.'},
+  {spk:'BẠN', text:'Trước khi rời khỏi trường, mình muốn đi một vòng để chắc chắn rằng mọi thứ thật sự đã kết thúc.'}
+];
+
+const EPILOGUE_LIB_NORMAL = [
+  {spk:'BẠN', text:'Thư viện vắng tanh. Mình bước vào định kiểm tra lần cuối trước khi rời khỏi trường.'},
+  {spk:'BẠN', text:'...Trên kệ sách gần cửa sổ có những vết cào dài, sâu hoắm, còn mới nguyên.'},
+  {spk:'BẠN', text:'Giữa sàn nhà là một vũng chất lỏng đen sệt — y hệt thứ mình từng thấy tối qua ở The TIU.'},
+  {spk:'BẠN', text:'Nó... chưa từng thật sự rời khỏi khuôn viên trường này.'},
+  {spk:'???', text:'"...Hahaha"'}
+];
+
+const EPILOGUE_LIB_SECRET = [
+  {spk:'BẠN', text:'Trước khi về, mình ghé qua Thư viện — nơi cuối cùng còn chưa kiểm tra.'},
+  {spk:'BẠN', text:'Không khí ở đây lạnh hơn hẳn những nơi khác, dù nắng đã lên cao ngoài kia.'},
+  {spk:'BẠN', text:'Trên bàn đọc sách, ba mảnh La Peace mình từng đưa cho Trọng lại nằm ở đó, nguyên vẹn, như chưa từng được dùng đến.'},
+  {spk:'BẠN', text:'Và ngay cạnh đó là một vết cào dài, còn mới — y hệt móng vuốt của The TIU.'},
+  {spk:'BẠN', text:'Tế lễ có thật sự thành công không... hay đó chỉ là điều Trọng muốn mình tin?'},
+  {spk:'???', text:'"...Hahaha"'}
+];

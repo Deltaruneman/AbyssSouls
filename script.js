@@ -22,9 +22,38 @@ const NPC_IMAGES = { E:"", B:"", TRONG:"" };
 // Ảnh riêng cho từng phòng — thay các URL này bằng ảnh của bạn (đặt file vào cùng thư mục
 // với file HTML này và sửa đường dẫn bên dưới, ví dụ: A:"images/nha-a.jpg").
 const ROOM_IMAGES = {
-  A:"assets/images/ToaA.png", B:"assets/images/ToaB.png", C:"assets/images/ToaC.png", D:"assets/images/ToaD.png", E:"assets/images/ToaE.png", LIB:"assets/images/lib.png", CANTEEN:"assets/images/ct.png",
-  PARK:"assets/images/park.png", FIELD:"assets/images/field.png"
+  A:"assets/images/ToaA.png", 
+  B:"assets/images/ToaB.png", 
+  C:"assets/images/ToaC.png", 
+  D:"assets/images/ToaD.png", 
+  E:"assets/images/ToaE.png", 
+  LIB:"assets/images/lib.png", 
+  CANTEEN:"assets/images/ct.png",
+  PARK:"assets/images/park.png", 
+  FIELD:"assets/images/field.png"
 };
+// Ảnh riêng cho từng phòng LÚC BUỔI SÁNG — dùng cho đoạn epilogue sau khi kết thúc thành
+// công (đêm 3 sinh tồn bình thường HOẶC secret ending). Điền URL ảnh chụp ban ngày của
+// từng tòa vào đây, ví dụ: A:"assets/images/ToaA-day.png". Để trống thì sẽ tự dùng lại
+// ảnh ban đêm (ROOM_IMAGES) làm ảnh dự phòng.
+const ROOM_IMAGES_DAY = {
+  A:"assets/images/ToaAs.png",
+  B:"assets/images/ToaBs.png", 
+  C:"assets/images/ToaCs.png", 
+  D:"assets/images/ToaDs.png", 
+  E:"assets/images/ToaEs.png", 
+  LIB:"assets/images/libs.png", 
+  CANTEEN:"assets/images/cts.png", 
+  PARK:"", 
+  FIELD:""
+};
+
+// Khung giờ của đoạn epilogue (buổi sáng cuối cùng, sau khi kết thúc thành công): đồng hồ
+// bắt đầu từ 15:00 và không vượt quá 18:00. Thời gian chỉ trôi khi người chơi di chuyển
+// (xem epilogueMove) — không đếm theo thời gian thực như lúc đang trốn ban đêm.
+const EPILOGUE_START_MIN = 15*60;
+const EPILOGUE_END_MIN = 18*60;
+
 // Ảnh quái vật The TIU dùng cho pha jumpscare toàn màn hình — điền đường dẫn PNG vào đây,
 // ví dụ: 'assets/images/tiu-monster.png'. Để trống thì sẽ hiện icon dự phòng.
 const TIU_IMAGE = "assets/images/TIU.png";
@@ -145,6 +174,12 @@ function freshState(night){
    Được đặt về 0 mỗi khi bắt đầu lại từ Đêm 1, giữ nguyên khi tiếp tục sang đêm sau. */
 let campaignLaPeace = 0;
 
+/* Những đêm mà người chơi đã nói chuyện với Wibu Việt Nhật (E) / Chàng Lính Ngu Lắm (B),
+   xuyên suốt lượt chơi thường (đêm 1 -> 3). Cả hai đều cần đủ 3/3 đêm (cùng với đủ 3 La
+   Peace) thì mới đủ điều kiện mở khóa secret ending khi gặp Trọng — xem talkToNPC().
+   Được đặt lại mỗi khi bắt đầu lại từ Đêm 1, giữ nguyên khi tiếp tục sang đêm sau. */
+let campaignNpcTalks = { E: new Set(), B: new Set() };
+
 function rand(a,b){return a+Math.random()*(b-a);}
 function pick(arr){return arr[Math.floor(Math.random()*arr.length)];}
 
@@ -221,6 +256,7 @@ function applyVNReward(reward){
 
 /* Trả về thông tin NPC hiện diện tại 1 phòng vào đêm hiện tại (nếu có) */
 function getRoomNPCMeta(roomKey){
+  if(S.epilogue) return null;
   if(roomKey==='C' && S.night===3 && S.hp===1 && !S.trongSeen){
     return {key:'TRONG', name:'TRỌNG', avatarBg:'#7a1a1a', avatarText:'✦', talkable:true};
   }
@@ -238,7 +274,8 @@ function getRoomNPCMeta(roomKey){
 function talkToNPC(meta){
   if(meta.key==='TRONG'){
     S.trongSeen = true;
-    const unlockSecret = !S.standalone && campaignLaPeace>=3;
+    const unlockSecret = !S.standalone && campaignLaPeace>=3
+      && campaignNpcTalks.E.size>=3 && campaignNpcTalks.B.size>=3;
     playVN(TRONG_DIALOGUE.lines, ()=>{
       applyVNReward(TRONG_DIALOGUE.reward);
       if(unlockSecret){
@@ -250,6 +287,7 @@ function talkToNPC(meta){
   } else {
     const entry = NPC_DIALOGUES[meta.key][S.night];
     S.npcSeen[meta.key] = S.night;
+    if(meta.key==='E' || meta.key==='B') campaignNpcTalks[meta.key].add(S.night);
     playVN(entry.lines, ()=>{ applyVNReward(entry.reward); refreshActionPane(); });
   }
 }
@@ -362,7 +400,7 @@ function setRoomTitleGlitch(on){
 function refreshHud(){
   document.getElementById('clockVal').textContent = formatClock(S.gameMinutes);
   document.getElementById('pointsHud').textContent = S.points;
-  document.getElementById('nightBadge').textContent = NIGHT_CFG[S.night].name;
+  document.getElementById('nightBadge').textContent = S.epilogue ? 'BUỔI SÁNG' : NIGHT_CFG[S.night].name;
   const hpWrap = document.getElementById('hpWrap');
   hpWrap.innerHTML='';
   for(let i=0;i<3;i++){
@@ -378,7 +416,10 @@ function refreshHud(){
   stFill.classList.toggle('low', S.stamina<30);
 
   const tiuEl = document.getElementById('tiuLastSeen');
-  if(S.cameraMovesLeft>0){
+  if(S.epilogue){
+    tiuEl.textContent = '—';
+    tiuEl.style.color = 'var(--text-dim)';
+  } else if(S.cameraMovesLeft>0){
     tiuEl.textContent = ROOM_DEF[S.monsterRoom].name+' (TRỰC TIẾP 📷 x'+S.cameraMovesLeft+')';
     tiuEl.style.color = 'var(--scan)';
   } else {
@@ -392,7 +433,7 @@ let actionPaneDirty = true;
 function markActionDirty(){ actionPaneDirty = true; }
 
 function updateRoomDescOnly(){
-  if(!S) return;
+  if(!S || S.epilogue) return;
   const def = ROOM_DEF[S.playerRoom];
   let desc = def.sub;
   if(S.activeEvents[S.playerRoom]){
@@ -410,6 +451,7 @@ function updateRoomDescOnly(){
 }
 
 function refreshActionPane(){
+  if(S.epilogue){ renderEpilogueActionPane(); return; }
   const def = ROOM_DEF[S.playerRoom];
   const safeNow = isRoomSafe(S.playerRoom);
   document.getElementById('roomTitle').textContent = def.name;
@@ -588,7 +630,9 @@ function refreshActionPane(){
                     <div class="itemChip">Cầu dao: <b>${S.inventory.breaker}</b></div>
                     <div class="itemChip">Buff tốc độ: <b>${S.gameMinutes<S.speedBuffUntil?'ĐANG BẬT':'—'}</b></div>
                     <div class="itemChip">Thể lực: <b>${Math.round(Math.max(0,S.stamina))}%</b></div>
-                    <div class="itemChip">La Peace: <b>${campaignLaPeace}/3</b></div>`;
+                    <div class="itemChip">La Peace: <b>${campaignLaPeace}/3</b></div>
+                    <div class="itemChip">Tin tưởng Wibu Việt Nhật: <b>${campaignNpcTalks.E.size}/3</b></div>
+                    <div class="itemChip">Tin tưởng Chàng Lính: <b>${campaignNpcTalks.B.size}/3</b></div>`;
 }
 
 /* ============== LA PEACE (vật phẩm ẩn) ============== */
@@ -599,6 +643,117 @@ function pickupLaPeace(){
   addLog('✦ Bạn tìm thấy một mảnh La Peace (năng lượng ôn hòa) ẩn tại '+ROOM_DEF[S.playerRoom].name+'! ('+campaignLaPeace+'/3)', '');
   markActionDirty();
   refreshHud(); refreshActionPane();
+}
+
+/* ============== EPILOGUE — BUỔI SÁNG SAU CÙNG ==============
+   Chạy sau khi kết thúc thành công: sinh tồn qua Đêm 3 (ending thường) HOẶC cầm cự đủ 15
+   lượt trong trận đánh boss bí mật (secret ending). Người chơi được tự do đi lại quanh
+   trường (không còn The TIU, không còn sự cố) trong khung giờ EPILOGUE_START_MIN ->
+   EPILOGUE_END_MIN, cho đến khi đi vào Thư viện — nơi hé lộ đoạn kết thật sự và đột ngột
+   chuyển sang màn hình kết thúc Chapter 1. ---- */
+
+function renderEpilogueActionPane(){
+  const def = ROOM_DEF[S.playerRoom];
+  document.getElementById('roomTitle').textContent = def.name;
+  const safeTagEl = document.getElementById('roomSafeTag');
+  safeTagEl.textContent = '☀ BUỔI SÁNG — AN TOÀN';
+  safeTagEl.style.color = 'var(--scan)';
+
+  const banner = document.getElementById('roomBanner');
+  banner.classList.add('safebanner');
+  const dayImg = ROOM_IMAGES_DAY[S.playerRoom];
+  const imgUrl = dayImg || ROOM_IMAGES[S.playerRoom];
+  banner.style.backgroundImage = imgUrl ? `url('${imgUrl}')` : ROOM_FALLBACK_GRADIENT[S.playerRoom];
+
+  document.getElementById('resolveBtn').classList.remove('show');
+  document.getElementById('npcSprite').classList.add('hidden');
+
+  document.getElementById('roomDesc').textContent = def.sub
+    + ' — Buổi sáng yên tĩnh. Không còn tiếng bước chân nào cả, nhưng đâu đó vẫn thấy có gì bất thường.';
+
+  const btnWrap = document.getElementById('actionButtons');
+  btnWrap.innerHTML = '';
+
+  const moveGroup = document.createElement('div');
+  moveGroup.className = 'actionGroup';
+  const moveTitle = document.createElement('div');
+  moveTitle.className = 'actionGroupTitle';
+  moveTitle.textContent = 'DI CHUYỂN';
+  moveGroup.appendChild(moveTitle);
+  const moveRow = document.createElement('div');
+  moveRow.className = 'actionGroupRow';
+  def.connects.forEach(c=>{
+    const b = document.createElement('button');
+    b.className = 'btn';
+    b.textContent = '➜ '+ROOM_DEF[c].name;
+    b.onclick = ()=>movePlayer(c);
+    moveRow.appendChild(b);
+  });
+  moveGroup.appendChild(moveRow);
+  btnWrap.appendChild(moveGroup);
+
+  document.getElementById('invRow').innerHTML =
+    `<div class="itemChip">Buổi sáng: <b>${formatClock(S.gameMinutes)}</b></div>
+     <div class="itemChip">Hãy đi một vòng quanh trường trước khi về... Thư viện vẫn còn đó.</div>`;
+}
+
+function startEpilogue(variant){
+  if(!S) return;
+  S.epilogue = true;
+  S.epilogueVariant = variant; // 'normal' | 'secret'
+  S.running = true;
+  S.paused = false;
+  S.gameMinutes = EPILOGUE_START_MIN;
+  S.playerRoom = 'A';
+  S.activeEvents = {};
+  S.enraged = false;
+  S.meter = 0;
+  S.cameraMovesLeft = 0;
+  S.lastTick = performance.now();
+  addLog('Buổi sáng đã đến. Không khí trong khuôn viên trường có gì đó khác lạ...', '');
+
+  hideAllOverlays();
+  document.getElementById('pauseMenu').classList.add('hidden');
+  document.getElementById('blackout').classList.remove('on');
+  document.getElementById('meterOuter').classList.remove('enraged');
+  document.getElementById('meterOuter').classList.add('epi-hide');
+  document.getElementById('staminaOuter').classList.add('epi-hide');
+  setRoomTitleGlitch(false);
+  buildMap();
+  refreshAll();
+
+  const introLines = variant==='secret' ? EPILOGUE_INTRO_SECRET : EPILOGUE_INTRO_NORMAL;
+  playVN(introLines, ()=>{});
+}
+
+function epilogueMove(dest){
+  S.gameMinutes = Math.min(EPILOGUE_END_MIN, S.gameMinutes + BASE_MOVE_COST_MIN);
+  S.playerRoom = dest;
+  addLog('Bạn đi đến '+ROOM_DEF[dest].name+' dưới ánh nắng buổi sáng.', '');
+  refreshAll();
+  if(dest==='LIB') triggerEpilogueLibraryDiscovery();
+}
+
+function triggerEpilogueLibraryDiscovery(){
+  if(!S) return;
+  S.running = false;
+  const lines = S.epilogueVariant==='secret' ? EPILOGUE_LIB_SECRET : EPILOGUE_LIB_NORMAL;
+  playVN(lines, showChapterEndScreen);
+}
+
+/* Màn hình kết thúc Chapter 1 — xuất hiện đột ngột (kèm chớp trắng) ngay sau khi người
+   chơi tìm thấy dấu vết của TIU trong Thư viện, bất kể đến từ ending thường hay secret. */
+function showChapterEndScreen(){
+  if(SETTINGS.flash){
+    document.getElementById('flash').classList.remove('flash-on'); void document.getElementById('flash').offsetWidth;
+    document.getElementById('flash').classList.add('flash-on');
+  }
+  hideAllOverlays();
+  const variant = S && S.epilogueVariant;
+  document.getElementById('chapterEndSub').textContent = variant==='secret'
+    ? 'Ba mảnh La Peace, Wibu Việt Nhật, Chàng Lính Ngu Lắm và Trọng — tất cả đã cùng viết nên một cái kết khác cho đêm nay. Nhưng dấu vết trong Thư viện vẫn còn đó...'
+    : 'Bạn đã sống sót qua 3 đêm lẩn trốn The TIU. Nhưng những gì bạn vừa tìm thấy trong Thư viện sáng nay... có lẽ câu chuyện chưa thực sự kết thúc.';
+  document.getElementById('chapterEndScreen').classList.remove('hidden');
 }
 
 function eventLabel(ev){
@@ -615,6 +770,7 @@ function onRoomClick(k){
 /* ============== MOVEMENT ============== */
 function movePlayer(dest){
   if(!S.running || S.paused) return;
+  if(S.epilogue){ epilogueMove(dest); return; }
   const noisy = S.gameMinutes < S.speedBuffUntil;
   const cost = noisy ? BUFF_MOVE_COST_MIN : BASE_MOVE_COST_MIN; // 10 phút bình thường, 5 phút khi có buff Nước tăng lực
   S.gameMinutes += cost;
@@ -819,7 +975,7 @@ function updateProximityAudio(){
   if(!proximityAudioEl || !TIU_PROXIMITY_MUSIC) return;
   let target = 0;
   let targetPan = 0;
-  if(S && S.running && !S.paused && S.gameMinutes>=S.breakerUntil){
+  if(S && S.running && !S.paused && !S.epilogue && S.gameMinutes>=S.breakerUntil){
     const d = roomDistance(S.playerRoom, S.monsterRoom);
     if(d<=1) target = 1;
     else if(d>=PROXIMITY_FAR_DISTANCE) target = 0;
@@ -940,7 +1096,7 @@ function jumpscare(){
 let rafId=null;
 let lastActionRebuild = 0;
 function tick(now){
-  if(S && S.running && !S.paused){
+  if(S && S.running && !S.paused && !S.epilogue){
     const dtReal = now - S.lastTick;
     S.lastTick = now;
     const dGameMin = dtReal / REAL_MS_PER_GAME_MIN;
@@ -1371,9 +1527,9 @@ function showEndScreen(){
     document.getElementById('nextNightBtn').onclick=()=>{ document.getElementById('winScreen').classList.add('hidden'); beginNight(S.night,true); };
   } else if(S.night>=3){
     document.getElementById('winTitle').textContent='BẠN ĐÃ SỐNG SÓT QUA 3 ĐÊM';
-    document.getElementById('winSub').textContent='Phòng trọ giờ đã sẵn sàng để dọn vào. The TIU tạm thời im lặng... cho đến đêm sau.';
-    document.getElementById('nextNightBtn').textContent='CHƠI LẠI TỪ ĐẦU';
-    document.getElementById('nextNightBtn').onclick=()=>{ document.getElementById('winScreen').classList.add('hidden'); showTitle(); };
+    document.getElementById('winSub').textContent='Phòng trọ giờ đã sẵn sàng để dọn vào. The TIU tạm thời im lặng... nhưng trước khi rời trường, có lẽ nên đi một vòng lần cuối.';
+    document.getElementById('nextNightBtn').textContent='TIẾP TỤC';
+    document.getElementById('nextNightBtn').onclick=()=>{ document.getElementById('winScreen').classList.add('hidden'); startEpilogue('normal'); };
   } else {
     document.getElementById('winTitle').textContent='ĐÃ ĐẾN 7:30 SÁNG';
     document.getElementById('winSub').textContent=NIGHT_CFG[S.night].name+' hoàn thành với '+S.hp+' HP còn lại. Chuẩn bị cho đêm lẩn trốn tiếp theo — The TIU sẽ hung hãn hơn.';
@@ -2053,8 +2209,8 @@ function showSecretEndScreen(){
   document.getElementById('winTitle').textContent = '✦ SECRET ENDING — HÒA GIẢI ✦';
   document.getElementById('winSub').textContent = 'Ba mảnh La Peace hợp nhất thành một luồng sáng ấm áp. TIU và Trọng cùng tan vào ánh sáng ấy — có lẽ, đây mới là câu trả lời thật sự cho việc "đừng ngủ quên ở UIT".';
   const nextBtn = document.getElementById('nextNightBtn');
-  nextBtn.textContent = 'VỀ MENU CHÍNH';
-  nextBtn.onclick = ()=>{ document.getElementById('winScreen').classList.add('hidden'); showTitle(); };
+  nextBtn.textContent = 'TIẾP TỤC';
+  nextBtn.onclick = ()=>{ document.getElementById('winScreen').classList.add('hidden'); startEpilogue('secret'); };
   document.getElementById('winScreen').classList.remove('hidden');
 }
 
@@ -2063,7 +2219,10 @@ function refreshAll(){
   refreshHud(); refreshMap(); refreshActionPane();
 }
 function beginNight(n, standalone){
-  if(n===1) campaignLaPeace = 0; // mỗi lượt chơi mới (từ Đêm 1) reset lại số La Peace đã nhặt
+  if(n===1){
+    campaignLaPeace = 0; // mỗi lượt chơi mới (từ Đêm 1) reset lại số La Peace đã nhặt
+    campaignNpcTalks = { E: new Set(), B: new Set() }; // ... và reset lại tiến độ tin tưởng NPC
+  }
   S = freshState(n);
   S.standalone = !!standalone;
   addLog('Ca trực '+NIGHT_CFG[n].name+' bắt đầu lúc 00:00. Bạn xuất phát tại '+ROOM_DEF[S.playerRoom].name+'.','');
@@ -2072,12 +2231,13 @@ function beginNight(n, standalone){
   hideAllOverlays();
   document.getElementById('pauseMenu').classList.add('hidden');
   document.getElementById('blackout').classList.remove('on');
-  document.getElementById('meterOuter').classList.remove('enraged');
+  document.getElementById('meterOuter').classList.remove('enraged','epi-hide');
+  document.getElementById('staminaOuter').classList.remove('epi-hide');
   setRoomTitleGlitch(false);
   playVN(VN_INTRO[n], ()=>{});
 }
 function hideAllOverlays(){
-  ['titleScreen','chapterSelectScreen','chapterIntroScreen','nightSelectScreen','settingsScreen','gameOverScreen','winScreen'].forEach(id=>{
+  ['titleScreen','chapterSelectScreen','chapterIntroScreen','nightSelectScreen','settingsScreen','gameOverScreen','winScreen','chapterEndScreen'].forEach(id=>{
     document.getElementById(id).classList.add('hidden');
   });
 }
@@ -2238,10 +2398,14 @@ document.getElementById('retryBtn').onclick=()=>{
 };
 document.getElementById('menuFromGameOver').onclick = showTitle;
 document.getElementById('menuFromWin').onclick = showTitle;
+document.getElementById('chapterEndMenuBtn').onclick = ()=>{
+  if(S){ S.epilogue = false; S.running = false; }
+  showTitle();
+};
 
 /* ============== PAUSE MENU (ESC) ============== */
 function isBlockingOverlayOpen(){
-  return ['mgModal','mapModal','vnOverlay','jumpscareOverlay','gameOverScreen','winScreen','settingsScreen','battleOverlay']
+  return ['mgModal','mapModal','vnOverlay','jumpscareOverlay','gameOverScreen','winScreen','settingsScreen','battleOverlay','chapterEndScreen']
     .some(id=>!document.getElementById(id).classList.contains('hidden'));
 }
 function openPauseMenu(){

@@ -69,6 +69,7 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
 #hud::after{content:'';position:absolute;left:0;right:0;bottom:-5px;height:6px;background:var(--line);opacity:0.85;
   clip-path:polygon(0% 0%,2% 100%,6% 8%,11% 92%,17% 0%,23% 100%,29% 15%,35% 88%,41% 0%,47% 100%,53% 10%,59% 90%,65% 0%,71% 100%,77% 18%,83% 85%,89% 0%,95% 100%,100% 0%,100% 100%,0% 100%);}
 .hud-block{display:flex;flex-direction:column;gap:3px;min-width:90px;}
+.hud-block.epi-hide{display:none;}
 .hud-label{font-size:10px;letter-spacing:2px;color:var(--text-dim);}
 .hud-value{font-size:18px;color:var(--scan);text-shadow:0 0 6px rgba(61,220,132,0.5);}
 #clockVal{font-family:var(--font-disp);font-size:26px;color:var(--amber);text-shadow:0 0 8px rgba(226,162,59,0.6);letter-spacing:1px;}
