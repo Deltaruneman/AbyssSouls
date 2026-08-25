@@ -235,11 +235,14 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
 .bigbtn.neutral{border-color:var(--line);color:var(--text-dim);}
 .bigbtn.neutral:hover{background:var(--panel-2);color:var(--text);box-shadow:none;}
 
-#nightSelectScreen .nightCard, #settingsScreen .settingRow{width:340px;}
+#nightSelectScreen .nightCard, #chapterSelectScreen .nightCard, #settingsScreen .settingRow{width:340px;}
 .nightCard{border:1px solid var(--line);background:var(--panel-2);padding:14px 16px;margin-bottom:10px;text-align:left;cursor:pointer;transition:all .15s;border-radius:3px;}
 .nightCard:hover{border-color:var(--amber);box-shadow:0 0 14px rgba(226,162,59,0.3);}
 .nightCard b{font-family:var(--font-disp);font-size:18px;color:var(--amber);letter-spacing:1px;display:block;}
 .nightCard span{font-size:11px;color:var(--text-dim);}
+.chapterCard.locked{opacity:0.45;cursor:not-allowed;}
+.chapterCard.locked:hover{border-color:var(--line);box-shadow:none;}
+.chapterLockedTag{display:block;margin-top:6px;font-size:10px;letter-spacing:1px;color:var(--blood-bright);}
 .settingRow{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);padding:12px 4px;text-align:left;}
 .settingRow .slabel{font-size:13px;}
 .settingRow .sdesc{font-size:10px;color:var(--text-dim);margin-top:2px;}

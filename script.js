@@ -2042,7 +2042,7 @@ function playBossShatterFx(cb){
 }
 
 /* ============== SECRET ENDING (3 La Peace + nói chuyện với Trọng) ==============
-   Chỉ có thể kích hoạt trong chế độ chơi thường (nút BẮT ĐẦU — không phải CHỌN MÀN),
+   Chỉ có thể kích hoạt trong chế độ chơi thường (nút BẮT ĐẦU — không phải CHỌN MÀN/CHỌN CHAPTER),
    và chỉ sau khi cầm cự thành công qua trận đánh boss bí mật ở trên. */
 function triggerSecretEnding(){
   if(!S) return;
@@ -2077,13 +2077,38 @@ function beginNight(n, standalone){
   playVN(VN_INTRO[n], ()=>{});
 }
 function hideAllOverlays(){
-  ['titleScreen','nightSelectScreen','settingsScreen','gameOverScreen','winScreen'].forEach(id=>{
+  ['titleScreen','chapterSelectScreen','nightSelectScreen','settingsScreen','gameOverScreen','winScreen'].forEach(id=>{
     document.getElementById(id).classList.add('hidden');
   });
 }
 function showTitle(){
   hideAllOverlays();
   document.getElementById('titleScreen').classList.remove('hidden');
+}
+
+/* ---- Chapters: hiện tại chỉ có Chapter 1 (nội dung đầy đủ trong file này).
+   Chapter 2 trở đi sẽ được bổ sung sau — placeholder "SẮP RA MẮT" cho đến lúc đó. ---- */
+const CHAPTERS = [
+  { id:1, name:'CHAPTER 1', title:'ĐỪNG NGỦ QUÊN Ở UIT', desc:'3 đêm lén ở lại khuôn viên trường để trốn The TIU.', locked:false },
+  { id:2, name:'CHAPTER 2', title:'???', desc:'Sắp ra mắt.', locked:true }
+];
+function buildChapterSelect(){
+  const wrap = document.getElementById('chapterCardWrap');
+  wrap.innerHTML='';
+  CHAPTERS.forEach(ch=>{
+    const card=document.createElement('div');
+    card.className='nightCard chapterCard' + (ch.locked ? ' locked' : '');
+    card.innerHTML = `<b>${ch.name} — ${ch.title}</b><span>${ch.desc}</span>`;
+    if(ch.locked){
+      card.innerHTML += `<span class="chapterLockedTag">🔒 SẮP RA MẮT</span>`;
+    } else {
+      card.onclick=()=>{
+        hideAllOverlays(); buildNightSelect();
+        document.getElementById('nightSelectScreen').classList.remove('hidden');
+      };
+    }
+    wrap.appendChild(card);
+  });
 }
 
 const NIGHT_DESCR = {
@@ -2147,16 +2172,20 @@ function buildSettings(){
 let settingsOrigin = 'title'; // 'title' | 'pause' — controls where the "back" button on the Settings screen returns to
 
 document.getElementById('startBtn').onclick=()=>{ hideAllOverlays(); beginNight(1,false); };
-document.getElementById('selectNightBtn').onclick=()=>{
-  hideAllOverlays(); buildNightSelect();
-  document.getElementById('nightSelectScreen').classList.remove('hidden');
+document.getElementById('chapterSelectBtn').onclick=()=>{
+  hideAllOverlays(); buildChapterSelect();
+  document.getElementById('chapterSelectScreen').classList.remove('hidden');
 };
 document.getElementById('settingsBtn').onclick=()=>{
   settingsOrigin = 'title';
   hideAllOverlays(); buildSettings();
   document.getElementById('settingsScreen').classList.remove('hidden');
 };
-document.getElementById('backFromSelect').onclick = showTitle;
+document.getElementById('backFromChapterSelect').onclick = showTitle;
+document.getElementById('backFromSelect').onclick = ()=>{
+  hideAllOverlays(); buildChapterSelect();
+  document.getElementById('chapterSelectScreen').classList.remove('hidden');
+};
 document.getElementById('backFromSettings').onclick = ()=>{
   document.getElementById('settingsScreen').classList.add('hidden');
   if(settingsOrigin==='pause'){
