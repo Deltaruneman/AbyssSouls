@@ -58,6 +58,10 @@ const EPILOGUE_END_MIN = 18*60;
 // ví dụ: 'assets/images/tiu-monster.png'. Để trống thì sẽ hiện icon dự phòng.
 const TIU_IMAGE = "assets/images/TIU.png";
 
+// SFX phát đúng lúc The TIU lao ra khỏi màn hình (jumpscare) — điền đường dẫn file âm thanh
+// vào đây, ví dụ: 'assets/sfx/jumpscare.mp3'. Để trống thì sẽ không phát SFX (chỉ có hiệu ứng hình).
+const TIU_JUMPSCARE_SFX = "assets/sfx/TIUAttack.mp3";
+
 // Nhạc cảnh báo khi The TIU ở gần — điền đường dẫn file âm thanh vào đây,
 // ví dụ: 'assets/audio/tiu-near.mp3'. Để trống thì tính năng này sẽ tự tắt.
 const TIU_PROXIMITY_MUSIC = "assets/sfx/OST/TIU.mp3";
@@ -1035,7 +1039,7 @@ function checkEncounter(){
 function jumpscare(){
   S.hp--;
   markActionDirty();
-  S.paused = true; // đóng băng thế giới trong lúc màn jumpscare đang hiện — người chơi phải bấm "đứng dậy" mới chơi tiếp
+  S.paused = true; // đóng băng thế giới trong lúc màn jumpscare đang hiện — người chơi phải bấm nút mới chơi tiếp
   // Giảm I-Frames: chỉ đủ cho đúng 1 lượt di chuyển để trốn thoát
   S.invulnUntil = S.gameMinutes + rand(15,20);
   const caughtRoom = S.playerRoom;
@@ -1055,12 +1059,17 @@ function jumpscare(){
   }
   addLog('JUMPSCARE! The TIU đã tóm được bạn tại '+ROOM_DEF[caughtRoom].name+'!','danger');
 
-  // fullscreen jumpscare display: TIU lao thẳng vào màn hình, rung lắc, hiện bảng thông báo,
-  // rồi TỰ ĐỘNG chuyển tiếp — toàn bộ pha này chỉ kéo dài đúng 1 giây, không cần bấm nút.
+  // fullscreen jumpscare display: ảnh TIU phóng to dần rồi lao thẳng ra khỏi màn hình (kèm SFX),
+  // sau đó bảng thông báo trồi lên với 2 lựa chọn "TIẾP TỤC" / "BỎ CUỘC" — người chơi phải bấm
+  // một trong hai nút thì pha jumpscare mới kết thúc (không tự động đóng nữa).
   const js = document.getElementById('jumpscareOverlay');
   const jsMonster = document.getElementById('jsMonster');
   const jsPanel = document.getElementById('jsPanel');
   const jsPanelText = document.getElementById('jsPanelText');
+  const jsBtnRow = document.getElementById('jsPanelBtnRow');
+  const jsContinueBtn = document.getElementById('jsContinueBtn');
+  const jsGiveUpBtn = document.getElementById('jsGiveUpBtn');
+  const sfx = document.getElementById('jumpscareSfxAudio');
 
   jsMonster.style.backgroundImage = TIU_IMAGE ? `url('${TIU_IMAGE}')` : '';
   jsMonster.classList.toggle('no-img', !TIU_IMAGE);
@@ -1070,18 +1079,37 @@ function jumpscare(){
     ? 'THE TIU ĐÃ TÓM ĐƯỢC BẠN LẦN CUỐI...<span class="jsPanelSub">Bạn gục ngã tại '+ROOM_DEF[caughtRoom].name+'.</span>'
     : 'THE TIU ĐÃ TÓM ĐƯỢC BẠN!<span class="jsPanelSub">Còn lại '+hpLeft+' HP — vừa xảy ra tại '+ROOM_DEF[caughtRoom].name+'</span>';
 
+  // Khi đã hết HP thì không thể "chơi tiếp" — chỉ còn một nút dẫn tới màn hình kết quả.
+  jsContinueBtn.textContent = dead ? 'XEM KẾT QUẢ' : 'TIẾP TỤC';
+  jsGiveUpBtn.classList.toggle('hidden', dead);
+
   js.classList.remove('hidden');
   js.classList.remove('active','lunge'); void js.offsetWidth;
-  js.classList.add('active','lunge'); // TIU lao thẳng vào màn hình (0.6s) + màn hình rung lắc (0.4s), chạy song song
+  js.classList.add('active','lunge'); // TIU phóng to rồi lao ra khỏi màn hình (0.9s) + màn hình rung lắc, chạy song song
 
-  // Bảng thông báo trồi lên ngay sau pha lao vào màn hình
-  setTimeout(()=>{ jsPanel.classList.add('show'); }, 650);
+  // SFX phát đúng lúc TIU lao ra khỏi màn hình (điền đường dẫn vào TIU_JUMPSCARE_SFX ở đầu file)
+  if(TIU_JUMPSCARE_SFX){
+    try{
+      sfx.src = TIU_JUMPSCARE_SFX;
+      sfx.volume = (window.UIT_SOUND_MUTED?0:1) * (SETTINGS.masterVolume/100);
+      sfx.currentTime = 0;
+      sfx.play().catch(()=>{});
+    }catch(e){}
+  }
 
-  // Đúng 1 giây kể từ lúc bắt đầu jumpscare: tự động đóng lại và chuyển tiếp
-  setTimeout(()=>{
+  // Bảng thông báo + nút lựa chọn trồi lên ngay sau khi TIU đã lao ra khỏi màn hình
+  setTimeout(()=>{ jsPanel.classList.add('show'); }, 900);
+
+  function closeJumpscare(){
     js.classList.add('hidden');
     js.classList.remove('active','lunge');
     jsPanel.classList.remove('show');
+    jsContinueBtn.onclick = null;
+    jsGiveUpBtn.onclick = null;
+  }
+
+  jsContinueBtn.onclick = ()=>{
+    closeJumpscare();
     if(dead){
       gameOver();
     } else {
@@ -1089,7 +1117,13 @@ function jumpscare(){
       S.lastTick = performance.now();
       refreshAll();
     }
-  }, 1000);
+  };
+
+  jsGiveUpBtn.onclick = ()=>{
+    closeJumpscare();
+    S.running = false;
+    showTitle();
+  };
 }
 
 /* ============== TICK LOOP (real time) ============== */
