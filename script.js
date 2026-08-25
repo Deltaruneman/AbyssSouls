@@ -1964,11 +1964,11 @@ function finishBattle(won){
   if(won){
     addBattleLog('Trọng hoàn tất tế lễ thanh tẩy — hình hài TIU rạn nứt rồi vỡ tan thành từng mảnh!','sys');
     playBossShatterFx(()=>{
-      addBattleLog('Một cột ánh sáng trắng đâm thẳng lên trời, bảy sắc cầu vồng xoáy quanh cột nuốt trọn những mảnh vỡ cuối cùng của TIU!','sys');
-      playRainbowFx(()=>{
+      addBattleLog('Một luồng ánh sáng trắng ấm áp lan tỏa khắp không gian, nuốt trọn những mảnh vỡ cuối cùng của TIU!','sys');
+      playWhiteFlashFx(()=>{
         document.getElementById('battleVictoryFx').classList.remove('go');
         document.getElementById('battleOverlay').classList.add('hidden');
-        triggerSecretEnding();
+        playVN(TRONG_VICTORY_DIALOGUE.lines, ()=>{ triggerSecretEnding(); });
       });
     });
   } else {
@@ -1984,11 +1984,11 @@ function finishBattle(won){
   }
 }
 
-function playRainbowFx(cb){
+function playWhiteFlashFx(cb){
   const fx = document.getElementById('battleVictoryFx');
   fx.classList.remove('go'); void fx.offsetWidth;
   fx.classList.add('go');
-  setTimeout(cb, 2000); // màn hình lóe sáng dần trong 2 giây trước khi hiện thông báo ending
+  setTimeout(cb, 2000); // màn hình lóe sáng trắng dần đều trong 2 giây trước khi vào hội thoại kết
 }
 
 /* ---- Hình hài TIU rạn nứt rồi vỡ tan thành từng mảnh khi party cầm cự đủ 15 lượt ---- */
