@@ -7,7 +7,7 @@ const ROOM_DEF = {
   B:      {name:"TÒA B", sub:"7 tầng", x:26, y:44, connects:["A","C","E","CANTEEN","PARK"], event:"floors"},
   C:      {name:"TÒA C", sub:"Tủ điện", x:58, y:44, connects:["B","D","E","CANTEEN"], event:"wire"},
   D:      {name:"TÒA D", sub:"Ban chỉ huy", x:80, y:14, connects:["C","FIELD"], event:"quiz"},
-  E:      {name:"TÒA E", sub:"11 tầng", x:56, y:70, connects:["A","C","FIELD"], event:"wibu"},
+  E:      {name:"TÒA E", sub:"11 tầng", x:56, y:70, connects:["A","B","C","FIELD"], event:"wibu"},
   LIB:    {name:"THƯ VIỆN", sub:"Kho sách", x:9, y:88, connects:["A","PARK"], event:"books"},
   CANTEEN:{name:"CĂN TIN", sub:"Khu an toàn", x:44, y:20, connects:["B","C"], safe:true},
   PARK:   {name:"CHỖ GỬI XE", sub:"Bãi giữ xe", x:7, y:55, connects:["LIB","B"], event:"bikes", noEvent:true},
