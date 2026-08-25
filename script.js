@@ -2077,7 +2077,7 @@ function beginNight(n, standalone){
   playVN(VN_INTRO[n], ()=>{});
 }
 function hideAllOverlays(){
-  ['titleScreen','chapterSelectScreen','nightSelectScreen','settingsScreen','gameOverScreen','winScreen'].forEach(id=>{
+  ['titleScreen','chapterSelectScreen','chapterIntroScreen','nightSelectScreen','settingsScreen','gameOverScreen','winScreen'].forEach(id=>{
     document.getElementById(id).classList.add('hidden');
   });
 }
@@ -2092,6 +2092,36 @@ const CHAPTERS = [
   { id:1, name:'CHAPTER 1', title:'ĐỪNG NGỦ QUÊN Ở UIT', desc:'3 đêm lén ở lại khuôn viên trường để trốn The TIU.', locked:false },
   { id:2, name:'CHAPTER 2', title:'???', desc:'Sắp ra mắt.', locked:true }
 ];
+
+/* ---- Panel tóm tắt / hướng dẫn hiện ra khi bắt đầu một chapter ---- */
+const CHAPTER_INTRO = {
+  1:{
+    title:'CHAPTER 1',
+    subtitle:'ĐỪNG NGỦ QUÊN Ở UIT',
+    html:`<p>Phòng trọ của bạn phải <b>3 ngày nữa mới dọn vào được</b>, nên tối nay bạn đành lén ở lại trong khuôn viên trường để chờ qua ngày.
+    Bạn phải sống sót qua các khu vực: Nhà A, B, C, D, E, Thư viện và Căn tin.
+    Mỗi đêm trôi qua từ 00:00 đến 07:30 (kéo dài khoảng 15 phút thực tế). Mỗi khu vực sẽ phát sinh sự cố ngẫu nhiên — bỏ lỡ hoặc làm hỏng
+    sẽ khiến <b style="color:var(--blood-bright)">The TIU</b> hoạt động mạnh hơn và dễ phát hiện ra bạn hơn. Nếu bạn đứng cùng tòa với The TIU, bạn sẽ bị jumpscare
+    và mất 1 HP. Mất 3 HP là thua. <b>Căn tin chỉ an toàn khi mở cửa</b> (01:00-02:00 &amp; 04:00-05:00) — nán lại đó quá lâu cũng khiến bạn cạn <b>Thể lực</b> và bị đói.
+    Khi thanh mức độ hoạt động chạm 100%, <b style="color:var(--blood-bright)">Huyết Nguyệt</b> sẽ kích hoạt và không nơi nào còn an toàn. Hãy để ý các sinh viên khác cũng đang lén ở lại trong khuôn viên — họ có thể giúp bạn.
+    Bấm <b>ESC</b> khi đang chơi để mở bảng tạm dừng.</p>`
+  }
+};
+
+let chapterIntroBackAction = showTitle;
+function showChapterIntro(chapterId, onContinue, onBack){
+  const info = CHAPTER_INTRO[chapterId];
+  if(!info){ onContinue(); return; }
+  hideAllOverlays();
+  document.getElementById('chapterIntroTitle').textContent = info.title;
+  document.getElementById('chapterIntroSubtitle').textContent = info.subtitle;
+  document.getElementById('chapterIntroBody').innerHTML = info.html;
+  document.getElementById('chapterIntroScreen').classList.remove('hidden');
+  chapterIntroBackAction = onBack || showTitle;
+  document.getElementById('chapterIntroContinueBtn').onclick = ()=>{ hideAllOverlays(); onContinue(); };
+}
+document.getElementById('chapterIntroBackBtn').onclick = ()=> chapterIntroBackAction();
+
 function buildChapterSelect(){
   const wrap = document.getElementById('chapterCardWrap');
   wrap.innerHTML='';
@@ -2103,13 +2133,19 @@ function buildChapterSelect(){
       card.innerHTML += `<span class="chapterLockedTag">🔒 SẮP RA MẮT</span>`;
     } else {
       card.onclick=()=>{
-        hideAllOverlays(); buildNightSelect();
-        document.getElementById('nightSelectScreen').classList.remove('hidden');
+        showChapterIntro(ch.id, ()=>{
+          buildNightSelect();
+          document.getElementById('nightSelectScreen').classList.remove('hidden');
+        }, ()=>{
+          hideAllOverlays(); buildChapterSelect();
+          document.getElementById('chapterSelectScreen').classList.remove('hidden');
+        });
       };
     }
     wrap.appendChild(card);
   });
 }
+
 
 const NIGHT_DESCR = {
   1:"Khởi động nhẹ — sự cố thưa, The TIU còn chậm chạp.",
@@ -2171,7 +2207,9 @@ function buildSettings(){
 
 let settingsOrigin = 'title'; // 'title' | 'pause' — controls where the "back" button on the Settings screen returns to
 
-document.getElementById('startBtn').onclick=()=>{ hideAllOverlays(); beginNight(1,false); };
+document.getElementById('startBtn').onclick=()=>{
+  showChapterIntro(1, ()=>beginNight(1,false), showTitle);
+};
 document.getElementById('chapterSelectBtn').onclick=()=>{
   hideAllOverlays(); buildChapterSelect();
   document.getElementById('chapterSelectScreen').classList.remove('hidden');

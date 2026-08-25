@@ -85,13 +85,7 @@
   <div id="titleLeft">
     <h1>ĐỪNG NGỦ QUÊN Ở UIT</h1>
     <h2>THE TIU ĐANG RÌNH RẬP</h2>
-    <p>Phòng trọ của bạn phải <b>3 ngày nữa mới dọn vào được</b>, nên tối nay bạn đành lén ở lại trong khuôn viên trường để chờ qua ngày.
-    Bạn phải sống sót qua các khu vực: Nhà A, B, C, D, E, Thư viện và Căn tin.
-    Mỗi đêm trôi qua từ 00:00 đến 07:30 (kéo dài khoảng 15 phút thực tế). Mỗi khu vực sẽ phát sinh sự cố ngẫu nhiên — bỏ lỡ hoặc làm hỏng
-    sẽ khiến <b style="color:var(--blood-bright)">The TIU</b> hoạt động mạnh hơn và dễ phát hiện ra bạn hơn. Nếu bạn đứng cùng tòa với The TIU, bạn sẽ bị jumpscare
-    và mất 1 HP. Mất 3 HP là thua. <b>Căn tin chỉ an toàn khi mở cửa</b> (01:00-02:00 &amp; 04:00-05:00) — nán lại đó quá lâu cũng khiến bạn cạn <b>Thể lực</b> và bị đói.
-    Khi thanh mức độ hoạt động chạm 100%, <b style="color:var(--blood-bright)">Huyết Nguyệt</b> sẽ kích hoạt và không nơi nào còn an toàn. Hãy để ý các sinh viên khác cũng đang lén ở lại trong khuôn viên — họ có thể giúp bạn.
-    Bấm <b>ESC</b> khi đang chơi để mở bảng tạm dừng.</p>
+    <p>Một tựa game sinh tồn kinh dị nhiều chapter lấy bối cảnh khuôn viên trường UIT vào ban đêm. Chọn một chapter để xem tóm tắt cốt truyện và hướng dẫn trước khi bắt đầu.</p>
     <div id="menuBtnRow">
       <button class="bigbtn" id="startBtn">BẮT ĐẦU (SỐNG SÓT CẢ 3 ĐÊM)</button>
       <button class="bigbtn secondary" id="chapterSelectBtn">CHỌN CHAPTER</button>
@@ -104,6 +98,20 @@
     <div id="carouselLabel">—</div>
   </div>
 </div>
+
+<div class="overlay hidden" id="chapterIntroScreen">
+  <div id="chapterIntroBox">
+    <div id="chapterIntroTag" class="hud-label">TÓM TẮT CHAPTER</div>
+    <h1 id="chapterIntroTitle" style="font-size:32px;">—</h1>
+    <h2 id="chapterIntroSubtitle" style="font-size:13px;color:var(--text-dim);letter-spacing:4px;margin-top:2px;"></h2>
+    <div id="chapterIntroBody"></div>
+    <div id="chapterIntroBtnRow">
+      <button class="bigbtn" id="chapterIntroContinueBtn">TIẾP TỤC</button>
+      <button class="bigbtn neutral" id="chapterIntroBackBtn">QUAY LẠI</button>
+    </div>
+  </div>
+</div>
+
 
 <div class="overlay hidden" id="chapterSelectScreen">
   <h1 style="font-size:32px;">CHỌN CHAPTER</h1>
