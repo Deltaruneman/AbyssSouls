@@ -125,6 +125,11 @@ const ENRAGE_DURATION_MIN = 100;   // Huyết Nguyệt kéo dài bao lâu (phút
 /* ---- Tiếng ồn khi có buff tốc độ ---- */
 const NOISE_ATTRACT_CHANCE = 0.35;
 
+/* ---- Giới hạn tài nguyên an toàn: số Bim Bim tối đa có thể mua tại Căn tin MỖI ĐÊM.
+   Giảm dần qua từng đêm để buộc người chơi không thể chỉ camping mua Bim Bim hồi máu
+   mà phải ra ngoài đối mặt với The TIU để lấy điểm/vật phẩm khác. ---- */
+const BIMBIM_NIGHT_LIMIT = [null, 3, 2, 1];
+
 /* ============== STATE ============== */
 let S = null;
 
@@ -150,6 +155,7 @@ function freshState(night){
     lastSeenRoom: null,
     lastSeenAt: 0,
     inventory: {bimbim:1, water:0, camera:0, breaker:0},
+    bimbimBoughtTonight: 0, // reset mỗi đêm — xem BIMBIM_NIGHT_LIMIT
     lastTick: performance.now(),
     nextEventAt: rand(...NIGHT_CFG[night].eventEvery),
     nextMonsterMoveAt: rand(...NIGHT_CFG[night].monsterMoveEvery),
@@ -1164,6 +1170,49 @@ function tick(now){
 }
 
 /* ============== MINIGAMES ============== */
+
+/* ---- Áp lực thời gian thực trong lúc giải đố: hiệu ứng nhiễu sóng (glitch) hình ảnh +
+   SFX dọa nạt xuất hiện bất chợt và ngẫu nhiên trong khi bộ đếm giờ đang chạy, dồn dập
+   hơn ở các đêm sau. Chỉ là hiệu ứng — không trực tiếp trừ điểm/thời gian — nhưng khiến
+   người chơi giật mình và dễ bấm nhầm hơn dưới áp lực. ---- */
+let mgPressureHandle = null;
+function startMinigamePressureFx(box){
+  stopMinigamePressureFx();
+  const nightFactor = Math.max(0, (S ? S.night-1 : 0)); // 0,1,2
+  const minGap = Math.max(2000, 5200 - nightFactor*900);
+  const maxGap = Math.max(minGap+700, 8000 - nightFactor*1100);
+  const fire = ()=>{
+    if(box.closest('#mgModal') && !document.getElementById('mgModal').classList.contains('hidden')){
+      box.classList.remove('pressureGlitch'); void box.offsetWidth; box.classList.add('pressureGlitch');
+      let staticEl = document.getElementById('mgStaticOverlay');
+      if(!staticEl){
+        staticEl = document.createElement('div');
+        staticEl.id = 'mgStaticOverlay';
+        box.appendChild(staticEl);
+      }
+      staticEl.classList.remove('show'); void staticEl.offsetWidth; staticEl.classList.add('show');
+      if(TIU_JUMPSCARE_SFX){
+        try{
+          const sfx = document.getElementById('jumpscareSfxAudio');
+          sfx.src = TIU_JUMPSCARE_SFX;
+          sfx.currentTime = 0;
+          sfx.volume = (window.UIT_SOUND_MUTED?0:1) * (SETTINGS.masterVolume/100) * 0.32;
+          sfx.play().catch(()=>{});
+        }catch(e){}
+      }
+    }
+    mgPressureHandle = setTimeout(fire, rand(minGap, maxGap));
+  };
+  mgPressureHandle = setTimeout(fire, rand(minGap, maxGap));
+}
+function stopMinigamePressureFx(){
+  if(mgPressureHandle){ clearTimeout(mgPressureHandle); mgPressureHandle=null; }
+  const box = document.getElementById('mgBox');
+  if(box) box.classList.remove('pressureGlitch');
+  const staticEl = document.getElementById('mgStaticOverlay');
+  if(staticEl) staticEl.classList.remove('show');
+}
+
 function startMinigame(room){
   const ev = ROOM_DEF[room].event;
   const modal = document.getElementById('mgModal');
@@ -1174,9 +1223,11 @@ function startMinigame(room){
   body.innerHTML=''; footer.innerHTML='';
   let timerEl = document.getElementById('mgTimer');
   let timeLeft, timerHandle;
+  startMinigamePressureFx(document.getElementById('mgBox'));
 
   function finish(success){
     clearInterval(timerHandle);
+    stopMinigamePressureFx();
     modal.classList.add('hidden');
     delete S.activeEvents[room];
     if(success){
@@ -1511,16 +1562,27 @@ function openShop(){
   const footer=document.getElementById('mgFooter');
   footer.innerHTML='';
   function render(){
+    const bimLimit = BIMBIM_NIGHT_LIMIT[S.night] ?? 2;
+    const bimLeft = Math.max(0, bimLimit - S.bimbimBoughtTonight);
+    const bimOut = bimLeft<=0;
     body.innerHTML = `<p style="font-size:12px;color:var(--text-dim);">Điểm hiện có: <span id="pointsVal">${S.points}</span></p>
     <div id="shopBody">
-      <div class="shopItem"><span>Bim Bim (hồi 1 HP) — 20đ</span><button class="btn primary" id="buyBim">Mua</button></div>
+      <div class="shopItem"><span>Bim Bim (hồi 1 HP) — 20đ <span style="color:${bimOut?'var(--blood-bright)':'var(--text-dim)'};font-size:11px;">(còn ${bimLeft}/${bimLimit} suất đêm nay)</span></span><button class="btn primary" id="buyBim" ${bimOut?'disabled':''}>${bimOut?'Hết hàng':'Mua'}</button></div>
       <div class="shopItem"><span>Nước tăng lực (buff tốc độ) — 15đ</span><button class="btn primary" id="buyWater">Mua</button></div>
       <div class="shopItem"><span>Suất ăn khuya (+50 Thể lực) — 10đ</span><button class="btn primary" id="buyFood">Mua</button></div>
       <div class="shopItem"><span>Camera Sinh viên (định vị TIU 3 lượt) — 100đ</span><button class="btn primary" id="buyCam">Mua</button></div>
       <div class="shopItem"><span>Sập Cầu Dao (vô hiệu hóa TIU 60p) — 150đ</span><button class="btn primary" id="buyBreaker">Mua</button></div>
     </div>`;
     document.getElementById('buyBim').onclick=()=>{
-      if(S.points>=20){ S.points-=20; S.inventory.bimbim++; addLog('Bạn mua Bim Bim tại Căn tin.',''); refreshAll(); render(); }
+      if(S.bimbimBoughtTonight >= bimLimit){
+        addLog('Căn tin đã hết suất Bim Bim đêm nay — bạn buộc phải tự xoay sở ngoài kia!','warn');
+        return;
+      }
+      if(S.points>=20){
+        S.points-=20; S.inventory.bimbim++; S.bimbimBoughtTonight++;
+        addLog('Bạn mua Bim Bim tại Căn tin ('+S.bimbimBoughtTonight+'/'+bimLimit+' suất đêm nay).','');
+        refreshAll(); render();
+      }
     };
     document.getElementById('buyWater').onclick=()=>{
       if(S.points>=15){ S.points-=15; S.inventory.water++; addLog('Bạn mua Nước tăng lực tại Căn tin.',''); refreshAll(); render(); }
@@ -1620,7 +1682,8 @@ function freshBattleState(){
   return {
     turn:1, maxTurn:BATTLE_MAX_TURN,
     boss:{hp:BOSS_MAX_HP, maxHp:BOSS_MAX_HP, stunned:false},
-    party, order:BATTLE_PARTY_ORDER, pickIdx:0, log:[], over:false
+    party, order:BATTLE_PARTY_ORDER, pickIdx:0, log:[], over:false,
+    dodgeSoften:0 // số lệnh "Tấn công" ở lượt vừa rồi -> làm chậm & giãn chuỗi đạn né tiếp theo
   };
 }
 
@@ -1799,6 +1862,13 @@ function resolveRound(){
   // Lưu ý: TIU KHÔNG BAO GIỜ bị hạ gục bằng đòn đánh — chiến thắng chỉ đến ở endRound()
   // khi party cầm cự đủ BS.maxTurn lượt. Không có finishBattle(true) ở đây.
 
+  // Mỗi lệnh "Tấn công" trong lượt này làm CHẬM tốc độ đạn & GIÃN mật độ của chuỗi đòn né
+  // tiếp theo của TIU — cho các lựa chọn JRPG giá trị thực tế thay vì chỉ là hình thức.
+  BS.dodgeSoften = atkCount;
+  if(atkCount>0){
+    addBattleLog('Party dồn '+atkCount+' đòn tấn công — chuỗi đạn né tiếp theo của TIU sẽ CHẬM & THƯA hơn!','atk');
+  }
+
   const staggerChance = atkCount*0.10;
   const staggered = Math.random() < staggerChance;
   if(staggered){
@@ -1924,6 +1994,11 @@ function runDodgePhase(pattern, cb){
 
   const rect = {w: box.clientWidth || 340, h: box.clientHeight || 260};
   const soulR = 7;
+  // Đòn "Tấn công" của party ở lượt trước làm TIU chậm lại: đạn bay chậm hơn (speedFactor)
+  // và thưa hơn (densityBoost giãn khoảng cách giữa các đợt) — càng nhiều Tấn công, càng dễ né.
+  const soften = BS ? (BS.dodgeSoften||0) : 0;
+  const speedFactor = Math.max(0.55, 1 - soften*0.12);
+  const densityBoost = Math.min(1.6, 1 + soften*0.15);
   DZ = {
     x: rect.w/2, y: rect.h - 26,
     keys: {up:false,down:false,left:false,right:false},
@@ -1932,7 +2007,8 @@ function runDodgePhase(pattern, cb){
     invulnUntil: 0,
     start: performance.now(),
     duration: (pattern.dodgeDuration||4600) + (BS ? Math.min(600, (BS.turn-1)*30) : 0), // dài & dồn dập hơn ở lượt sau
-    spawnQueue: buildDodgeSpawnQueue(pattern, rect, BS ? BS.turn : 1),
+    spawnQueue: buildDodgeSpawnQueue(pattern, rect, BS ? BS.turn : 1, densityBoost),
+    speedFactor,
     rect, soulR
   };
 
@@ -2018,8 +2094,9 @@ function endDodgePhase(cb){
 
 /* ---- Sinh lịch phát đạn: mỗi pattern giờ gồm NHIỀU ĐỢT (chuỗi) liên tiếp, độ dồn dập
    tăng dần theo lượt (turn) để trận đấu càng về sau càng khó né hơn ---- */
-function buildDodgeSpawnQueue(pattern, rect, turn){
-  const density = Math.max(0.62, 1 - (turn-1)*0.03); // khoảng cách giữa các đợt rút ngắn dần theo lượt
+function buildDodgeSpawnQueue(pattern, rect, turn, densityBoost){
+  let density = Math.max(0.62, 1 - (turn-1)*0.03); // khoảng cách giữa các đợt rút ngắn dần theo lượt
+  density *= (densityBoost||1); // nới rộng lại nếu party vừa dồn nhiều đòn Tấn công (xem BS.dodgeSoften)
   const gens = {
     rain: genRainQueue, spiral: genSpiralQueue, sweep: genSweepQueue,
     burst: genBurstQueue, cross: genCrossQueue
@@ -2084,25 +2161,30 @@ function genCrossQueue(rect, duration, density){
 function spawnDodgeBullet(ev, box){
   const el = document.createElement('div');
   const b = {el, dead:false, age:0, life:6500, r:6};
+  const sf = (DZ && DZ.speedFactor) || 1; // đòn Tấn công lượt trước -> đạn bay chậm hơn
   if(ev.kind==='fall'){
     el.className = 'dbullet t-rain';
-    b.x = ev.x; b.y = -12; b.vx = 0; b.vy = ev.speed; b.r=6;
+    b.x = ev.x; b.y = -12; b.vx = 0; b.vy = ev.speed*sf; b.r=6;
   } else if(ev.kind==='radial'){
     el.className = 'dbullet t-radial';
     const rad = ev.ang*Math.PI/180;
-    b.x = ev.cx; b.y = ev.cy; b.vx = Math.cos(rad)*ev.speed; b.vy = Math.sin(rad)*ev.speed; b.r=6;
+    b.x = ev.cx; b.y = ev.cy; b.vx = Math.cos(rad)*ev.speed*sf; b.vy = Math.sin(rad)*ev.speed*sf; b.r=6;
   } else if(ev.kind==='edge'){
     el.className = 'dbullet t-edge';
     const rect = DZ.rect;
+    const spd = ev.speed*sf;
     let sx,sy,vx,vy;
-    if(ev.edge===0){ sx=ev.offset*rect.w; sy=-12; vx=0; vy=ev.speed; }
-    else if(ev.edge===1){ sx=rect.w+12; sy=ev.offset*rect.h; vx=-ev.speed; vy=0; }
-    else if(ev.edge===2){ sx=ev.offset*rect.w; sy=rect.h+12; vx=0; vy=-ev.speed; }
-    else { sx=-12; sy=ev.offset*rect.h; vx=ev.speed; vy=0; }
+    if(ev.edge===0){ sx=ev.offset*rect.w; sy=-12; vx=0; vy=spd; }
+    else if(ev.edge===1){ sx=rect.w+12; sy=ev.offset*rect.h; vx=-spd; vy=0; }
+    else if(ev.edge===2){ sx=ev.offset*rect.w; sy=rect.h+12; vx=0; vy=-spd; }
+    else { sx=-12; sy=ev.offset*rect.h; vx=spd; vy=0; }
     b.x=sx; b.y=sy; b.vx=vx; b.vy=vy; b.r=6;
   } else if(ev.kind==='laser'){
+    // đòn Tấn công lượt trước cũng kéo dài thời gian cảnh báo (telegraph) của tia quét,
+    // cho người chơi nhiều thời gian phản ứng hơn.
+    const telegraph = (ev.telegraph||500) / sf;
     b.laser = true; b.horiz = ev.horiz; b.pos = ev.pos;
-    b.age = -(ev.telegraph||500); b.life = (ev.telegraph||500) + 320;
+    b.age = -telegraph; b.life = telegraph + 320;
     el.className = 'dbullet '+(ev.horiz?'t-laser-h':'t-laser-v')+' telegraph';
     if(ev.horiz){ el.style.top = ev.pos+'px'; el.style.left='0'; }
     else { el.style.left = ev.pos+'px'; el.style.top='0'; }

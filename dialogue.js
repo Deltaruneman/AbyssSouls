@@ -198,7 +198,7 @@ const EPILOGUE_INTRO_NORMAL = [
 
 const EPILOGUE_INTRO_SECRET = [
   {spk:'BẠN', text:'The TIU đã tan biến. Trọng nói tế lễ đã hoàn tất... nhưng lòng mình vẫn chưa thấy yên hẳn.'},
-  {spk:'BẠN', text:'Trước khi rời khỏi trường, mình muốn đi một vòng để chắc chắn rằng mọi thứ thật sự đã kết thúc.'}
+  {spk:'BẠN', text:'Dù đã 1 tuần trôi qua rồi nhưng mình muốn đi một vòng để chắc chắn rằng mọi thứ thật sự đã kết thúc.'}
 ];
 
 const EPILOGUE_LIB_NORMAL = [
