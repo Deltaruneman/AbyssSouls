@@ -378,9 +378,9 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
 #blackout .bo-label{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);font-family:var(--font-mono);font-size:11px;color:var(--blood-bright);letter-spacing:2px;opacity:0.8;}
 
 /* ---------- visual novel ---------- */
-#vnOverlay{position:fixed;inset:0;z-index:95;background:rgba(4,3,2,0.92);display:flex;align-items:flex-end;justify-content:center;padding:24px;}
+#vnOverlay{position:fixed;inset:0;z-index:95;background:linear-gradient(180deg, rgba(4,3,2,0) 55%, rgba(4,3,2,0.55) 100%);display:flex;align-items:flex-end;justify-content:center;padding:24px;pointer-events:none;}
 #vnOverlay.hidden{display:none;}
-#vnBox{width:min(760px,94vw);margin-bottom:10px;background:var(--panel);border:2px solid var(--amber);border-radius:6px;padding:20px 22px;box-shadow:0 0 30px rgba(0,0,0,0.7);}
+#vnBox{width:min(760px,94vw);margin-bottom:10px;background:rgba(19,16,14,0.97);border:2px solid var(--amber);border-radius:6px;padding:20px 22px;box-shadow:0 0 30px rgba(0,0,0,0.85);pointer-events:auto;}
 #vnSpeaker{font-family:var(--font-disp);font-weight:900;color:var(--amber);font-size:17px;margin-bottom:8px;letter-spacing:1.5px;text-transform:uppercase;}
 #vnText{font-size:14px;line-height:1.7;min-height:56px;color:var(--text);}
 #vnFooter{text-align:right;margin-top:12px;}
