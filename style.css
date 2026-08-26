@@ -112,11 +112,24 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
 #soundToggleBtn.muted{color:var(--text-dim);border-color:var(--line);}
 #soundToggleBtn.muted #soundIcon{opacity:0.6;}
 
+#bagArea{display:flex;align-items:center;gap:4px;flex-shrink:0;}
 #bagBtn{display:flex;align-items:center;justify-content:center;gap:5px;height:38px;flex-shrink:0;padding:0 12px;
   background:#1a1d23;border:1px solid var(--line);color:var(--text);font-size:16px;cursor:pointer;border-radius:2px;
   box-shadow:2px 3px 0 rgba(0,0,0,0.55);transition:border-color .15s,color .15s,box-shadow .15s;}
 #bagBtn:hover{border-color:var(--amber);color:var(--amber);box-shadow:3px 4px 0 rgba(0,0,0,0.6);}
 #bagCountBadge{font-family:var(--font-mono);font-size:12px;color:var(--scan);}
+
+/* ---- Nút nhỏ "chỉ số ẩn" (độ tin tưởng NPC, v.v.) nằm sát bên phải ô túi đồ ---- */
+#hiddenStatsWrap{position:relative;flex-shrink:0;}
+#hiddenStatsBtn{display:flex;align-items:center;justify-content:center;width:22px;height:38px;flex-shrink:0;
+  background:#1a1d23;border:1px solid var(--line);color:var(--text-dim);font-size:15px;cursor:pointer;border-radius:2px;
+  box-shadow:2px 3px 0 rgba(0,0,0,0.55);transition:border-color .15s,color .15s,box-shadow .15s;line-height:1;}
+#hiddenStatsBtn:hover{border-color:var(--scan);color:var(--scan);box-shadow:3px 4px 0 rgba(0,0,0,0.6);}
+#hiddenStatsPopover{position:absolute;top:44px;right:0;z-index:70;min-width:230px;
+  background:rgba(19,16,14,0.97);border:1px solid var(--line);border-radius:4px;padding:10px 12px;
+  box-shadow:0 6px 20px rgba(0,0,0,0.6);display:flex;flex-direction:column;gap:6px;}
+#hiddenStatsPopover .hiddenStatsTitle{font-family:var(--font-disp);font-size:11px;letter-spacing:1.5px;
+  color:var(--text-dim);text-transform:uppercase;margin-bottom:2px;}
 
 /* ---------- Túi đồ (overlay dùng chung #mgModal) ---------- */
 .bagItemRow{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);}
@@ -449,6 +462,9 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
 #vnText{font-size:14px;line-height:1.7;min-height:56px;color:var(--text);}
 #vnFooter{text-align:right;margin-top:12px;}
 #vnHint{font-size:10px;color:var(--text-dim);float:left;margin-top:16px;}
+#vnChoices{display:flex;flex-direction:column;gap:6px;margin-top:12px;}
+#vnChoices.hidden{display:none;}
+#vnChoices button{width:100%;text-align:left;margin:0;}
 
 /* ================= SECRET BOSS BATTLE (Trọng + La Peace) ================= */
 #battleOverlay{position:fixed;inset:0;z-index:97;background:#050405;display:flex;flex-direction:column;overflow:hidden;}

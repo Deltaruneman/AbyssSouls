@@ -24,7 +24,13 @@
     </div>
     <div class="hud-block"><span class="hud-label">ĐIỂM</span><span class="hud-value" id="pointsHud">0</span></div>
     <div class="hud-block"><span class="hud-label">TIU LẦN CUỐI THẤY TẠI</span><span class="hud-value" id="tiuLastSeen" style="color:var(--blood-bright);">—</span></div>
-    <button id="bagBtn" title="Túi đồ">🎒 <span id="bagCountBadge">0</span></button>
+    <div id="bagArea">
+      <button id="bagBtn" title="Túi đồ">🎒 <span id="bagCountBadge">0</span></button>
+      <div id="hiddenStatsWrap">
+        <button id="hiddenStatsBtn" title="Chỉ số ẩn">⋮</button>
+        <div id="hiddenStatsPopover" class="hidden"></div>
+      </div>
+    </div>
     <button id="soundToggleBtn" title="Bật/Tắt âm thanh" aria-pressed="false"><span id="soundIcon">🔊</span></button>
     <div id="nightBadge">ĐÊM 1</div>
   </div>
@@ -165,6 +171,7 @@
   <div id="vnBox">
     <div id="vnSpeaker">—</div>
     <div id="vnText"></div>
+    <div id="vnChoices" class="hidden"></div>
     <div id="vnFooter">
       <span id="vnHint">Bấm để tiếp tục lời thoại</span>
       <button class="btn primary" id="vnNextBtn">TIẾP TỤC ▶</button>

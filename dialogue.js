@@ -6,6 +6,18 @@
    ============================================================== */
 "use strict";
 
+/* ---- Hội thoại rẽ nhánh ----
+   Một dòng thoại bình thường vẫn chỉ cần {spk, text}. Để thêm rẽ nhánh:
+   - Thêm `next: <index>` vào 1 dòng để buộc dòng kế tiếp nhảy tới index chỉ
+     định trong cùng mảng `lines` thay vì i+1 (dùng để bỏ qua 1 đoạn nhánh
+     không được chọn, hoặc để nhiều nhánh hội tụ về lại cùng 1 điểm).
+   - Thêm `choices: [{label, next, reward, effect}]` vào 1 dòng để biến nó
+     thành điểm rẽ nhánh: người chơi sẽ thấy các nút lựa chọn theo `label`
+     thay vì nút "TIẾP TỤC". `reward` (không bắt buộc) áp dụng ngay qua
+     applyVNReward(). `next` (không bắt buộc, mặc định i+1) là index của
+     dòng tiếp theo sau khi chọn. Xem ví dụ NPC_DIALOGUES.E[1] và .B[1] bên
+     dưới — được engine playVN() trong script.js xử lý tự động. ---- */
+
 /* ---- Lời thoại mở màn / kết màn mỗi đêm ---- */
 const VN_INTRO = {
   1: [
@@ -46,20 +58,29 @@ const NPC_DIALOGUES = {
   E: { // Wibu Việt Nhật — Tòa E
     1: {
       lines:[
-        {spk:'WIBU VIỆT NHẬT', text:'"Oi!!"'},
-        {spk:'WIBU VIỆT NHẬT', text:'"Theo phân tích của tao thì chúng ta đang ở đây vào buổi đêm."'},
-        {spk:'Bạn', text:'"Yeh tao khá chắc là tao có thấy trời tối."'},
-        {spk:'Bạn', text:'"(Mấy thằng Việt Nhật dị vl)"'},
-        {spk:'Bạn', text:'"(Mà mình cũng là Việt Nhật mà nhỉ!!)"'},
-        {spk:'WIBU VIỆT NHẬT', text:'"Tao đoán chúng ta đã bị isekai!!."'},
-        {spk:'Bạn', text:'"À không không"'},
-        {spk:'Bạn', text:'"Không có chúng ta nào ở đây hết."'},
-        {spk:'WIBU VIỆT NHẬT', text:'"Ồ tiếc vậy, một lolicon trong thế giới pháp quyên này như tao..."'},
-        {spk:'Bạn', text:'"(Ai đó xin hãy gọi cảnh sát)"'},
-        {spk:'WIBU VIỆT NHẬT', text:'"Dù sao thì,"'},
-        {spk:'WIBU VIỆT NHẬT', text:'"Cầm lấy chai nước này đi, nó sẽ có ích cho mày đó"'},
-        {spk:'Bạn', text:'"À ờ cảm ơn nha!"'},
-        {spk:'Bạn', text:'"(Lolicon có lẽ cũng không tệ đến vậy!)"'}
+        {spk:'WIBU VIỆT NHẬT', text:'"Oi!!"'},                                                              //0
+        {spk:'WIBU VIỆT NHẬT', text:'"Theo phân tích của tao thì chúng ta đang ở đây vào buổi đêm."'},        //1
+        {spk:'Bạn', text:'"Yeh tao khá chắc là tao có thấy trời tối."'},                                      //2
+        {spk:'Bạn', text:'"(Mấy thằng Việt Nhật dị vl)"'},                                                    //3
+        {spk:'Bạn', text:'"(Mà mình cũng là Việt Nhật mà nhỉ!!)"'},                                           //4
+        {spk:'WIBU VIỆT NHẬT', text:'"Tao đoán chúng ta đã bị isekai!!."',                                    //5 — điểm rẽ nhánh
+          choices:[
+            {label:'"À không không, không có chúng ta nào ở đây hết."', next:6},
+            {label:'"Ơ mà... biết đâu thật vậy thì sao?"', next:9,
+              reward:{type:'points', amount:5, msg:'Wibu Việt Nhật khoái chí vì bạn hưởng ứng thuyết isekai (+5 điểm).'}}
+          ]
+        },
+        {spk:'Bạn', text:'"À không không"'},                                                                 //6
+        {spk:'Bạn', text:'"Không có chúng ta nào ở đây hết."'},                                               //7
+        {spk:'WIBU VIỆT NHẬT', text:'"Ồ tiếc vậy, một lolicon trong thế giới pháp quyên này như tao..."', next:12}, //8 — hội tụ, bỏ qua nhánh isekai
+        {spk:'Bạn', text:'"Ơ mà... biết đâu là thật thì sao ta?"'},                                           //9 — nhánh isekai
+        {spk:'WIBU VIỆT NHẬT', text:'"Hả?? Mày cũng nghĩ vậy à?? Yeah số phận đã an bài rồi!!"'},              //10
+        {spk:'Bạn', text:'"(Thôi thì đùa cho vui thôi... nhưng nhìn mặt nó nghiêm túc dễ sợ)"'},              //11 — hội tụ (mặc định next=12)
+        {spk:'Bạn', text:'"(Ai đó xin hãy gọi cảnh sát)"'},                                                   //12
+        {spk:'WIBU VIỆT NHẬT', text:'"Dù sao thì,"'},                                                        //13
+        {spk:'WIBU VIỆT NHẬT', text:'"Cầm lấy chai nước này đi, nó sẽ có ích cho mày đó"'},                   //14
+        {spk:'Bạn', text:'"À ờ cảm ơn nha!"'},                                                                //15
+        {spk:'Bạn', text:'"(Lolicon có lẽ cũng không tệ đến vậy!)"'}                                          //16
       ], reward:{type:'item', item:'water', qty:1, msg:'Wibu Việt Nhật tặng bạn 1 chai Nước tăng lực.'}
     },
     2: {
@@ -94,17 +115,25 @@ const NPC_DIALOGUES = {
   B: { // Chàng Lính Ngu Lắm — Tòa B
     1: {
       lines:[
-        {spk:'CHÀNG LÍNH NGU LẮM', text:'*ngáp* "Ơ... mấy giờ rồi ta? Tại tao xếp TKB ngu quá nên học tới giờ này luôn..."'},
-        {spk:'Bạn', text:'"À ờ cảm ơn nha!"'},
-        {spk:'CHÀNG LÍNH NGU LẮM', text:'"Thật ra còn có hai chăng lính khác"'},
-        {spk:'Bạn', text:'"Bạn của mày à"'},
-        {spk:'CHÀNG LÍNH NGU LẮM', text:' "Đúng vậy"'},
-        {spk:'CHÀNG LÍNH NGU LẮM', text:' "Tên thật của tao là Lý Sang Hiếc"'},
-        {spk:'CHÀNG LÍNH NGU LẮM', text:' "Tao có thằng em đang du học bên Trung tên là Lý Sang Nai"'},
-        {spk:'CHÀNG LÍNH NGU LẮM', text:' "Và người anh em Sobin Hoàng Cáp du học ở bên châu Âu"'},
-        {spk:'CHÀNG LÍNH NGU LẮM', text:' "Ba chàng lính ngu lam là bất khả chiến bại"'},
-        {spk:'CHÀNG LÍNH NGU LẮM', text:'"Cầm bịch Bim Bim này ăn tạm đi, đêm nay chàng lính ngu lam này sẽ bảo vệ mày"'},
-        {spk:'CHÀNG LÍNH NGU LẮM', text:'"Hoặc không"'},
+        {spk:'CHÀNG LÍNH NGU LẮM', text:'*ngáp* "Ơ... mấy giờ rồi ta? Tại tao xếp TKB ngu quá nên học tới giờ này luôn..."', //0 — điểm rẽ nhánh
+          choices:[
+            {label:'"À ờ cảm ơn nha!"', next:1},
+            {label:'"Ủa xếp TKB ngu vậy thì đổi lịch đi chứ."', next:11,
+              reward:{type:'points', amount:5, msg:'Chàng Lính Ngu Lắm bật cười vì câu đùa của bạn (+5 điểm).'}}
+          ]
+        },
+        {spk:'Bạn', text:'"À ờ cảm ơn nha!"'},                                                //1
+        {spk:'CHÀNG LÍNH NGU LẮM', text:'"Thật ra còn có hai chăng lính khác"'},               //2
+        {spk:'Bạn', text:'"Bạn của mày à"'},                                                   //3
+        {spk:'CHÀNG LÍNH NGU LẮM', text:' "Đúng vậy"'},                                        //4
+        {spk:'CHÀNG LÍNH NGU LẮM', text:' "Tên thật của tao là Lý Sang Hiếc"'},                 //5
+        {spk:'CHÀNG LÍNH NGU LẮM', text:' "Tao có thằng em đang du học bên Trung tên là Lý Sang Nai"'}, //6
+        {spk:'CHÀNG LÍNH NGU LẮM', text:' "Và người anh em Sobin Hoàng Cáp du học ở bên châu Âu"'}, //7
+        {spk:'CHÀNG LÍNH NGU LẮM', text:' "Ba chàng lính ngu lam là bất khả chiến bại"'},       //8
+        {spk:'CHÀNG LÍNH NGU LẮM', text:'"Cầm bịch Bim Bim này ăn tạm đi, đêm nay chàng lính ngu lam này sẽ bảo vệ mày"'}, //9
+        {spk:'CHÀNG LÍNH NGU LẮM', text:'"Hoặc không"'},                                       //10
+        {spk:'CHÀNG LÍNH NGU LẮM', text:'"Ê được đó, nhưng đừng méc phòng đào tạo tao đấy nha!"'}, //11 — nhánh riêng
+        {spk:'Bạn', text:'"(Ông này chắc cũng đang tự an ủi bản thân thôi...)"', next:2}        //12 — hội tụ lại dòng 2
       ], reward:{type:'item', item:'bimbim', qty:1, msg:'Chàng Lính Ngu Lắm chia cho bạn 1 gói Bim Bim.'}
     },
     2: {
