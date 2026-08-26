@@ -1073,6 +1073,8 @@ function startEpilogue(variant){
   hideAllOverlays();
   document.getElementById('pauseMenu').classList.add('hidden');
   document.getElementById('blackout').classList.remove('on');
+  document.getElementById('miniMapWrap')?.classList.remove('mapBlackout');
+  document.getElementById('mapModal')?.classList.remove('mapBlackout');
   document.getElementById('meterOuter').classList.remove('enraged');
   document.getElementById('meterOuter').classList.add('epi-hide');
   document.getElementById('staminaOuter').classList.add('epi-hide');
@@ -1525,6 +1527,21 @@ function jumpscare(){
 }
 
 /* ============== TICK LOOP (real time) ============== */
+function updateBlackoutUI(){
+  const blackedOut = !!(S && (S.gameMinutes < S.breakerUntil || S.gridDown));
+  const bo = document.getElementById('blackout');
+  if(bo) bo.classList.toggle('on', blackedOut);
+  const miniWrap = document.getElementById('miniMapWrap');
+  if(miniWrap) miniWrap.classList.toggle('mapBlackout', blackedOut);
+  const mapModal = document.getElementById('mapModal');
+  if(mapModal) mapModal.classList.toggle('mapBlackout', blackedOut);
+  const expandBtn = document.getElementById('miniMapExpand');
+  if(expandBtn){
+    expandBtn.disabled = blackedOut;
+    expandBtn.textContent = blackedOut ? '⚡ Mất tín hiệu' : '⤢ Phóng to';
+  }
+  return blackedOut;
+}
 let rafId=null;
 let lastActionRebuild = 0;
 function tick(now){
@@ -1537,7 +1554,7 @@ function tick(now){
       advanceWorld(dGameMin);
       if(!S.running){ refreshHud(); refreshMap(); rafId = requestAnimationFrame(tick); return; }
       checkEncounter();
-      document.getElementById('blackout').classList.toggle('on', S.gameMinutes < S.breakerUntil || S.gridDown);
+      updateBlackoutUI();
       document.getElementById('meterOuter').classList.toggle('enraged', S.enraged);
       setRoomTitleGlitch(S.enraged);
       refreshHud();
@@ -2749,9 +2766,12 @@ function beginNight(n, standalone){
   hideAllOverlays();
   document.getElementById('pauseMenu').classList.add('hidden');
   document.getElementById('blackout').classList.remove('on');
+  document.getElementById('miniMapWrap')?.classList.remove('mapBlackout');
+  document.getElementById('mapModal')?.classList.remove('mapBlackout');
   document.getElementById('meterOuter').classList.remove('enraged','epi-hide');
   document.getElementById('staminaOuter').classList.remove('epi-hide');
   setRoomTitleGlitch(false);
+  updateBlackoutUI();
   playVN(VN_INTRO[n], ()=>{});
 }
 function hideAllOverlays(){

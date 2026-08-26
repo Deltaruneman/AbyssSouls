@@ -143,6 +143,21 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
 #miniMapSvgWrap .room-box{padding:4px 2px;font-size:8px;letter-spacing:0.5px;}
 #miniMapSvgWrap .event-badge{width:12px;height:12px;font-size:8px;top:-6px;right:-6px;}
 
+/* Bóng tối (mất điện toàn trường / cầu dao ngắt): sơ đồ không còn hiển thị được */
+#miniMapWrap.mapBlackout #miniMapSvgWrap > *{opacity:0;}
+#miniMapWrap.mapBlackout #miniMapSvgWrap::after,
+#mapModal.mapBlackout #mapSvgWrap::after{
+  content:'⚡ MẤT ĐIỆN — KHÔNG CÓ TÍN HIỆU SƠ ĐỒ';
+  white-space:pre-line;text-align:center;
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  padding:0 10%;background:#000;
+  font-family:var(--font-mono);letter-spacing:1px;color:var(--blood-bright);
+  font-size:10px;
+}
+#mapModal.mapBlackout #mapSvgWrap::after{font-size:14px;letter-spacing:2px;}
+#mapModal.mapBlackout #mapSvgWrap > *{opacity:0;}
+#miniMapExpand:disabled{opacity:0.5;cursor:not-allowed;}
+
 #logPane{position:fixed;right:16px;bottom:16px;width:260px;max-height:240px;overflow-y:auto;
   padding:10px 12px;background:rgba(16,18,22,0.92);border:1px solid var(--line);border-radius:6px;
   font-size:11px;line-height:1.5;z-index:20;backdrop-filter:blur(2px);box-shadow:0 4px 20px rgba(0,0,0,0.5);}
