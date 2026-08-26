@@ -131,7 +131,7 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
 .edge{position:absolute;background:var(--line);height:2px;transform-origin:0 0;z-index:0;}
 
 /* ---------- mini map (always visible, above log) ---------- */
-#miniMapWrap{position:fixed;right:16px;bottom:274px;width:260px;z-index:20;
+#miniMapWrap{position:fixed;right:16px;bottom:274px;width:260px;z-index:55;
   background:rgba(16,13,10,0.92);border:1px solid var(--line);border-radius:6px;
   padding:8px;backdrop-filter:blur(2px);box-shadow:0 4px 20px rgba(0,0,0,0.5);}
 #miniMapHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}

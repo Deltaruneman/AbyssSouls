@@ -114,10 +114,11 @@ function isRoomSafe(k){
   return isCanteenOpen(S ? S.gameMinutes : 0);
 }
 
-/* ---- Thể lực (camping) ---- */
-const STAMINA_DRAIN_SAFE = 0.22;   // mỗi phút game đứng yên trong khu an toàn
-const STAMINA_REGEN_ROAM = 0.07;   // mỗi phút game hoạt động bên ngoài
-const STARVE_TICK_MIN = 55;        // cạn thể lực -> mất máu mỗi X phút game
+/* ---- Thể lực ---- */
+const MOVE_STAMINA_COST = 25;        // % thể lực tiêu hao mỗi lần di chuyển (bình thường)
+const MOVE_STAMINA_COST_BUFFED = 15; // % thể lực tiêu hao mỗi lần di chuyển khi có buff Nước tăng lực
+const STAMINA_REGEN_IDLE = 1;        // mỗi phút game đứng yên (không di chuyển) hồi 1% thể lực
+const STARVE_TICK_MIN = 55;          // cạn thể lực -> mất máu mỗi X phút game
 
 /* ---- Huyết Nguyệt ---- */
 const ENRAGE_DURATION_MIN = 100;   // Huyết Nguyệt kéo dài bao lâu (phút game) trước khi hạ nhiệt
@@ -659,12 +660,12 @@ function refreshActionPane(){
 
   const useWater=document.createElement('button');
   useWater.className='btn';
-  useWater.textContent='Uống Nước tăng lực (buff tốc độ, gây tiếng ồn)';
+  useWater.textContent='Uống Nước tăng lực (buff tốc độ, đỡ hao thể lực, gây tiếng ồn)';
   useWater.disabled = S.inventory.water<=0;
   useWater.onclick=()=>{
     if(S.inventory.water>0){
       S.inventory.water--; S.speedBuffUntil = S.gameMinutes + 90;
-      addLog('Bạn uống Nước tăng lực — di chuyển nhanh hơn trong 90 phút, nhưng bước chân sẽ ồn hơn.','');
+      addLog('Bạn uống Nước tăng lực — di chuyển nhanh hơn và chỉ tốn '+MOVE_STAMINA_COST_BUFFED+'% thể lực mỗi lần di chuyển trong 90 phút, nhưng bước chân sẽ ồn hơn.','');
       markActionDirty();
       refreshHud(); refreshActionPane();
     }
@@ -1134,12 +1135,14 @@ function movePlayer(dest){
   if(S.epilogue){ epilogueMove(dest); return; }
   const noisy = S.gameMinutes < S.speedBuffUntil;
   const cost = noisy ? BUFF_MOVE_COST_MIN : BASE_MOVE_COST_MIN; // 10 phút bình thường, 5 phút khi có buff Nước tăng lực
+  const staminaCost = noisy ? MOVE_STAMINA_COST_BUFFED : MOVE_STAMINA_COST; // % thể lực tiêu hao mỗi lần di chuyển
+  S.stamina = Math.max(0, S.stamina - staminaCost);
   S.gameMinutes += cost;
   S.playerRoom = dest;
   addLog('Bạn di chuyển đến '+ROOM_DEF[dest].name+'.','');
   if(S.cameraMovesLeft>0) S.cameraMovesLeft--;
   markActionDirty();
-  advanceWorld(cost);
+  advanceWorld(cost, {isMove:true}); // di chuyển tốn 10 phút (hoặc 5 phút nếu có buff) -> không hồi thể lực trong khoảng thời gian này
 
   // Hệ thống tiếng ồn: buff tốc độ khiến bước chân ồn hơn, có xác suất TIU bị thu hút
   if(S.running && noisy && Math.random()<NOISE_ATTRACT_CHANCE){
@@ -1155,7 +1158,7 @@ function movePlayer(dest){
 }
 
 /* ============== WORLD / EVENTS / MONSTER ============== */
-function advanceWorld(minutesPassed){
+function advanceWorld(minutesPassed, opts={}){
   // --- Giai đoạn đêm: kiểm tra xem đã bước sang mốc mới chưa ---
   checkPhaseTransition();
 
@@ -1178,11 +1181,9 @@ function advanceWorld(minutesPassed){
     markActionDirty();
   }
 
-  // --- Thể lực: cạn dần nếu đứng yên trong khu an toàn, hồi lại khi hoạt động ---
-  if(isRoomSafe(S.playerRoom)){
-    S.stamina = Math.max(0, S.stamina - STAMINA_DRAIN_SAFE*minutesPassed);
-  } else {
-    S.stamina = Math.min(100, S.stamina + STAMINA_REGEN_ROAM*minutesPassed);
+  // --- Thể lực: di chuyển tốn thẳng % (trừ ở movePlayer, không hồi trong lúc đó); đứng yên thì hồi dần theo thời gian ---
+  if(!opts.isMove){
+    S.stamina = Math.min(100, S.stamina + STAMINA_REGEN_IDLE*minutesPassed);
   }
   if(S.stamina<=0){
     if(S.gameMinutes >= S.nextStarveTickAt){
@@ -1531,8 +1532,8 @@ function updateBlackoutUI(){
   const blackedOut = !!(S && (S.gameMinutes < S.breakerUntil || S.gridDown));
   const bo = document.getElementById('blackout');
   if(bo) bo.classList.toggle('on', blackedOut);
-  const miniWrap = document.getElementById('miniMapWrap');
-  if(miniWrap) miniWrap.classList.toggle('mapBlackout', blackedOut);
+  // Sơ đồ góc màn hình (#miniMapWrap) CHỦ Ý không bị ẩn/mờ khi mất điện — nó nằm ở layer trên cùng
+  // (xem z-index trong style.css) để người chơi vẫn thấy đường đi và di chuyển được trong bóng tối.
   const mapModal = document.getElementById('mapModal');
   if(mapModal) mapModal.classList.toggle('mapBlackout', blackedOut);
   const expandBtn = document.getElementById('miniMapExpand');
