@@ -115,8 +115,8 @@ function isRoomSafe(k){
 }
 
 /* ---- Thể lực ---- */
-const MOVE_STAMINA_COST = 15;        // % thể lực tiêu hao mỗi lần di chuyển (bình thường)
-const MOVE_STAMINA_COST_BUFFED = 5; // % thể lực tiêu hao mỗi lần di chuyển khi có buff Nước tăng lực
+const MOVE_STAMINA_COST = 25;        // % thể lực tiêu hao mỗi lần di chuyển (bình thường)
+const MOVE_STAMINA_COST_BUFFED = 15; // % thể lực tiêu hao mỗi lần di chuyển khi có buff Nước tăng lực
 const STAMINA_REGEN_IDLE = 1;        // mỗi phút game đứng yên (không di chuyển) hồi 1% thể lực
 const STARVE_TICK_MIN = 55;          // cạn thể lực -> mất máu mỗi X phút game
 
@@ -379,19 +379,6 @@ function shuffle(arr){
 }
 
 /* ============== VISUAL NOVEL ============== */
-/* ---- Hỗ trợ hội thoại rẽ nhánh ----
-   Mỗi phần tử trong mảng `lines` vẫn có dạng {spk, text} như cũ. Ngoài ra:
-   - Có thể thêm `next: <index>` vào một dòng để buộc dòng kế tiếp KHÔNG phải
-     là i+1 mà nhảy thẳng tới index chỉ định trong cùng mảng `lines` (dùng để
-     bỏ qua một đoạn nhánh, hoặc hội tụ nhiều nhánh về lại cùng một điểm).
-   - Có thể thêm `choices: [{label, next, reward, effect}]` vào một dòng để
-     biến dòng đó thành một điểm rẽ nhánh: thay vì nút "TIẾP TỤC", người chơi
-     sẽ thấy các nút lựa chọn theo `label`. Khi bấm một lựa chọn:
-       · `reward` (không bắt buộc) được áp dụng ngay qua applyVNReward().
-       · `effect` (không bắt buộc, là 1 hàm) được gọi ngay lập tức — dùng để
-         chỉnh state tùy ý (vd tăng độ tin tưởng riêng, đặt cờ...).
-       · Hội thoại tiếp tục tại index `next` (nếu bỏ trống, mặc định i+1).
-   Xem ví dụ thực tế trong dialogue.js (NPC_DIALOGUES.E[1], NPC_DIALOGUES.B[1]). */
 function playVN(lines, onDone){
   if(!lines || !lines.length){ if(onDone) onDone(); return; }
   S.paused = true;
@@ -399,62 +386,26 @@ function playVN(lines, onDone){
   const spkEl = document.getElementById('vnSpeaker');
   const txtEl = document.getElementById('vnText');
   const nextBtn = document.getElementById('vnNextBtn');
-  const footerEl = document.getElementById('vnFooter');
-  const choicesEl = document.getElementById('vnChoices');
   overlay.classList.remove('hidden');
   let i = 0;
-
-  function finish(){
-    overlay.classList.add('hidden');
-    nextBtn.onclick = null;
-    if(choicesEl){ choicesEl.innerHTML = ''; choicesEl.classList.add('hidden'); }
-    if(footerEl) footerEl.classList.remove('hidden');
-    S.paused = false;
-    S.lastTick = performance.now();
-    if(onDone) onDone();
-  }
-
-  function goto(idx){
-    i = idx;
-    if(i>=lines.length || i<0){ finish(); return; }
-    showLine();
-  }
-
   function showLine(){
     const l = lines[i];
     spkEl.textContent = l.spk;
     txtEl.textContent = l.text;
-    if(l.choices && l.choices.length){
-      /* Điểm rẽ nhánh: ẩn nút "tiếp tục", hiện các lựa chọn thay thế. */
-      if(footerEl) footerEl.classList.add('hidden');
-      choicesEl.classList.remove('hidden');
-      choicesEl.innerHTML = '';
-      l.choices.forEach(choice=>{
-        const b = document.createElement('button');
-        b.className = 'btn primary';
-        b.textContent = choice.label;
-        b.onclick = ()=>{
-          if(choice.reward) applyVNReward(choice.reward);
-          if(typeof choice.effect==='function') choice.effect();
-          const nextIdx = (choice.next!==undefined) ? choice.next : i+1;
-          goto(nextIdx);
-        };
-        choicesEl.appendChild(b);
-      });
-    } else {
-      if(footerEl) footerEl.classList.remove('hidden');
-      choicesEl.classList.add('hidden');
-      choicesEl.innerHTML = '';
-      nextBtn.textContent = (i>=lines.length-1 && l.next===undefined) ? 'ĐÓNG ▶' : 'TIẾP TỤC ▶';
-    }
+    nextBtn.textContent = (i>=lines.length-1) ? 'ĐÓNG ▶' : 'TIẾP TỤC ▶';
   }
-
   function advance(){
-    const cur = lines[i];
-    const nextIdx = (cur && cur.next!==undefined) ? cur.next : i+1;
-    goto(nextIdx);
+    i++;
+    if(i>=lines.length){
+      overlay.classList.add('hidden');
+      nextBtn.onclick = null;
+      S.paused = false;
+      S.lastTick = performance.now();
+      if(onDone) onDone();
+      return;
+    }
+    showLine();
   }
-
   nextBtn.onclick = advance;
   showLine();
 }
