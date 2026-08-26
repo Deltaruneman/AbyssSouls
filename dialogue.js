@@ -118,22 +118,22 @@ const NPC_DIALOGUES = {
         {spk:'CHÀNG LÍNH NGU LẮM', text:'*ngáp* "Ơ... mấy giờ rồi ta? Tại tao xếp TKB ngu quá nên học tới giờ này luôn..."', //0 — điểm rẽ nhánh
           choices:[
             {label:'"À ờ cảm ơn nha!"', next:1},
-            {label:'"Ủa xếp TKB ngu vậy thì đổi lịch đi chứ."', next:11,
+            {label:'"Mày hoàn toàn có thể lựa chọn cúp mà :))."', next:11,
               reward:{type:'points', amount:5, msg:'Chàng Lính Ngu Lắm bật cười vì câu đùa của bạn (+5 điểm).'}}
           ]
         },
-        {spk:'Bạn', text:'"À ờ cảm ơn nha!"'},                                                //1
-        {spk:'CHÀNG LÍNH NGU LẮM', text:'"Thật ra còn có hai chăng lính khác"'},               //2
-        {spk:'Bạn', text:'"Bạn của mày à"'},                                                   //3
-        {spk:'CHÀNG LÍNH NGU LẮM', text:' "Đúng vậy"'},                                        //4
-        {spk:'CHÀNG LÍNH NGU LẮM', text:' "Tên thật của tao là Lý Sang Hiếc"'},                 //5
-        {spk:'CHÀNG LÍNH NGU LẮM', text:' "Tao có thằng em đang du học bên Trung tên là Lý Sang Nai"'}, //6
-        {spk:'CHÀNG LÍNH NGU LẮM', text:' "Và người anh em Sobin Hoàng Cáp du học ở bên châu Âu"'}, //7
-        {spk:'CHÀNG LÍNH NGU LẮM', text:' "Ba chàng lính ngu lam là bất khả chiến bại"'},       //8
-        {spk:'CHÀNG LÍNH NGU LẮM', text:'"Cầm bịch Bim Bim này ăn tạm đi, đêm nay chàng lính ngu lam này sẽ bảo vệ mày"'}, //9
-        {spk:'CHÀNG LÍNH NGU LẮM', text:'"Hoặc không"'},                                       //10
-        {spk:'CHÀNG LÍNH NGU LẮM', text:'"Ê được đó, nhưng đừng méc phòng đào tạo tao đấy nha!"'}, //11 — nhánh riêng
-        {spk:'Bạn', text:'"(Ông này chắc cũng đang tự an ủi bản thân thôi...)"', next:2}        //12 — hội tụ lại dòng 2
+        {spk:'Bạn', text:'"À ờ cảm ơn nha!"'},                                                
+        {spk:'CHÀNG LÍNH NGU LẮM', text:'"Thật ra còn có hai chăng lính khác"'},            
+        {spk:'Bạn', text:'"Bạn của mày à"'},                                                  
+        {spk:'CHÀNG LÍNH NGU LẮM', text:' "Đúng vậy"'},                                        
+        {spk:'CHÀNG LÍNH NGU LẮM', text:' "Tên thật của tao là Lý Sang Hiếc"'},                
+        {spk:'CHÀNG LÍNH NGU LẮM', text:' "Tao có thằng em đang du học bên Trung tên là Lý Sang Nai"'}, 
+        {spk:'CHÀNG LÍNH NGU LẮM', text:' "Và người anh em Sobin Hoàng Cáp du học ở bên châu Âu"'}, 
+        {spk:'CHÀNG LÍNH NGU LẮM', text:' "Ba chàng lính ngu lam là bất khả chiến bại"'},      
+        {spk:'CHÀNG LÍNH NGU LẮM', text:'"Cầm bịch Bim Bim này ăn tạm đi, đêm nay chàng lính ngu lam này sẽ bảo vệ mày"'}, 
+        {spk:'CHÀNG LÍNH NGU LẮM', text:'"Hoặc không"'},                                       
+        {spk:'CHÀNG LÍNH NGU LẮM', text:'"Ê được đó, nhưng đừng méc phòng đào tạo tao đấy nha!"'}, 
+        {spk:'Bạn', text:'"(Ông này chắc cũng đang tự an ủi bản thân thôi...)"', next:2}      
       ], reward:{type:'item', item:'bimbim', qty:1, msg:'Chàng Lính Ngu Lắm chia cho bạn 1 gói Bim Bim.'}
     },
     2: {
@@ -161,7 +161,7 @@ const NPC_DIALOGUES = {
 /* ---- Trọng: pháp sư bí ẩn — chỉ xuất hiện tại Nhà C, đêm 3, khi người chơi còn 1 HP ---- */
 const TRONG_DIALOGUE = {
   lines:[
-    {spk:'TRỌNG', text:'"...Đứng lại. Tao thấy khí sắc của ngươi đã suy kiệt lắm rồi."'},
+    {spk:'TRỌNG', text:'"...Đứng lại. Tao thấy mày đã suy kiệt lắm rồi."'},
     {spk:'TRỌNG', text:'"Thứ đó, tên nó là TIU, một thực thể trái ngược với UIT được tạo nên từ... mà chuyện đó không quan trọng."'},
     {spk:'TRỌNG', text:'" Nhận lấy thứ này — nó sẽ giúp ngươi cầm cự."'},
     {spk:'Bạn', text:'"Khoan khoan mày là ai cơ."'},
