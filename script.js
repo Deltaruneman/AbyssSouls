@@ -115,8 +115,8 @@ function isRoomSafe(k){
 }
 
 /* ---- Thể lực ---- */
-const MOVE_STAMINA_COST = 25;        // % thể lực tiêu hao mỗi lần di chuyển (bình thường)
-const MOVE_STAMINA_COST_BUFFED = 15; // % thể lực tiêu hao mỗi lần di chuyển khi có buff Nước tăng lực
+const MOVE_STAMINA_COST = 15;        // % thể lực tiêu hao mỗi lần di chuyển (bình thường)
+const MOVE_STAMINA_COST_BUFFED = 5; // % thể lực tiêu hao mỗi lần di chuyển khi có buff Nước tăng lực
 const STAMINA_REGEN_IDLE = 1;        // mỗi phút game đứng yên (không di chuyển) hồi 1% thể lực
 const STARVE_TICK_MIN = 55;          // cạn thể lực -> mất máu mỗi X phút game
 
