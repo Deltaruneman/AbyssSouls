@@ -130,6 +130,51 @@ const NOISE_ATTRACT_CHANCE = 0.35;
    mà phải ra ngoài đối mặt với The TIU để lấy điểm/vật phẩm khác. ---- */
 const BIMBIM_NIGHT_LIMIT = [null, 3, 2, 1];
 
+/* ============== GIAI ĐOẠN ĐÊM (PHASED NIGHT) ==============
+   Đêm được chia làm 3 mốc theo tỉ lệ thời lượng đêm (00:00 -> 07:30 trong game):
+   Giai đoạn 1 "KHỞI ĐỘNG" (0% -> 37.5%, tương ứng ~00:00-02:49): tuần tra, thu gom, xử lý
+   sự cố nhỏ như bình thường.
+   Giai đoạn 2 "BIẾN CỐ TRUNG TÂM" (37.5% -> 75%, ~02:49-05:37): kích hoạt sự cố mất điện
+   toàn trường, buộc phải đến Phòng Kỹ Thuật (Tòa C) để khởi động lại cầu dao tổng.
+   Giai đoạn 3 "SĂN ĐUỔI DỒN DẬP" (75% -> 100%, ~05:37-07:30): The TIU di chuyển nhanh hơn
+   hẳn, một số cửa nối giữa các tòa bị khóa ngẫu nhiên. ---- */
+const PHASE_NAMES = {1:'KHỞI ĐỘNG', 2:'BIẾN CỐ TRUNG TÂM', 3:'SĂN ĐUỔI DỒN DẬP'};
+function getPhase(gmin){
+  const total = GAME_MINUTES_TOTAL;
+  if(gmin < total*0.375) return 1;
+  if(gmin < total*0.75) return 2;
+  return 3;
+}
+
+/* ---- Thu gom & Chế tạo (Scavenging & Crafting) ---- */
+const COMPONENT_TYPES = ['pin','wire','tape','pipe'];
+const COMPONENT_NAMES = {pin:'Pin cũ', wire:'Dây điện', tape:'Băng keo', pipe:'Ống thép'};
+const CRAFTING_RECIPES = {
+  camera:    {label:'Camera Sinh viên (định vị TIU 3 lượt)', need:{wire:2, tape:1}, give:()=>{ S.inventory.camera++; }},
+  breaker:   {label:'Bộ Sập Cầu Dao (vô hiệu hóa TIU 60p)',  need:{pin:2, pipe:1},  give:()=>{ S.inventory.breaker++; }},
+  uvlight:   {label:'Đèn chiếu UV (làm choáng The TIU)',     need:{pin:1, pipe:1},  give:()=>{ S.inventory.uvlight++; }},
+  noisetrap: {label:'Bẫy gây nhiễu (thu hút TIU đi nơi khác)', need:{wire:1, tape:1}, give:()=>{ S.inventory.noisetrap++; }}
+};
+
+/* ---- Nhiệm vụ điều tra phụ (Lore Sub-quests) ---- */
+const LORE_CLUES = [
+  {id:'diary1', title:'Nhật ký cũ — Trang xé vội', text:'"...tôi thấy nó lần đầu tiên ở hành lang Tòa E, ánh mắt nó không giống người..."'},
+  {id:'audio1', title:'Đĩa ghi âm bảo vệ ca đêm', text:'Giọng nói rè rè phát ra từ chiếc đĩa cũ: "...báo cáo 2 giờ 15, phát hiện tiếng động lạ tại Tòa C, sau đó... [tạp âm]..."'},
+  {id:'safe1', title:'Mật mã két sắt phòng quản lý', text:'Một mảnh giấy nhàu nát ghi vội: "Mã két: 0 - 4 - 1 - 9. Đừng để ai khác thấy cái này."'},
+  {id:'diary2', title:'Nhật ký cũ — Trang thứ hai', text:'"...The TIU không phải lúc nào cũng như vậy. Có ai đó đã làm gì với nó, từ rất lâu rồi..."'},
+  {id:'audio2', title:'Đoạn ghi âm cuối cùng', text:'"...nếu ai nghe được đoạn này, đừng xuống Tòa C một mình sau 1 giờ sáng. Đừng đi một mình..."'},
+  {id:'note1', title:'Mẩu giấy nhét trong sách thư viện', text:'"Ba mảnh La Peace có thể xoa dịu nó. Nhưng phải có đủ cả ba, không thể thiếu một."'}
+];
+
+/* Những manh mối đã tìm thấy xuyên suốt lượt chơi thường (đêm 1 -> 3), reset khi bắt đầu
+   lại từ Đêm 1 (giống campaignLaPeace / campaignNpcTalks). */
+let campaignLoreFound = new Set();
+
+function pickDistinctRooms(pool, n){
+  const arr = shuffle(pool.slice());
+  return arr.slice(0, Math.min(n, arr.length));
+}
+
 /* ============== STATE ============== */
 let S = null;
 
@@ -140,6 +185,22 @@ function freshState(night){
   // Chỗ Gửi Xe và Sân Bóng có tỉ lệ xuất hiện La Peace cao hơn hẳn các khu vực khác. ---
   const peaceSpots = ROOM_KEYS.filter(r=>!ROOM_DEF[r].safe && r!==startRoom);
   const laPeaceRoom = weightedPeaceRoom(peaceSpots.length ? peaceSpots : ROOM_KEYS.filter(r=>!ROOM_DEF[r].safe));
+
+  // --- Thu gom: rải linh kiện ngẫu nhiên vào các góc tối (tối đa 5 phòng không an toàn) ---
+  const nonSafeRooms = ROOM_KEYS.filter(r=>!ROOM_DEF[r].safe);
+  const scavengeRooms = pickDistinctRooms(nonSafeRooms, Math.min(5, nonSafeRooms.length));
+  const scavenge = {};
+  scavengeRooms.forEach(r=>{ scavenge[r] = pick(COMPONENT_TYPES); });
+
+  // --- Lore: rải 2 manh mối (nhật ký/đĩa ghi âm/mật mã) chưa từng nhặt vào các phòng còn lại ---
+  const loreRoomsPool = nonSafeRooms.filter(r=>!scavengeRooms.includes(r));
+  const availableClueIds = LORE_CLUES.map(c=>c.id).filter(id=>!campaignLoreFound.has(id));
+  const loreCount = Math.min(2, availableClueIds.length, loreRoomsPool.length);
+  const chosenClueIds = shuffle(availableClueIds.slice()).slice(0, loreCount);
+  const chosenLoreRooms = pickDistinctRooms(loreRoomsPool, loreCount);
+  const loreClues = {};
+  chosenClueIds.forEach((id,i)=>{ loreClues[chosenLoreRooms[i]] = id; });
+
   return {
     night,
     gameMinutes: 0,
@@ -151,10 +212,10 @@ function freshState(night){
     monsterRoom: monsterRoom,
     speedBuffUntil: 0, // game-minute timestamp
     invulnUntil: 0,
-    activeEvents: {}, // roomKey -> {deadline(gameMin)}
+    activeEvents: {}, // roomKey -> {deadline(gameMin), start(gameMin)}
     lastSeenRoom: null,
     lastSeenAt: 0,
-    inventory: {bimbim:1, water:0, camera:0, breaker:0},
+    inventory: {bimbim:1, water:0, camera:0, breaker:0, uvlight:0, noisetrap:0},
     bimbimBoughtTonight: 0, // reset mỗi đêm — xem BIMBIM_NIGHT_LIMIT
     lastTick: performance.now(),
     nextEventAt: rand(...NIGHT_CFG[night].eventEvery),
@@ -176,7 +237,20 @@ function freshState(night){
     introShown: false,
     // --- La Peace (mảnh năng lượng ôn hòa) ---
     laPeaceRoom: laPeaceRoom,
-    laPeaceFound: false
+    laPeaceFound: false,
+    // --- Giai đoạn đêm (phased night) ---
+    phase: 1,
+    gridDown: false,
+    gridIncidentActive: false,
+    gridIncidentDone: false,
+    frenzyStarted: false,
+    lockedDoors: {}, // edgeKey -> true
+    // --- Thu gom & chế tạo ---
+    components: {pin:0, wire:0, tape:0, pipe:0},
+    scavenge: scavenge,       // roomKey -> component type còn nằm đó
+    noiseTrap: null,          // {room, until}
+    // --- Lore sub-quests ---
+    loreClues: loreClues      // roomKey -> clue id còn nằm đó
   };
 }
 
@@ -442,13 +516,16 @@ function refreshHud(){
 let actionPaneDirty = true;
 function markActionDirty(){ actionPaneDirty = true; }
 
-function updateRoomDescOnly(){
-  if(!S || S.epilogue) return;
-  const def = ROOM_DEF[S.playerRoom];
+function roomDescExtras(def){
   let desc = def.sub;
-  if(S.activeEvents[S.playerRoom]){
-    const left = Math.max(0, Math.ceil(S.activeEvents[S.playerRoom].deadline - S.gameMinutes));
-    desc += ` — SỰ CỐ ĐANG DIỄN RA (còn ~${left} phút để xử lý)`;
+  const ev = S.activeEvents[S.playerRoom];
+  if(ev){
+    if(ev.mandatory){
+      desc += ` — ⚡ CẦU DAO TỔNG ĐANG NGẮT: phải khởi động lại ngay`;
+    } else {
+      const left = Math.max(0, Math.ceil(ev.deadline - S.gameMinutes));
+      desc += ` — SỰ CỐ ĐANG DIỄN RA (còn ~${left} phút để xử lý)`+(ev.chainedFrom?' [sự cố dây chuyền]':'');
+    }
   }
   if(def.safe && !isRoomSafe(S.playerRoom)){
     desc += ` — Căn tin chỉ mở cửa lúc 01:00-02:00 và 04:00-05:00.`;
@@ -456,8 +533,20 @@ function updateRoomDescOnly(){
   if(S.laPeaceRoom===S.playerRoom && !S.laPeaceFound){
     desc += ` — ✦ Một luồng năng lượng kỳ lạ, ấm áp phảng phất đâu đây...`;
   }
+  if(S.scavenge[S.playerRoom]){
+    desc += ` — 🔧 Có vẻ như có vật gì đó nằm trong góc tối...`;
+  }
+  if(S.loreClues[S.playerRoom]){
+    desc += ` — 📖 Một vật gì đó khác thường nằm sót lại trong phòng...`;
+  }
+  return desc;
+}
+
+function updateRoomDescOnly(){
+  if(!S || S.epilogue) return;
+  const def = ROOM_DEF[S.playerRoom];
   const el = document.getElementById('roomDesc');
-  if(el) el.textContent = desc;
+  if(el) el.textContent = roomDescExtras(def);
 }
 
 function refreshActionPane(){
@@ -481,10 +570,11 @@ function refreshActionPane(){
     : ROOM_FALLBACK_GRADIENT[S.playerRoom];
 
   const resolveBtn = document.getElementById('resolveBtn');
-  const hasEvent = !!S.activeEvents[S.playerRoom];
+  const curEvent = S.activeEvents[S.playerRoom];
+  const hasEvent = !!curEvent;
   resolveBtn.classList.toggle('show', hasEvent);
   if(hasEvent){
-    resolveBtn.textContent = '⚠ XỬ LÝ: '+eventLabel(def.event);
+    resolveBtn.textContent = curEvent.mandatory ? '⚡ KHỞI ĐỘNG LẠI CẦU DAO TỔNG' : '⚠ XỬ LÝ: '+eventLabel(def.event);
     resolveBtn.onclick = ()=>startMinigame(S.playerRoom);
   }
 
@@ -506,18 +596,7 @@ function refreshActionPane(){
     document.getElementById('npcName').textContent = npcMeta.name;
   }
 
-  let desc = def.sub;
-  if(hasEvent){
-    const left = Math.max(0, Math.ceil(S.activeEvents[S.playerRoom].deadline - S.gameMinutes));
-    desc += ` — SỰ CỐ ĐANG DIỄN RA (còn ~${left} phút để xử lý)`;
-  }
-  if(def.safe && !safeNow){
-    desc += ` — Căn tin chỉ mở cửa lúc 01:00-02:00 và 04:00-05:00.`;
-  }
-  if(S.laPeaceRoom===S.playerRoom && !S.laPeaceFound){
-    desc += ` — ✦ Một luồng năng lượng kỳ lạ, ấm áp phảng phất đâu đây...`;
-  }
-  document.getElementById('roomDesc').textContent = desc;
+  document.getElementById('roomDesc').textContent = roomDescExtras(def);
 
   const btnWrap = document.getElementById('actionButtons');
   btnWrap.innerHTML='';
@@ -538,10 +617,11 @@ function refreshActionPane(){
   /* ---- Nhóm 1: DI CHUYỂN ---- */
   const moveGroup = makeGroup('DI CHUYỂN');
   def.connects.forEach(c=>{
+    const locked = isEdgeLocked(S.playerRoom, c);
     const b=document.createElement('button');
-    b.className='btn';
-    b.textContent='➜ '+ROOM_DEF[c].name;
-    b.onclick=()=>movePlayer(c);
+    b.className='btn'+(locked?' danger':'');
+    b.textContent=(locked?'🔒 ':'➜ ')+ROOM_DEF[c].name;
+    b.onclick=()=> locked ? attemptUnlockDoor(c) : movePlayer(c);
     moveGroup.row.appendChild(b);
   });
   btnWrap.appendChild(moveGroup.g);
@@ -556,6 +636,12 @@ function refreshActionPane(){
     b.disabled = !safeNow;
     b.onclick=openShop;
     itemGroup.row.appendChild(b);
+
+    const bench=document.createElement('button');
+    bench.className='btn';
+    bench.textContent='🛠 Bàn chế tạo';
+    bench.onclick=openCraftBench;
+    itemGroup.row.appendChild(bench);
   }
 
   const useBim=document.createElement('button');
@@ -613,12 +699,43 @@ function refreshActionPane(){
   };
   itemGroup.row.appendChild(useBreaker);
 
+  const useUV=document.createElement('button');
+  useUV.className='btn';
+  useUV.textContent='💡 Dùng Đèn UV (làm choáng TIU nếu ở gần)';
+  useUV.disabled = S.inventory.uvlight<=0;
+  useUV.onclick=useUVLight;
+  itemGroup.row.appendChild(useUV);
+
+  const useNoise=document.createElement('button');
+  useNoise.className='btn';
+  useNoise.textContent='📢 Đặt Bẫy gây nhiễu tại đây';
+  useNoise.disabled = S.inventory.noisetrap<=0;
+  useNoise.onclick=useNoiseTrap;
+  itemGroup.row.appendChild(useNoise);
+
   if(S.laPeaceRoom===S.playerRoom && !S.laPeaceFound){
     const usePeace=document.createElement('button');
     usePeace.className='btn peace';
     usePeace.textContent='✦ Nhặt La Peace (mảnh năng lượng ôn hòa)';
     usePeace.onclick=pickupLaPeace;
     itemGroup.row.appendChild(usePeace);
+  }
+
+  if(S.scavenge[S.playerRoom]){
+    const type = S.scavenge[S.playerRoom];
+    const usePickup=document.createElement('button');
+    usePickup.className='btn peace';
+    usePickup.textContent='🔧 Nhặt '+COMPONENT_NAMES[type]+' trong góc tối';
+    usePickup.onclick=pickupScavenge;
+    itemGroup.row.appendChild(usePickup);
+  }
+
+  if(S.loreClues[S.playerRoom]){
+    const useLore=document.createElement('button');
+    useLore.className='btn peace';
+    useLore.textContent='📖 Thu thập manh mối';
+    useLore.onclick=pickupLore;
+    itemGroup.row.appendChild(useLore);
   }
   btnWrap.appendChild(itemGroup.g);
 
@@ -638,6 +755,11 @@ function refreshActionPane(){
                     <div class="itemChip">Nước tăng lực: <b>${S.inventory.water}</b></div>
                     <div class="itemChip">Camera SV: <b>${S.inventory.camera}</b></div>
                     <div class="itemChip">Cầu dao: <b>${S.inventory.breaker}</b></div>
+                    <div class="itemChip">Đèn UV: <b>${S.inventory.uvlight}</b></div>
+                    <div class="itemChip">Bẫy gây nhiễu: <b>${S.inventory.noisetrap}</b></div>
+                    <div class="itemChip">Linh kiện: <b>${COMPONENT_TYPES.map(k=>COMPONENT_NAMES[k]+' '+S.components[k]).join(' / ')}</b></div>
+                    <div class="itemChip">Manh mối: <b>${campaignLoreFound.size}/${LORE_CLUES.length}</b></div>
+                    <div class="itemChip">Giai đoạn: <b>${PHASE_NAMES[S.phase]}</b></div>
                     <div class="itemChip">Buff tốc độ: <b>${S.gameMinutes<S.speedBuffUntil?'ĐANG BẬT':'—'}</b></div>
                     <div class="itemChip">Thể lực: <b>${Math.round(Math.max(0,S.stamina))}%</b></div>
                     <div class="itemChip">La Peace: <b>${campaignLaPeace}/3</b></div>
@@ -653,6 +775,232 @@ function pickupLaPeace(){
   addLog('✦ Bạn tìm thấy một mảnh La Peace (năng lượng ôn hòa) ẩn tại '+ROOM_DEF[S.playerRoom].name+'! ('+campaignLaPeace+'/3)', '');
   markActionDirty();
   refreshHud(); refreshActionPane();
+}
+
+/* ============== THU GOM & CHẾ TẠO (Scavenging & Crafting) ============== */
+function pickupScavenge(){
+  if(!S || !S.scavenge[S.playerRoom]) return;
+  const type = S.scavenge[S.playerRoom];
+  S.components[type] = (S.components[type]||0)+1;
+  delete S.scavenge[S.playerRoom];
+  addLog('🔧 Bạn nhặt được '+COMPONENT_NAMES[type]+' trong một góc tối tại '+ROOM_DEF[S.playerRoom].name+'.', '');
+  markActionDirty();
+  refreshHud(); refreshActionPane();
+}
+
+function openCraftBench(){
+  const modal = document.getElementById('mgModal');
+  modal.classList.remove('hidden');
+  document.getElementById('mgTitle').textContent = '🛠 BÀN CHẾ TẠO';
+  document.getElementById('mgTimer').textContent = '';
+  const body = document.getElementById('mgBody');
+  const footer = document.getElementById('mgFooter');
+  footer.innerHTML = '';
+  function render(){
+    const compLine = COMPONENT_TYPES.map(k=>COMPONENT_NAMES[k]+': <b>'+S.components[k]+'</b>').join(' &nbsp;|&nbsp; ');
+    body.innerHTML = `<p style="font-size:12px;color:var(--text-dim);">Linh kiện hiện có: ${compLine}</p><div id="craftList"></div>`;
+    const list = body.querySelector('#craftList');
+    Object.keys(CRAFTING_RECIPES).forEach(key=>{
+      const r = CRAFTING_RECIPES[key];
+      const needText = Object.keys(r.need).map(c=>COMPONENT_NAMES[c]+' x'+r.need[c]).join(', ');
+      const can = Object.keys(r.need).every(c=>S.components[c]>=r.need[c]);
+      const row = document.createElement('div');
+      row.className='shopItem';
+      row.innerHTML = `<span>${r.label} <span style="font-size:11px;color:var(--text-dim);">(cần ${needText})</span></span>`;
+      const btn = document.createElement('button');
+      btn.className='btn primary'; btn.textContent = can ? 'Chế tạo' : 'Thiếu linh kiện';
+      btn.disabled = !can;
+      btn.onclick=()=>{
+        Object.keys(r.need).forEach(c=>{ S.components[c]-=r.need[c]; });
+        r.give();
+        addLog('Bạn đã chế tạo thành công: '+r.label+'.', '');
+        markActionDirty();
+        refreshAll(); render();
+      };
+      row.appendChild(btn);
+      list.appendChild(row);
+    });
+  }
+  render();
+  const closeBtn = document.createElement('button');
+  closeBtn.className='btn'; closeBtn.textContent='Đóng';
+  closeBtn.onclick=()=>modal.classList.add('hidden');
+  footer.appendChild(closeBtn);
+}
+
+function useUVLight(){
+  if(!S || S.inventory.uvlight<=0) return;
+  const dist = roomDistance(S.playerRoom, S.monsterRoom);
+  if(dist<=1){
+    S.inventory.uvlight--;
+    const far = ROOM_KEYS.filter(r=>r!==S.playerRoom && !isRoomSafe(r) && roomDistance(S.playerRoom,r)>=2);
+    S.monsterRoom = far.length ? pick(far) : S.monsterRoom;
+    S.invulnUntil = S.gameMinutes + 12;
+    addLog('💡 Bạn chiếu thẳng đèn UV vào The TIU — nó bị choáng và lùi ra xa!', '');
+  } else {
+    addLog('The TIU hiện không ở gần đây — đèn UV chưa phát huy tác dụng lúc này.', '');
+  }
+  markActionDirty();
+  refreshHud(); refreshActionPane();
+}
+
+function useNoiseTrap(){
+  if(!S || S.inventory.noisetrap<=0) return;
+  S.inventory.noisetrap--;
+  S.noiseTrap = {room:S.playerRoom, until:S.gameMinutes+70};
+  addLog('📢 Bạn đặt Bẫy gây nhiễu tại '+ROOM_DEF[S.playerRoom].name+' — The TIU có thể sẽ bị thu hút tới đó thay vì bạn.', '');
+  markActionDirty();
+  refreshHud(); refreshActionPane();
+}
+
+/* ============== NHIỆM VỤ ĐIỀU TRA PHỤ (Lore Sub-quests) ============== */
+function pickupLore(){
+  if(!S || !S.loreClues[S.playerRoom]) return;
+  const clueId = S.loreClues[S.playerRoom];
+  const clue = LORE_CLUES.find(c=>c.id===clueId);
+  delete S.loreClues[S.playerRoom];
+  campaignLoreFound.add(clueId);
+  addLog('📖 Bạn tìm thấy một manh mối ẩn tại '+ROOM_DEF[S.playerRoom].name+'. ('+campaignLoreFound.size+'/'+LORE_CLUES.length+')', '');
+  markActionDirty();
+  refreshHud(); refreshActionPane();
+  showLoreOverlay(clue);
+}
+
+function showLoreOverlay(clue){
+  if(!clue) return;
+  const modal = document.getElementById('mgModal');
+  modal.classList.remove('hidden');
+  document.getElementById('mgTitle').textContent = '📖 '+clue.title;
+  document.getElementById('mgTimer').textContent = '';
+  const body = document.getElementById('mgBody');
+  const footer = document.getElementById('mgFooter');
+  footer.innerHTML = '';
+  body.innerHTML = `<p style="font-size:13px;line-height:1.7;color:var(--text-main,#ddd);">${clue.text}</p>`;
+  const closeBtn = document.createElement('button');
+  closeBtn.className='btn primary'; closeBtn.textContent='Đóng';
+  closeBtn.onclick=()=>modal.classList.add('hidden');
+  footer.appendChild(closeBtn);
+}
+
+/* ============== GIAI ĐOẠN ĐÊM: BIẾN CỐ TRUNG TÂM & SĂN ĐUỔI DỒN DẬP ============== */
+function edgeKey(a,b){ return [a,b].sort().join('|'); }
+function isEdgeLocked(a,b){ return !!(S && S.lockedDoors[edgeKey(a,b)]); }
+
+function checkPhaseTransition(){
+  const newPhase = getPhase(S.gameMinutes);
+  if(newPhase === S.phase) return;
+  S.phase = newPhase;
+  markActionDirty();
+  if(newPhase===2 && !S.gridIncidentDone && !S.gridIncidentActive) triggerGridIncident();
+  if(newPhase===3 && !S.frenzyStarted) startFrenzy();
+}
+
+function triggerGridIncident(){
+  S.gridDown = true;
+  S.gridIncidentActive = true;
+  addLog('⚡ BIẾN CỐ: Toàn trường mất điện đột ngột! Hãy đến TÒA C (Phòng Kỹ Thuật) để khởi động lại cầu dao tổng trước khi The TIU lợi dụng bóng tối!', 'danger');
+  S.activeEvents['C'] = {deadline: S.gameMinutes+99999, start:S.gameMinutes, mandatory:true, gridEvent:true};
+  markActionDirty();
+}
+
+function startFrenzy(){
+  S.frenzyStarted = true;
+  addLog('🌒 The TIU bước vào trạng thái CUỒNG NỘ — di chuyển nhanh hơn hẳn! Một số cửa nối giữa các tòa vừa bị khóa.', 'danger');
+  lockRandomDoors();
+  markActionDirty();
+}
+
+function lockRandomDoors(){
+  const edges = [];
+  const seen = new Set();
+  ROOM_KEYS.forEach(a=>{
+    if(ROOM_DEF[a].safe) return;
+    ROOM_DEF[a].connects.forEach(b=>{
+      if(ROOM_DEF[b].safe) return;
+      const k = edgeKey(a,b);
+      if(!seen.has(k)){ seen.add(k); edges.push([a,b]); }
+    });
+  });
+  const shuffled = shuffle(edges.slice());
+  function graphConnected(extraLocked){
+    const start = ROOM_KEYS[0];
+    const visited = new Set([start]);
+    const queue = [start];
+    while(queue.length){
+      const node = queue.shift();
+      for(const nb of ROOM_DEF[node].connects){
+        if(visited.has(nb)) continue;
+        if(extraLocked.has(edgeKey(node,nb))) continue;
+        visited.add(nb); queue.push(nb);
+      }
+    }
+    return visited.size === ROOM_KEYS.length;
+  }
+  const locked = new Set();
+  let target = Math.min(2, shuffled.length);
+  for(const [a,b] of shuffled){
+    if(locked.size >= target) break;
+    const trial = new Set(locked); trial.add(edgeKey(a,b));
+    if(graphConnected(trial)) locked.add(edgeKey(a,b));
+  }
+  locked.forEach(k=>{ S.lockedDoors[k] = true; });
+}
+
+function attemptUnlockDoor(dest){
+  if(!S || !S.running || S.paused) return;
+  const modal = document.getElementById('mgModal');
+  document.getElementById('mapModal').classList.add('hidden');
+  modal.classList.remove('hidden');
+  document.getElementById('mgTitle').textContent = '🔒 CỬA BỊ KHÓA — đường đến '+ROOM_DEF[dest].name;
+  const body = document.getElementById('mgBody');
+  const footer = document.getElementById('mgFooter');
+  footer.innerHTML = '';
+  const timerEl = document.getElementById('mgTimer');
+  body.innerHTML = `<p style="font-size:12px;color:var(--text-dim);">Ổ khóa đã bị The TIU phá hỏng cơ chế — bấm liên tục GIỰT KHÓA để bật nó ra trước khi hết giờ!</p>
+    <div style="text-align:center;margin:16px 0;"><div style="height:14px;border:2px solid var(--line);border-radius:6px;overflow:hidden;max-width:260px;margin:0 auto;"><div id="lockProgressFill" style="height:100%;width:0%;background:var(--scan);transition:width .12s;"></div></div></div>`;
+  const fillEl = body.querySelector('#lockProgressFill');
+  const btn = document.createElement('button');
+  btn.className='btn primary'; btn.textContent='GIỰT KHÓA';
+  const needed = 3;
+  let progress = 0, timeLeft = 8, timerHandle = null, done=false;
+  startMinigamePressureFx(document.getElementById('mgBox'));
+  function cleanup(){
+    clearInterval(timerHandle);
+    stopMinigamePressureFx();
+    modal.classList.add('hidden');
+  }
+  function succeed(){
+    if(done) return; done=true;
+    cleanup();
+    delete S.lockedDoors[edgeKey(S.playerRoom,dest)];
+    addLog('Bạn đã gỡ khóa thành công! Cửa nối '+ROOM_DEF[S.playerRoom].name+' - '+ROOM_DEF[dest].name+' đã mở.', '');
+    movePlayer(dest);
+  }
+  function fail(){
+    if(done) return; done=true;
+    cleanup();
+    S.meter = Math.min(100, S.meter+8);
+    addLog('Bạn không kịp gỡ khóa — tiếng động thu hút The TIU đến gần hơn!', 'warn');
+    if(S.gameMinutes>=S.breakerUntil && Math.random()<0.5){
+      const path = bfsPath(S.monsterRoom, S.playerRoom, !S.enraged);
+      if(path && path.length>1){ S.monsterRoom = path[1]; }
+    }
+    markActionDirty();
+    refreshAll();
+  }
+  btn.onclick=()=>{
+    if(done) return;
+    progress++;
+    fillEl.style.width = Math.min(100, progress/needed*100)+'%';
+    if(progress>=needed) succeed();
+  };
+  footer.appendChild(btn);
+  timerEl.textContent = 'Thời gian còn lại: '+timeLeft+'s';
+  timerHandle = setInterval(()=>{
+    timeLeft--;
+    timerEl.textContent = 'Thời gian còn lại: '+timeLeft+'s';
+    if(timeLeft<=0) fail();
+  }, 1000);
 }
 
 /* ============== EPILOGUE — BUỔI SÁNG SAU CÙNG ==============
@@ -773,6 +1121,7 @@ function eventLabel(ev){
 function onRoomClick(k){
   if(k===S.playerRoom) return;
   if(!ROOM_DEF[S.playerRoom].connects.includes(k)) return;
+  if(isEdgeLocked(S.playerRoom, k)){ attemptUnlockDoor(k); return; }
   movePlayer(k);
   document.getElementById('mapModal').classList.add('hidden');
 }
@@ -805,6 +1154,9 @@ function movePlayer(dest){
 
 /* ============== WORLD / EVENTS / MONSTER ============== */
 function advanceWorld(minutesPassed){
+  // --- Giai đoạn đêm: kiểm tra xem đã bước sang mốc mới chưa ---
+  checkPhaseTransition();
+
   // decay meter slowly (chậm hơn khi đang Huyết Nguyệt)
   if(!S.enraged){
     S.meter = Math.max(0, S.meter - NIGHT_CFG[S.night].meterDecay*minutesPassed);
@@ -841,13 +1193,34 @@ function advanceWorld(minutesPassed){
     }
   }
 
-  // expire unresolved events -> ignored penalty
+  // expire unresolved events -> ignored penalty (không áp dụng cho sự cố bắt buộc gridEvent)
   for(const room in S.activeEvents){
-    if(S.gameMinutes >= S.activeEvents[room].deadline){
+    const ev0 = S.activeEvents[room];
+    if(!ev0.mandatory && S.gameMinutes >= ev0.deadline){
       delete S.activeEvents[room];
       S.meter = Math.min(100, S.meter + NIGHT_CFG[S.night].meterGainIgnore);
       addLog('Sự cố tại '+ROOM_DEF[room].name+' đã bị bỏ lỡ! The TIU trở nên bất ổn hơn.','warn');
       markActionDirty();
+    }
+  }
+
+  // --- Biến cố môi trường & ảo giác: sự cố dây chuyền lan sang phòng liền kề nếu để quá lâu ---
+  for(const room in S.activeEvents){
+    const ev = S.activeEvents[room];
+    if(ev.mandatory || ev.chainChecked) continue;
+    const total = ev.deadline - ev.start;
+    const elapsed = S.gameMinutes - ev.start;
+    if(total>0 && elapsed/total >= 0.5){
+      ev.chainChecked = true;
+      if(Math.random() < 0.45){
+        const candidates = ROOM_DEF[room].connects.filter(r=>!ROOM_DEF[r].safe && !ROOM_DEF[r].noEvent && !S.activeEvents[r]);
+        if(candidates.length){
+          const spread = pick(candidates);
+          S.activeEvents[spread] = {deadline: S.gameMinutes + rand(45,70), start: S.gameMinutes, chainedFrom: room};
+          addLog('🔥 Sự cố dây chuyền! '+ROOM_DEF[room].name+' quá tải và lan sự cố sang '+ROOM_DEF[spread].name+'!', 'danger');
+          markActionDirty();
+        }
+      }
     }
   }
 
@@ -864,7 +1237,7 @@ function advanceWorld(minutesPassed){
   let guard=0;
   while(S.nextMonsterMoveAt<=0 && guard<6){
     moveMonster();
-    const factor = NIGHT_CFG[S.night].meterMoveSpeedFactor;
+    const factor = NIGHT_CFG[S.night].meterMoveSpeedFactor * (S.gridDown?1.35:1) * (S.phase===3?1.6:1);
     const meterSpeed = 1/(1 + S.meter/140);
     S.nextMonsterMoveAt += rand(...NIGHT_CFG[S.night].monsterMoveEvery) * meterSpeed / factor;
     guard++;
@@ -883,7 +1256,7 @@ function spawnEvent(){
     room = near.length ? pick(near) : null;
   }
   if(!room) return;
-  S.activeEvents[room] = {deadline: S.gameMinutes + rand(70,110)};
+  S.activeEvents[room] = {deadline: S.gameMinutes + rand(70,110), start: S.gameMinutes};
   addLog('⚠ The TIU gây ra sự cố tại '+ROOM_DEF[room].name+': '+eventLabel(ROOM_DEF[room].event)+'!','warn');
 }
 
@@ -1010,6 +1383,25 @@ function updateProximityAudio(){
 function moveMonster(){
   if(S.gameMinutes < S.breakerUntil) return; // cầu dao đã ngắt: TIU bị vô hiệu hóa
   const from = S.monsterRoom;
+
+  // --- Bẫy gây nhiễu: TIU bị thu hút về phía bẫy thay vì hành vi bình thường ---
+  if(S.noiseTrap){
+    if(S.gameMinutes >= S.noiseTrap.until){
+      S.noiseTrap = null;
+    } else if(from === S.noiseTrap.room){
+      S.noiseTrap = null; // đã đến nơi -> bẫy tiêu hao
+    } else {
+      const path = bfsPath(from, S.noiseTrap.room, !S.enraged);
+      if(path && path.length>1){
+        S.monsterRoom = path[1];
+        S.lastSeenRoom = from;
+        S.lastSeenAt = S.gameMinutes;
+        addLog('The TIU bị tiếng ồn từ Bẫy gây nhiễu thu hút và lao về phía '+ROOM_DEF[S.noiseTrap.room].name+'...', 'tiu');
+        return;
+      }
+    }
+  }
+
   let opts = ROOM_DEF[from].connects.filter(r=>!isRoomSafe(r));
   if(opts.length===0) opts = ROOM_DEF[from].connects.slice();
   let next;
@@ -1145,7 +1537,7 @@ function tick(now){
       advanceWorld(dGameMin);
       if(!S.running){ refreshHud(); refreshMap(); rafId = requestAnimationFrame(tick); return; }
       checkEncounter();
-      document.getElementById('blackout').classList.toggle('on', S.gameMinutes < S.breakerUntil);
+      document.getElementById('blackout').classList.toggle('on', S.gameMinutes < S.breakerUntil || S.gridDown);
       document.getElementById('meterOuter').classList.toggle('enraged', S.enraged);
       setRoomTitleGlitch(S.enraged);
       refreshHud();
@@ -1215,9 +1607,12 @@ function stopMinigamePressureFx(){
 
 function startMinigame(room){
   const ev = ROOM_DEF[room].event;
+  const isGridEvent = !!(S.activeEvents[room] && S.activeEvents[room].gridEvent);
   const modal = document.getElementById('mgModal');
   modal.classList.remove('hidden');
-  document.getElementById('mgTitle').textContent = eventLabel(ev)+' — '+ROOM_DEF[room].name;
+  document.getElementById('mgTitle').textContent = isGridEvent
+    ? '⚡ KHỞI ĐỘNG LẠI CẦU DAO TỔNG — '+ROOM_DEF[room].name
+    : eventLabel(ev)+' — '+ROOM_DEF[room].name;
   const body = document.getElementById('mgBody');
   const footer = document.getElementById('mgFooter');
   body.innerHTML=''; footer.innerHTML='';
@@ -1234,6 +1629,13 @@ function startMinigame(room){
       S.points += 10 + S.night*5;
       S.meter = Math.max(0, S.meter - 6);
       addLog('Bạn đã xử lý xong sự cố tại '+ROOM_DEF[room].name+'. (+điểm, giảm mức hoạt động)','');
+      if(isGridEvent){
+        S.gridDown = false;
+        S.gridIncidentActive = false;
+        S.gridIncidentDone = true;
+        S.points += 25;
+        addLog('✅ Bạn đã khởi động lại cầu dao tổng — điện đã có trở lại toàn trường!', '');
+      }
     } else {
       S.meter = Math.min(100, S.meter + NIGHT_CFG[S.night].meterGainFail);
       addLog('Bạn thất bại ở sự cố tại '+ROOM_DEF[room].name+'! The TIU trở nên bất ổn hơn.','warn');
@@ -1246,7 +1648,13 @@ function startMinigame(room){
         S.lastSeenAt = S.gameMinutes;
         addLog('The TIU bị thu hút bởi sự hỗn loạn và nhảy cóc đến gần '+ROOM_DEF[room].name+'!','tiu');
       }
+      if(isGridEvent){
+        // Sự cố bắt buộc: phải thử lại, không được coi là đã bỏ lỡ
+        S.activeEvents[room] = {deadline: S.gameMinutes+99999, start:S.gameMinutes, mandatory:true, gridEvent:true};
+        addLog('Bạn thất bại khi khởi động lại cầu dao — điện vẫn mất, hãy quay lại Tòa C để thử lại!', 'danger');
+      }
     }
+    markActionDirty();
     refreshAll();
   }
 
@@ -1570,9 +1978,8 @@ function openShop(){
       <div class="shopItem"><span>Bim Bim (hồi 1 HP) — 20đ <span style="color:${bimOut?'var(--blood-bright)':'var(--text-dim)'};font-size:11px;">(còn ${bimLeft}/${bimLimit} suất đêm nay)</span></span><button class="btn primary" id="buyBim" ${bimOut?'disabled':''}>${bimOut?'Hết hàng':'Mua'}</button></div>
       <div class="shopItem"><span>Nước tăng lực (buff tốc độ) — 15đ</span><button class="btn primary" id="buyWater">Mua</button></div>
       <div class="shopItem"><span>Suất ăn khuya (+50 Thể lực) — 10đ</span><button class="btn primary" id="buyFood">Mua</button></div>
-      <div class="shopItem"><span>Camera Sinh viên (định vị TIU 3 lượt) — 100đ</span><button class="btn primary" id="buyCam">Mua</button></div>
-      <div class="shopItem"><span>Sập Cầu Dao (vô hiệu hóa TIU 60p) — 150đ</span><button class="btn primary" id="buyBreaker">Mua</button></div>
-    </div>`;
+    </div>
+    <p style="font-size:11px;color:var(--text-dim);margin-top:10px;">Căn tin đã hết hàng cho Camera Sinh viên, Sập Cầu Dao, Đèn UV và Bẫy gây nhiễu — hãy tự nhặt linh kiện rải rác quanh khuôn viên và ghé <b>Bàn chế tạo</b> để tự làm ra chúng.</p>`;
     document.getElementById('buyBim').onclick=()=>{
       if(S.bimbimBoughtTonight >= bimLimit){
         addLog('Căn tin đã hết suất Bim Bim đêm nay — bạn buộc phải tự xoay sở ngoài kia!','warn');
@@ -1589,12 +1996,6 @@ function openShop(){
     };
     document.getElementById('buyFood').onclick=()=>{
       if(S.points>=10){ S.points-=10; S.stamina=Math.min(100,S.stamina+50); addLog('Bạn ăn một suất ăn khuya, hồi thể lực.',''); refreshAll(); render(); }
-    };
-    document.getElementById('buyCam').onclick=()=>{
-      if(S.points>=100){ S.points-=100; S.inventory.camera++; addLog('Bạn mua Camera Sinh viên tại Căn tin.',''); refreshAll(); render(); }
-    };
-    document.getElementById('buyBreaker').onclick=()=>{
-      if(S.points>=150){ S.points-=150; S.inventory.breaker++; addLog('Bạn mua một bộ Sập Cầu Dao tại Căn tin.',''); refreshAll(); render(); }
     };
   }
   render();
@@ -2338,6 +2739,7 @@ function beginNight(n, standalone){
   if(n===1){
     campaignLaPeace = 0; // mỗi lượt chơi mới (từ Đêm 1) reset lại số La Peace đã nhặt
     campaignNpcTalks = { E: new Set(), B: new Set() }; // ... và reset lại tiến độ tin tưởng NPC
+    campaignLoreFound = new Set(); // ... và reset lại các manh mối đã tìm thấy
   }
   S = freshState(n);
   S.standalone = !!standalone;
@@ -2379,7 +2781,9 @@ const CHAPTER_INTRO = {
     Mỗi đêm trôi qua từ 00:00 đến 07:30 (kéo dài khoảng 15 phút thực tế). Mỗi khu vực sẽ phát sinh sự cố ngẫu nhiên — bỏ lỡ hoặc làm hỏng
     sẽ khiến <b style="color:var(--blood-bright)">The TIU</b> hoạt động mạnh hơn và dễ phát hiện ra bạn hơn. Nếu bạn đứng cùng tòa với The TIU, bạn sẽ bị jumpscare
     và mất 1 HP. Mất 3 HP là thua. <b>Căn tin chỉ an toàn khi mở cửa</b> (01:00-02:00 &amp; 04:00-05:00) — nán lại đó quá lâu cũng khiến bạn cạn <b>Thể lực</b> và bị đói.
-    Khi thanh mức độ hoạt động chạm 100%, <b style="color:var(--blood-bright)">Huyết Nguyệt</b> sẽ kích hoạt và không nơi nào còn an toàn. Hãy để ý các sinh viên khác cũng đang lén ở lại trong khuôn viên — họ có thể giúp bạn.
+    Khi thanh mức độ hoạt động chạm 100%, <b style="color:var(--blood-bright)">Huyết Nguyệt</b> sẽ kích hoạt và không nơi nào còn an toàn. Hãy để ý các sinh viên khác cũng đang lén ở lại trong khuôn viên — họ có thể giúp bạn.</p>
+    <p>Mỗi đêm chia làm 3 giai đoạn: <b>Khởi động</b> (tuần tra, thu gom linh kiện), <b>Biến cố trung tâm</b> (mất điện toàn trường — phải chạy đến <b>Tòa C</b> khởi động lại cầu dao tổng), rồi <b>Săn đuổi dồn dập</b> (The TIU nhanh hơn hẳn và một số cửa bị khóa, cần gỡ khóa hoặc đi vòng).
+    Hãy nhặt <b>linh kiện</b> (pin cũ, dây điện, băng keo, ống thép) rải rác trong các góc tối rồi ghé <b>Bàn chế tạo</b> ở Căn tin để tự chế Camera, Cầu dao, Đèn UV hay Bẫy gây nhiễu. Đừng quên tìm các <b>manh mối</b> ẩn (nhật ký, đĩa ghi âm, mật mã) để hiểu thêm về The TIU.
     Bấm <b>ESC</b> khi đang chơi để mở bảng tạm dừng.</p>`
   }
 };
