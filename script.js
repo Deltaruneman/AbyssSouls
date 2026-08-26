@@ -159,10 +159,10 @@ const CRAFTING_RECIPES = {
 
 /* ---- Nhiệm vụ điều tra phụ (Lore Sub-quests) ---- */
 const LORE_CLUES = [
-  {id:'diary1', title:'Nhật ký cũ — Trang xé vội', text:'"...tôi thấy nó lần đầu tiên ở hành lang Tòa E, ánh mắt nó không giống người..."'},
+  {id:'diary1', title:'Nhật ký cũ — Trang giấy xé vội', text:'"...tôi thấy nó lần đầu tiên ở hành lang Tòa E, một thực thể kì dị..."'},
   {id:'audio1', title:'Đĩa ghi âm bảo vệ ca đêm', text:'Giọng nói rè rè phát ra từ chiếc đĩa cũ: "...báo cáo 2 giờ 15, phát hiện tiếng động lạ tại Tòa C, sau đó... [tạp âm]..."'},
-  {id:'safe1', title:'Mật mã két sắt phòng quản lý', text:'Một mảnh giấy nhàu nát ghi vội: "Mã két: 0 - 4 - 1 - 9. Đừng để ai khác thấy cái này."'},
-  {id:'diary2', title:'Nhật ký cũ — Trang thứ hai', text:'"...The TIU không phải lúc nào cũng như vậy. Có ai đó đã làm gì với nó, từ rất lâu rồi..."'},
+  {id:'safe1', title:'Mật mã két sắt phòng quản lý', text:'Một mảnh giấy nhàu nát ghi vội: "Mã két: 0 - 4 - 1 - 9."'},
+  {id:'diary2', title:'Nhật ký cũ — Trang giấy thứ hai', text:'"...The TIU không phải lúc nào cũng như vậy. Có ai đó đã làm gì với nó, từ rất lâu rồi..."'},
   {id:'audio2', title:'Đoạn ghi âm cuối cùng', text:'"...nếu ai nghe được đoạn này, đừng xuống Tòa C một mình sau 1 giờ sáng. Đừng đi một mình..."'},
   {id:'note1', title:'Mẩu giấy nhét trong sách thư viện', text:'"Ba mảnh La Peace có thể xoa dịu nó. Nhưng phải có đủ cả ba, không thể thiếu một."'}
 ];
@@ -171,6 +171,34 @@ const LORE_CLUES = [
    lại từ Đêm 1 (giống campaignLaPeace / campaignNpcTalks). */
 let campaignLoreFound = new Set();
 
+/* ---- Túi đồ: thông tin hiển thị (tên/mô tả) cho từng loại vật phẩm & linh kiện ---- */
+const ITEM_META = {
+  bimbim:    {name:'Bim Bim',              icon:'🍟', desc:'Đồ ăn vặt — dùng ngay để hồi 1 HP.'},
+  water:     {name:'Nước tăng lực',        icon:'🥤', desc:'Uống để tăng tốc di chuyển và giảm hao thể lực trong 90 phút game, nhưng bước chân sẽ ồn hơn.'},
+  camera:    {name:'Camera Sinh viên',     icon:'📷', desc:'Định vị trực tiếp The TIU trên sơ đồ trong 3 lượt di chuyển tiếp theo.'},
+  breaker:   {name:'Bộ Sập Cầu Dao',       icon:'⚡', desc:'Ngắt điện toàn khuôn viên, vô hiệu hóa The TIU trong 60 phút — nhưng bạn phải di chuyển trong bóng tối.'},
+  uvlight:   {name:'Đèn chiếu UV',         icon:'💡', desc:'Làm choáng và đẩy lùi The TIU nếu nó đang ở gần bạn.'},
+  noisetrap: {name:'Bẫy gây nhiễu',        icon:'📢', desc:'Đặt tại phòng hiện tại để thu hút The TIU đi nơi khác.'}
+};
+const COMPONENT_META = {
+  pin:  {name:'Pin cũ',    icon:'🔋', desc:'Nguyên liệu chế tạo. Đem tới Bàn chế tạo trong khu an toàn để làm ra vật phẩm.'},
+  wire: {name:'Dây điện',  icon:'🔌', desc:'Nguyên liệu chế tạo. Đem tới Bàn chế tạo trong khu an toàn để làm ra vật phẩm.'},
+  tape: {name:'Băng keo',  icon:'🧷', desc:'Nguyên liệu chế tạo. Đem tới Bàn chế tạo trong khu an toàn để làm ra vật phẩm.'},
+  pipe: {name:'Ống thép',  icon:'🔧', desc:'Nguyên liệu chế tạo. Đem tới Bàn chế tạo trong khu an toàn để làm ra vật phẩm.'}
+};
+
+/* Vật phẩm/linh kiện được giữ lại xuyên suốt các đêm của một lượt chơi thường (đêm 1 -> 3).
+   Được ghi lại mỗi khi thắng một đêm, áp dụng lại khi đêm tiếp theo (hoặc lúc retry sau khi
+   thua) bắt đầu. Reset về null khi bắt đầu lại hẳn từ Đêm 1. Vật phẩm ở chế độ chơi lẻ từng
+   đêm (standalone, chọn qua "CHỌN MÀN") KHÔNG dùng cơ chế này — luôn bắt đầu với vật phẩm mặc định. */
+let campaignCarry = null;
+
+/* ---- Lưu game (localStorage) ----
+   Cơ chế lưu/tải toàn bộ tiến trình (đêm hiện tại, vật phẩm, linh kiện, tiến độ manh mối/NPC...)
+   để có thể tiếp tục sau khi đóng trình duyệt. Có thể bấm lưu/tải thủ công trong CÀI ĐẶT, và
+   game cũng tự lưu mỗi khi có thay đổi (nhặt/dùng vật phẩm, di chuyển, bắt đầu đêm mới...). */
+const SAVE_KEY = 'uit_savegame_v1';
+
 function pickDistinctRooms(pool, n){
   const arr = shuffle(pool.slice());
   return arr.slice(0, Math.min(n, arr.length));
@@ -178,6 +206,68 @@ function pickDistinctRooms(pool, n){
 
 /* ============== STATE ============== */
 let S = null;
+
+/* ---- Lưu / Tải game ---- */
+function serializeSave(){
+  if(!S) return null;
+  return {
+    v: 1,
+    savedAt: Date.now(),
+    state: S,
+    campaign: {
+      laPeace: campaignLaPeace,
+      npcTalksE: Array.from(campaignNpcTalks.E),
+      npcTalksB: Array.from(campaignNpcTalks.B),
+      loreFound: Array.from(campaignLoreFound),
+      carry: campaignCarry
+    }
+  };
+}
+function persistSave(){
+  if(!S || !S.running) return;
+  try{
+    const data = serializeSave();
+    if(data) localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+  }catch(e){}
+}
+let _autoSaveTimer = null;
+function scheduleAutoSave(){
+  if(_autoSaveTimer) clearTimeout(_autoSaveTimer);
+  _autoSaveTimer = setTimeout(persistSave, 800);
+}
+function readSaveGame(){
+  try{
+    const raw = localStorage.getItem(SAVE_KEY);
+    if(!raw) return null;
+    return JSON.parse(raw);
+  }catch(e){ return null; }
+}
+function hasSaveGame(){ return !!readSaveGame(); }
+function deleteSaveGame(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} }
+function loadGame(){
+  const data = readSaveGame();
+  if(!data || !data.state) return false;
+  S = data.state;
+  S.lastTick = performance.now();
+  campaignLaPeace = (data.campaign && data.campaign.laPeace) || 0;
+  campaignNpcTalks = {
+    E: new Set((data.campaign && data.campaign.npcTalksE) || []),
+    B: new Set((data.campaign && data.campaign.npcTalksB) || [])
+  };
+  campaignLoreFound = new Set((data.campaign && data.campaign.loreFound) || []);
+  campaignCarry = (data.campaign && data.campaign.carry) || null;
+  buildMap();
+  hideAllOverlays();
+  document.getElementById('pauseMenu').classList.add('hidden');
+  document.getElementById('meterOuter').classList.remove('epi-hide');
+  document.getElementById('staminaOuter').classList.remove('epi-hide');
+  setRoomTitleGlitch(!!S.enraged);
+  refreshAll();
+  updateBlackoutUI();
+  refreshBagBadge();
+  addLog('📂 Đã tải lại tiến trình đã lưu.', '');
+  return true;
+}
 
 function freshState(night){
   const startRoom = ROOM_KEYS[Math.floor(Math.random()*ROOM_KEYS.length)];
@@ -515,7 +605,7 @@ function refreshHud(){
 
 /* ============== ACTION PANE ============== */
 let actionPaneDirty = true;
-function markActionDirty(){ actionPaneDirty = true; }
+function markActionDirty(){ actionPaneDirty = true; scheduleAutoSave(); refreshBagBadge(); }
 
 function roomDescExtras(def){
   let desc = def.sub;
@@ -648,56 +738,29 @@ function refreshActionPane(){
   const useBim=document.createElement('button');
   useBim.className='btn danger';
   useBim.textContent='Dùng Bim Bim (+1 HP)';
-  useBim.disabled = S.inventory.bimbim<=0 || S.hp>=3;
-  useBim.onclick=()=>{
-    if(S.inventory.bimbim>0 && S.hp<3){
-      S.inventory.bimbim--; S.hp++; addLog('Bạn ăn Bim Bim, hồi 1 HP.','');
-      markActionDirty();
-      refreshHud(); refreshActionPane();
-    }
-  };
+  useBim.disabled = !canUseBimBim();
+  useBim.onclick=()=>{ useBimBim(); refreshActionPane(); };
   itemGroup.row.appendChild(useBim);
 
   const useWater=document.createElement('button');
   useWater.className='btn';
   useWater.textContent='Uống Nước tăng lực (buff tốc độ, đỡ hao thể lực, gây tiếng ồn)';
-  useWater.disabled = S.inventory.water<=0;
-  useWater.onclick=()=>{
-    if(S.inventory.water>0){
-      S.inventory.water--; S.speedBuffUntil = S.gameMinutes + 90;
-      addLog('Bạn uống Nước tăng lực — di chuyển nhanh hơn và chỉ tốn '+MOVE_STAMINA_COST_BUFFED+'% thể lực mỗi lần di chuyển trong 90 phút, nhưng bước chân sẽ ồn hơn.','');
-      markActionDirty();
-      refreshHud(); refreshActionPane();
-    }
-  };
+  useWater.disabled = !canUseWater();
+  useWater.onclick=()=>{ useWaterBoost(); refreshActionPane(); };
   itemGroup.row.appendChild(useWater);
 
   const useCam=document.createElement('button');
   useCam.className='btn';
   useCam.textContent='Dùng Camera Sinh viên (định vị TIU 3 lượt)';
-  useCam.disabled = S.inventory.camera<=0 || S.cameraMovesLeft>0;
-  useCam.onclick=()=>{
-    if(S.inventory.camera>0 && S.cameraMovesLeft<=0){
-      S.inventory.camera--; S.cameraMovesLeft = 3;
-      addLog('Bạn bật Camera Sinh viên — theo dõi trực tiếp The TIU trong 3 lượt di chuyển tới.','');
-      markActionDirty();
-      refreshHud(); refreshMap(); refreshActionPane();
-    }
-  };
+  useCam.disabled = !canUseCamera();
+  useCam.onclick=()=>{ useCameraItem(); refreshActionPane(); };
   itemGroup.row.appendChild(useCam);
 
   const useBreaker=document.createElement('button');
   useBreaker.className='btn danger';
   useBreaker.textContent='Sập Cầu Dao (vô hiệu hóa TIU 60p, tối màn hình)';
-  useBreaker.disabled = S.inventory.breaker<=0 || S.gameMinutes<S.breakerUntil;
-  useBreaker.onclick=()=>{
-    if(S.inventory.breaker>0 && S.gameMinutes>=S.breakerUntil){
-      S.inventory.breaker--; S.breakerUntil = S.gameMinutes + 60;
-      addLog('RẦM! Bạn sập cầu dao — toàn khuôn viên mất điện. The TIU bị vô hiệu hóa 60 phút, nhưng bạn phải di chuyển mù.','warn');
-      markActionDirty();
-      refreshHud(); refreshActionPane();
-    }
-  };
+  useBreaker.disabled = !canUseBreakerItem();
+  useBreaker.onclick=()=>{ useBreakerItem(); refreshActionPane(); };
   itemGroup.row.appendChild(useBreaker);
 
   const useUV=document.createElement('button');
@@ -829,6 +892,35 @@ function openCraftBench(){
   footer.appendChild(closeBtn);
 }
 
+/* ---- Vật phẩm dùng trực tiếp (dùng chung cho action pane & Túi đồ) ---- */
+function canUseBimBim(){ return !!S && S.inventory.bimbim>0 && S.hp<3; }
+function useBimBim(){
+  if(!canUseBimBim()) return;
+  S.inventory.bimbim--; S.hp++; addLog('Bạn ăn Bim Bim, hồi 1 HP.','');
+  markActionDirty(); refreshHud();
+}
+function canUseWater(){ return !!S && S.inventory.water>0; }
+function useWaterBoost(){
+  if(!canUseWater()) return;
+  S.inventory.water--; S.speedBuffUntil = S.gameMinutes + 90;
+  addLog('Bạn uống Nước tăng lực — di chuyển nhanh hơn và chỉ tốn '+MOVE_STAMINA_COST_BUFFED+'% thể lực mỗi lần di chuyển trong 90 phút, nhưng bước chân sẽ ồn hơn.','');
+  markActionDirty(); refreshHud();
+}
+function canUseCamera(){ return !!S && S.inventory.camera>0 && S.cameraMovesLeft<=0; }
+function useCameraItem(){
+  if(!canUseCamera()) return;
+  S.inventory.camera--; S.cameraMovesLeft = 3;
+  addLog('Bạn bật Camera Sinh viên — theo dõi trực tiếp The TIU trong 3 lượt di chuyển tới.','');
+  markActionDirty(); refreshHud(); refreshMap();
+}
+function canUseBreakerItem(){ return !!S && S.inventory.breaker>0 && S.gameMinutes>=S.breakerUntil; }
+function useBreakerItem(){
+  if(!canUseBreakerItem()) return;
+  S.inventory.breaker--; S.breakerUntil = S.gameMinutes + 60;
+  addLog('RẦM! Bạn sập cầu dao — toàn khuôn viên mất điện. The TIU bị vô hiệu hóa 60 phút, nhưng bạn phải di chuyển mù.','warn');
+  markActionDirty(); refreshHud();
+}
+
 function useUVLight(){
   if(!S || S.inventory.uvlight<=0) return;
   const dist = roomDistance(S.playerRoom, S.monsterRoom);
@@ -852,6 +944,89 @@ function useNoiseTrap(){
   addLog('📢 Bạn đặt Bẫy gây nhiễu tại '+ROOM_DEF[S.playerRoom].name+' — The TIU có thể sẽ bị thu hút tới đó thay vì bạn.', '');
   markActionDirty();
   refreshHud(); refreshActionPane();
+}
+
+/* ============== TÚI ĐỒ ============== */
+/* Bấm nút 🎒 ở HUD (mọi lúc trong đêm) để mở overlay liệt kê toàn bộ vật phẩm & linh kiện
+   đang có: tên, mô tả, số lượng và nút Dùng (nếu vật phẩm đó dùng được ngay). */
+function bagTotalCount(){
+  if(!S) return 0;
+  let n = 0;
+  Object.keys(ITEM_META).forEach(k=> n += (S.inventory[k]||0));
+  Object.keys(COMPONENT_META).forEach(k=> n += (S.components[k]||0));
+  return n;
+}
+function refreshBagBadge(){
+  const badge = document.getElementById('bagCountBadge');
+  if(badge) badge.textContent = String(bagTotalCount());
+}
+const BAG_ITEM_USE = {
+  bimbim:    { can: canUseBimBim,    use: useBimBim,    label: 'Dùng' },
+  water:     { can: canUseWater,     use: useWaterBoost, label: 'Dùng' },
+  camera:    { can: canUseCamera,    use: useCameraItem, label: 'Dùng' },
+  breaker:   { can: canUseBreakerItem, use: useBreakerItem, label: 'Dùng' },
+  uvlight:   { can: ()=> !!S && S.inventory.uvlight>0, use: useUVLight, label: 'Dùng' },
+  noisetrap: { can: ()=> !!S && S.inventory.noisetrap>0, use: useNoiseTrap, label: 'Đặt bẫy' }
+};
+function openBagModal(){
+  if(!S) return;
+  const modal = document.getElementById('mgModal');
+  modal.classList.remove('hidden');
+  document.getElementById('mgTitle').textContent = '🎒 TÚI ĐỒ';
+  document.getElementById('mgTimer').textContent = '';
+  const body = document.getElementById('mgBody');
+  const footer = document.getElementById('mgFooter');
+  footer.innerHTML = '';
+
+  function render(){
+    const rows = [];
+    Object.keys(ITEM_META).forEach(key=>{
+      const qty = S.inventory[key]||0;
+      const meta = ITEM_META[key];
+      const usable = BAG_ITEM_USE[key];
+      rows.push({key, meta, qty, usable});
+    });
+    Object.keys(COMPONENT_META).forEach(key=>{
+      const qty = S.components[key]||0;
+      const meta = COMPONENT_META[key];
+      rows.push({key, meta, qty, usable:null});
+    });
+    if(rows.every(r=>r.qty<=0)){
+      body.innerHTML = '<p style="font-size:12px;color:var(--text-dim);">Túi đồ hiện đang trống. Hãy đi tuần và thu gom vật phẩm quanh khuôn viên.</p>';
+      return;
+    }
+    body.innerHTML = '<div id="bagList"></div>';
+    const list = body.querySelector('#bagList');
+    rows.forEach(r=>{
+      const row = document.createElement('div');
+      row.className = 'bagItemRow';
+      row.innerHTML = `<div class="bagItemIcon">${r.meta.icon}</div>
+        <div class="bagItemInfo">
+          <div class="bagItemName">${r.meta.name}</div>
+          <div class="bagItemDesc">${r.meta.desc}</div>
+        </div>
+        <div class="bagItemQty">x${r.qty}</div>`;
+      if(r.usable){
+        const useBtn = document.createElement('button');
+        useBtn.className = 'btn primary';
+        useBtn.textContent = r.usable.label;
+        useBtn.disabled = r.qty<=0 || !r.usable.can();
+        useBtn.onclick = ()=>{
+          r.usable.use();
+          refreshActionPane();
+          refreshBagBadge();
+          render();
+        };
+        row.appendChild(useBtn);
+      }
+      list.appendChild(row);
+    });
+  }
+  render();
+  const closeBtn = document.createElement('button');
+  closeBtn.className='btn'; closeBtn.textContent='Đóng';
+  closeBtn.onclick=()=>modal.classList.add('hidden');
+  footer.appendChild(closeBtn);
 }
 
 /* ============== NHIỆM VỤ ĐIỀU TRA PHỤ (Lore Sub-quests) ============== */
@@ -1541,7 +1716,19 @@ function updateBlackoutUI(){
     expandBtn.disabled = blackedOut;
     expandBtn.textContent = blackedOut ? '⚡ Mất tín hiệu' : '⤢ Phóng to';
   }
+  updateBreakerFloatBtn();
   return blackedOut;
+}
+/* Nút nổi "KHỞI ĐỘNG LẠI CẦU DAO TỔNG": chỉ hiện khi đang có biến cố mất điện toàn trường
+   VÀ người chơi đang có mặt tại Tòa C — nổi lên trên cả lớp phủ tối (#blackout) để không bị
+   khuất trong bóng tối. */
+function updateBreakerFloatBtn(){
+  const btn = document.getElementById('breakerFloatBtn');
+  if(!btn) return;
+  const gridEv = !!(S && S.activeEvents && S.activeEvents.C && S.activeEvents.C.gridEvent);
+  const show = !!(S && S.running && !S.paused && !S.epilogue && S.gridDown && gridEv
+    && S.playerRoom==='C' && !isBlockingOverlayOpen());
+  btn.classList.toggle('show', show);
 }
 let rafId=null;
 let lastActionRebuild = 0;
@@ -2049,7 +2236,12 @@ function showEndScreen(){
     document.getElementById('winTitle').textContent='ĐÃ ĐẾN 7:30 SÁNG';
     document.getElementById('winSub').textContent=NIGHT_CFG[S.night].name+' hoàn thành với '+S.hp+' HP còn lại. Chuẩn bị cho đêm lẩn trốn tiếp theo — The TIU sẽ hung hãn hơn.';
     document.getElementById('nextNightBtn').textContent='BẮT ĐẦU ĐÊM '+(S.night+1);
-    document.getElementById('nextNightBtn').onclick=()=>{ document.getElementById('winScreen').classList.add('hidden'); beginNight(S.night+1); };
+    document.getElementById('nextNightBtn').onclick=()=>{
+      document.getElementById('winScreen').classList.add('hidden');
+      // Ghi lại vật phẩm & linh kiện còn giữ được để mang sang đêm tiếp theo.
+      campaignCarry = { inventory: Object.assign({}, S.inventory), components: Object.assign({}, S.components) };
+      beginNight(S.night+1);
+    };
   }
   document.getElementById('winScreen').classList.remove('hidden');
 }
@@ -2758,9 +2950,16 @@ function beginNight(n, standalone){
     campaignLaPeace = 0; // mỗi lượt chơi mới (từ Đêm 1) reset lại số La Peace đã nhặt
     campaignNpcTalks = { E: new Set(), B: new Set() }; // ... và reset lại tiến độ tin tưởng NPC
     campaignLoreFound = new Set(); // ... và reset lại các manh mối đã tìm thấy
+    campaignCarry = null; // ... và reset lại vật phẩm/linh kiện mang theo qua từng đêm
   }
   S = freshState(n);
   S.standalone = !!standalone;
+  // Vật phẩm & linh kiện được giữ lại xuyên suốt các đêm của một lượt chơi thường (không áp
+  // dụng cho chế độ chơi lẻ từng đêm qua "CHỌN MÀN", vốn luôn bắt đầu với vật phẩm mặc định).
+  if(!S.standalone && campaignCarry){
+    S.inventory = Object.assign({}, S.inventory, campaignCarry.inventory);
+    S.components = Object.assign({}, S.components, campaignCarry.components);
+  }
   addLog('Ca trực '+NIGHT_CFG[n].name+' bắt đầu lúc 00:00. Bạn xuất phát tại '+ROOM_DEF[S.playerRoom].name+'.','');
   buildMap();
   refreshAll();
@@ -2773,6 +2972,8 @@ function beginNight(n, standalone){
   document.getElementById('staminaOuter').classList.remove('epi-hide');
   setRoomTitleGlitch(false);
   updateBlackoutUI();
+  refreshBagBadge();
+  persistSave();
   playVN(VN_INTRO[n], ()=>{});
 }
 function hideAllOverlays(){
@@ -2783,6 +2984,12 @@ function hideAllOverlays(){
 function showTitle(){
   hideAllOverlays();
   document.getElementById('titleScreen').classList.remove('hidden');
+  refreshContinueBtn();
+}
+function refreshContinueBtn(){
+  const btn = document.getElementById('continueBtn');
+  if(!btn) return;
+  btn.classList.toggle('hidden', !hasSaveGame());
 }
 
 /* ---- Chapters: hiện tại chỉ có Chapter 1 (nội dung đầy đủ trong file này).
@@ -2904,6 +3111,65 @@ function buildSettings(){
       document.getElementById('crt').style.display = SETTINGS.crt ? '' : 'none';
     };
   });
+
+  buildSaveGameSection(wrap);
+}
+
+/* ---- Lưu / Tải game (trong CÀI ĐẶT) ---- */
+function buildSaveGameSection(wrap){
+  const block = document.createElement('div');
+  block.className = 'settingRow';
+  block.style.flexDirection = 'column';
+  block.style.alignItems = 'flex-start';
+  block.style.gap = '10px';
+  block.innerHTML = `
+    <div><div class="slabel">💾 Lưu / Tải game</div>
+      <div class="sdesc" id="saveStatusText">—</div></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn primary" id="saveGameBtn">Lưu game hiện tại</button>
+      <button class="btn" id="loadGameBtn">Tải game đã lưu</button>
+      <button class="btn danger" id="deleteSaveBtn">Xóa dữ liệu đã lưu</button>
+    </div>`;
+  wrap.appendChild(block);
+
+  const statusEl = block.querySelector('#saveStatusText');
+  const saveBtn = block.querySelector('#saveGameBtn');
+  const loadBtn = block.querySelector('#loadGameBtn');
+  const delBtn = block.querySelector('#deleteSaveBtn');
+
+  function refresh(){
+    saveBtn.disabled = !S || !S.running;
+    const data = readSaveGame();
+    if(data && data.state){
+      const d = new Date(data.savedAt);
+      const nightName = NIGHT_CFG[data.state.night] ? NIGHT_CFG[data.state.night].name : ('Đêm '+data.state.night);
+      statusEl.textContent = 'Đã lưu lúc '+d.toLocaleString('vi-VN')+' — '+nightName+', HP '+data.state.hp+'/3.';
+      loadBtn.disabled = false;
+      delBtn.disabled = false;
+    } else {
+      statusEl.textContent = 'Chưa có dữ liệu đã lưu.';
+      loadBtn.disabled = true;
+      delBtn.disabled = true;
+    }
+  }
+  refresh();
+
+  saveBtn.onclick = ()=>{
+    if(!S || !S.running) return;
+    persistSave();
+    addLog('💾 Đã lưu tiến trình game.', '');
+    refresh();
+  };
+  loadBtn.onclick = ()=>{
+    const ok = loadGame();
+    if(ok) return; // loadGame() đã tự ẩn hết overlay (kể cả màn Cài đặt) và vào lại game
+    refresh();
+  };
+  delBtn.onclick = ()=>{
+    deleteSaveGame();
+    refresh();
+    refreshContinueBtn();
+  };
 }
 
 let settingsOrigin = 'title'; // 'title' | 'pause' — controls where the "back" button on the Settings screen returns to
@@ -2986,9 +3252,7 @@ document.addEventListener('keydown', (e)=>{
   }
 });
 
-/* ---- CHEAT (dev/test): bấm phím "P" nhảy thẳng vào trận đánh boss bí mật / secret ending,
-   bỏ qua yêu cầu nhặt đủ 3 La Peace và tìm gặp Trọng. Chỉ hoạt động khi đang có 1 ván
-   đang chạy và chưa ở trong trận đánh khác. ---- */
+
 document.addEventListener('keydown', (e)=>{
   if(e.key !== 'p' && e.key !== 'P') return;
   if(e.ctrlKey || e.metaKey || e.altKey) return; // tránh trùng với tổ hợp phím khác của trình duyệt/OS
@@ -3053,6 +3317,31 @@ document.getElementById('closeMapBtn').onclick=()=>{
   show(0);
   setInterval(()=>{ idx = (idx+1) % slides.length; show(idx); }, 3600);
 })();
+
+/* ============== NÚT TIẾP TỤC (title screen) ============== */
+(function initContinueBtn(){
+  const btn = document.getElementById('continueBtn');
+  if(!btn) return;
+  btn.onclick = ()=>{ loadGame(); };
+  refreshContinueBtn();
+})();
+
+/* ============== NÚT NỔI KHỞI ĐỘNG LẠI CẦU DAO (blackout, tại Tòa C) ============== */
+(function initBreakerFloatBtn(){
+  const btn = document.getElementById('breakerFloatBtn');
+  if(!btn) return;
+  btn.onclick = ()=>{ if(S && S.playerRoom==='C') startMinigame('C'); };
+})();
+
+/* ============== TÚI ĐỒ ============== */
+(function initBagBtn(){
+  const btn = document.getElementById('bagBtn');
+  if(!btn) return;
+  btn.onclick = openBagModal;
+})();
+
+/* ============== LƯU GAME KHI RỜI TRANG ============== */
+window.addEventListener('beforeunload', ()=>{ persistSave(); });
 
 buildMap();
 initProximityAudio();

@@ -112,6 +112,22 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
 #soundToggleBtn.muted{color:var(--text-dim);border-color:var(--line);}
 #soundToggleBtn.muted #soundIcon{opacity:0.6;}
 
+#bagBtn{display:flex;align-items:center;justify-content:center;gap:5px;height:38px;flex-shrink:0;padding:0 12px;
+  background:#1a1d23;border:1px solid var(--line);color:var(--text);font-size:16px;cursor:pointer;border-radius:2px;
+  box-shadow:2px 3px 0 rgba(0,0,0,0.55);transition:border-color .15s,color .15s,box-shadow .15s;}
+#bagBtn:hover{border-color:var(--amber);color:var(--amber);box-shadow:3px 4px 0 rgba(0,0,0,0.6);}
+#bagCountBadge{font-family:var(--font-mono);font-size:12px;color:var(--scan);}
+
+/* ---------- Túi đồ (overlay dùng chung #mgModal) ---------- */
+.bagItemRow{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);}
+.bagItemRow:last-child{border-bottom:none;}
+.bagItemIcon{font-size:22px;flex-shrink:0;width:30px;text-align:center;}
+.bagItemInfo{flex:1;min-width:0;}
+.bagItemName{font-weight:700;color:var(--amber);font-size:13px;}
+.bagItemDesc{font-size:11px;color:var(--text-dim);margin-top:2px;line-height:1.4;}
+.bagItemQty{font-family:var(--font-mono);font-size:13px;color:var(--scan);white-space:nowrap;flex-shrink:0;}
+#bagList{max-height:52vh;overflow-y:auto;padding-right:4px;}
+
 #mapModalWrap{width:min(640px,92vw);}
 #mapSvgWrap{position:relative;width:100%;height:420px;background:radial-gradient(circle at 50% 30%, #14171c 0%, #0a0b0d 70%);border:1px solid var(--line);border-radius:4px;overflow:hidden;}
 .room-node{position:absolute;transform:translate(-50%,-50%);width:96px;text-align:center;cursor:pointer;user-select:none;}
@@ -413,6 +429,17 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
 #blackout{position:fixed;inset:0;background:#000;z-index:45;pointer-events:none;opacity:0;transition:opacity .6s;}
 #blackout.on{opacity:0.94;}
 #blackout .bo-label{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);font-family:var(--font-mono);font-size:11px;color:var(--blood-bright);letter-spacing:2px;opacity:0.8;}
+
+/* ---------- nút nổi: khởi động lại cầu dao tổng (chỉ hiện khi mất điện toàn trường + đang ở Tòa C) ---------- */
+#breakerFloatBtn{display:none;position:fixed;top:22px;left:50%;transform:translateX(-50%);z-index:63;
+  background:var(--blood);border:2px solid var(--blood-bright);color:#fff;font-family:var(--font-disp);
+  font-size:16px;letter-spacing:1px;text-align:center;padding:12px 26px;cursor:pointer;border-radius:4px;
+  box-shadow:0 0 26px rgba(230,41,63,0.85),0 0 55px rgba(230,41,63,0.4);
+  animation:breakerFloatPulse 1s infinite;}
+#breakerFloatBtn.show{display:block;}
+#breakerFloatBtn .breakerFloatSub{display:block;font-family:var(--font-mono);font-size:10px;letter-spacing:1px;
+  color:#ffd9df;opacity:0.9;margin-top:3px;text-transform:none;}
+@keyframes breakerFloatPulse{0%,100%{transform:translateX(-50%) scale(1);}50%{transform:translateX(-50%) scale(1.045);}}
 
 /* ---------- visual novel ---------- */
 #vnOverlay{position:fixed;inset:0;z-index:95;background:linear-gradient(180deg, rgba(4,3,2,0) 55%, rgba(4,3,2,0.55) 100%);display:flex;align-items:flex-end;justify-content:center;padding:24px;pointer-events:none;}
