@@ -379,6 +379,12 @@ function shuffle(arr){
 }
 
 /* ============== VISUAL NOVEL ============== */
+/* Mỗi phần tử của `lines` thường là {spk,text}. Từ nay hỗ trợ thêm nhánh rẽ:
+   {spk,text,choices:[{label, insert:[...dòng thoại kế tiếp...]}]} — khi gặp
+   dòng có `choices`, nút TIẾP TỤC được thay bằng các nút lựa chọn; bấm vào
+   một lựa chọn sẽ chèn `insert` (nếu có) ngay sau dòng hiện tại rồi tiếp tục
+   như bình thường. Dùng cho đoạn Trọng hỏi về con giáp của TIU (xem
+   CHAPTER2_OPEN_SECRET trong dialogue.js). */
 function playVN(lines, onDone){
   if(!lines || !lines.length){ if(onDone) onDone(); return; }
   S.paused = true;
@@ -386,18 +392,40 @@ function playVN(lines, onDone){
   const spkEl = document.getElementById('vnSpeaker');
   const txtEl = document.getElementById('vnText');
   const nextBtn = document.getElementById('vnNextBtn');
+  const footer = document.getElementById('vnFooter');
   overlay.classList.remove('hidden');
   let i = 0;
+  const queue = lines.slice();
+  function clearChoiceButtons(){
+    footer.querySelectorAll('.vnChoiceBtn').forEach(b=>b.remove());
+    nextBtn.classList.remove('hidden');
+  }
   function showLine(){
-    const l = lines[i];
+    const l = queue[i];
     spkEl.textContent = l.spk;
-    txtEl.textContent = l.text;
-    nextBtn.textContent = (i>=lines.length-1) ? 'ĐÓNG ▶' : 'TIẾP TỤC ▶';
+    txtEl.textContent = l.text || '';
+    clearChoiceButtons();
+    if(l.choices && l.choices.length){
+      nextBtn.classList.add('hidden');
+      l.choices.forEach(choice=>{
+        const b = document.createElement('button');
+        b.className = 'btn primary vnChoiceBtn';
+        b.textContent = choice.label;
+        b.onclick = ()=>{
+          if(choice.insert && choice.insert.length) queue.splice(i+1, 0, ...choice.insert);
+          advance();
+        };
+        footer.appendChild(b);
+      });
+    } else {
+      nextBtn.textContent = (i>=queue.length-1) ? 'ĐÓNG ▶' : 'TIẾP TỤC ▶';
+    }
   }
   function advance(){
     i++;
-    if(i>=lines.length){
+    if(i>=queue.length){
       overlay.classList.add('hidden');
+      clearChoiceButtons();
       nextBtn.onclick = null;
       S.paused = false;
       S.lastTick = performance.now();
@@ -1298,6 +1326,43 @@ function showChapterEndScreen(){
     ? 'Ba mảnh La Peace, Wibu Việt Nhật, Chàng Lính Ngu Lắm và Trọng — tất cả đã cùng viết nên một cái kết khác cho đêm nay. Nhưng dấu vết trong Thư viện vẫn còn đó...'
     : 'Bạn đã sống sót qua 3 đêm lẩn trốn The TIU. Nhưng những gì bạn vừa tìm thấy trong Thư viện sáng nay... có lẽ câu chuyện chưa thực sự kết thúc.';
   document.getElementById('chapterEndScreen').classList.remove('hidden');
+}
+
+/* ==============================================================
+   CHAPTER 2 — MỞ ĐẦU
+   Kích hoạt từ nút "TIẾP TỤC SANG CHAPTER 2" trên chapterEndScreen.
+   Chọn đoạn hội thoại phù hợp dựa trên:
+   - S.epilogueVariant: 'secret' -> Trọng xuất hiện, giải thích sự thật
+     và hỏi con giáp của TIU (playVN xử lý nhánh rẽ, xem ở trên).
+   - 'normal': tùy mức tin tưởng đã tích lũy với 2 NPC
+     (campaignNpcTalks.E / .B, size > 0 nghĩa là đã từng nói chuyện /
+     tin tưởng) mà gộp nhóm khác nhau trước khi ra Tòa A.
+   Nội dung hội thoại nằm trong dialogue.js (CHAPTER2_OPEN_*).
+   Chapter 2 gameplay (bản đồ, phòng, sự kiện...) chưa được xây dựng —
+   sau đoạn mở đầu, game hiện màn hình "sắp ra mắt" thay vì vào map mới. ---- */
+function pickChapter2NormalOpening(){
+  const trustE = campaignNpcTalks.E.size>0;
+  const trustB = campaignNpcTalks.B.size>0;
+  if(trustE && trustB) return CHAPTER2_OPEN_NORMAL_BOTH;
+  if(trustE) return CHAPTER2_OPEN_NORMAL_SINGLE_E;
+  if(trustB) return CHAPTER2_OPEN_NORMAL_SINGLE_B;
+  return CHAPTER2_OPEN_NORMAL_SOLO;
+}
+
+function startChapter2Opening(){
+  hideAllOverlays();
+  const variant = S && S.epilogueVariant;
+  const lines = variant==='secret' ? CHAPTER2_OPEN_SECRET : pickChapter2NormalOpening();
+  playVN(lines, showChapter2ComingSoon);
+}
+
+function showChapter2ComingSoon(){
+  hideAllOverlays();
+  const sub = document.getElementById('chapter2ComingSoonSub');
+  if(sub){
+    sub.textContent = 'Cả nhóm đã tập hợp dưới hiên Tòa A — nhưng câu chuyện của Chapter 2 vẫn còn đang được viết tiếp. Hẹn gặp lại trong bản cập nhật sau.';
+  }
+  document.getElementById('chapter2ComingSoonScreen').classList.remove('hidden');
 }
 
 function eventLabel(ev){
@@ -2985,7 +3050,7 @@ function beginNight(n, standalone){
   playVN(VN_INTRO[n], ()=>{});
 }
 function hideAllOverlays(){
-  ['titleScreen','chapterSelectScreen','chapterIntroScreen','nightSelectScreen','settingsScreen','gameOverScreen','winScreen','chapterEndScreen'].forEach(id=>{
+  ['titleScreen','chapterSelectScreen','chapterIntroScreen','nightSelectScreen','settingsScreen','gameOverScreen','winScreen','chapterEndScreen','chapter2ComingSoonScreen'].forEach(id=>{
     document.getElementById(id).classList.add('hidden');
   });
 }
@@ -3217,10 +3282,15 @@ document.getElementById('chapterEndMenuBtn').onclick = ()=>{
   if(S){ S.epilogue = false; S.running = false; }
   showTitle();
 };
+document.getElementById('chapter2ContinueBtn').onclick = ()=>{
+  if(S){ S.epilogue = false; S.running = false; }
+  startChapter2Opening();
+};
+document.getElementById('chapter2ComingSoonMenuBtn').onclick = showTitle;
 
 /* ============== PAUSE MENU (ESC) ============== */
 function isBlockingOverlayOpen(){
-  return ['mgModal','mapModal','vnOverlay','jumpscareOverlay','gameOverScreen','winScreen','settingsScreen','battleOverlay','chapterEndScreen']
+  return ['mgModal','mapModal','vnOverlay','jumpscareOverlay','gameOverScreen','winScreen','settingsScreen','battleOverlay','chapterEndScreen','chapter2ComingSoonScreen']
     .some(id=>!document.getElementById(id).classList.contains('hidden'));
 }
 function openPauseMenu(){

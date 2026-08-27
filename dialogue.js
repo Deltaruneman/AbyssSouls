@@ -217,3 +217,131 @@ const EPILOGUE_LIB_SECRET = [
   {spk:'BẠN', text:'Tế lễ có thật sự thành công không... hay đó chỉ là điều Trọng muốn mình tin?'},
   {spk:'???', text:'"...Hahaha"'}
 ];
+
+/* ==============================================================
+   CHAPTER 2 — MỞ ĐẦU
+   Chạy ngay sau showChapterEndScreen() của Chapter 1 (xem
+   startChapter2Opening() trong script.js). Nội dung rẽ nhánh theo
+   S.epilogueVariant ('normal' | 'secret') của lần chơi Chapter 1
+   vừa hoàn thành:
+
+   - normal: nhân vật chính tự tìm NPC nào mình đã có đủ tin tưởng
+     (campaignNpcTalks.E / .B, xem script.js) rồi tập hợp tại Tòa A.
+     Không có NPC nào tin tưởng thì vẫn một mình ra Tòa A.
+   - secret: Trọng xuất hiện trước khi kịp tìm ai khác, giải thích
+     sự thật về TIU / tà thần / 12 con giáp / La Peace, hỏi người
+     chơi đoán con giáp của TIU (dùng cơ chế `choices`/`insert` mới
+     trong playVN — xem script.js), rồi kể về thân thế của chính
+     mình (hiện tượng thai trong thai) trước khi cùng cả nhóm ra
+     Tòa A.
+   ============================================================== */
+
+/* ---- Normal: cả hai NPC (Wibu Việt Nhật + Chàng Lính Ngu Lắm) đã đủ tin tưởng ---- */
+const CHAPTER2_OPEN_NORMAL_BOTH = [
+  {spk:'BẠN', text:'Vết cào trên kệ sách... vũng chất lỏng đen sệt giữa sàn. Dấu vết của The TIU, giữa ban ngày ban mặt.'},
+  {spk:'BẠN', text:'Không thể giữ chuyện này một mình được. Phải tìm Wibu Việt Nhật với Chàng Lính Ngu Lắm.'},
+  {spk:'BẠN', text:'(Chạy khắp khuôn viên, cuối cùng cũng tìm được cả hai đang đứng gần Tòa E)'},
+  {spk:'WIBU VIỆT NHẬT', text:'"Ê ê, mặt mày tái mét vậy, có chuyện gì à?"'},
+  {spk:'CHÀNG LÍNH NGU LẮM', text:'"Đù, lại The TIU nữa hả? Ngay giữa ban ngày ư?."'},
+  {spk:'BẠN', text:'"Ra Tòa A đã. Tao có chuyện cần nói với cả hai đứa."'},
+  {spk:'BẠN', text:'(Ba người lặng lẽ kéo nhau ra hiên Tòa A, ánh đèn hành lang chớp tắt yếu ớt dù trời đã sáng)'},
+  {spk:'BẠN', text:'"Sáng nay tao thấy vết cào với vũng chất lỏng đen trong Thư viện. Y hệt thứ The TIU để lại."'},
+  {spk:'WIBU VIỆT NHẬT', text:'"Khoan, tụi mình chỉ thấy nó vào ban đêm thôi mà. Sao ban ngày cũng có dấu vết được?"'},
+  {spk:'CHÀNG LÍNH NGU LẮM', text:'"Ý mày là... nó không còn chỉ hoạt động ban đêm nữa?"'},
+  {spk:'BẠN', text:'"Tao cũng không chắc. Nhưng nếu đúng vậy thì ba đêm tụi mình vừa sống sót... có khi chỉ là màn khởi đầu."'},
+  {spk:'WIBU VIỆT NHẬT', text:'" Là con quái đó tự thay đổi, hay có gì khác đang xảy ra với nó?"'},
+  {spk:'CHÀNG LÍNH NGU LẮM', text:'"Ba chàng lính ngu lắm đã cầm cự qua bao đêm rồi, lần này chắc phải tính đường dài."'},
+  {spk:'BẠN', text:'"Từ khi nào bọn tao trở thành Lính ngu lam rồi??..."'},
+  {spk:'BẠN', text:'"Dù sao thì cũng phải tìm hiểu thêm. Nếu The TIU đã đổi luật chơi, tụi mình cũng phải đổi cách đối phó."'},
+  {spk:'BẠN', text:'Ba người nhìn nhau, không ai nói thêm gì — nhưng ai cũng hiểu, những gì sắp tới sẽ khác hẳn ba đêm vừa qua.'}
+];
+
+/* ---- Normal: chỉ Wibu Việt Nhật (Tòa E) đủ tin tưởng ---- */
+const CHAPTER2_OPEN_NORMAL_SINGLE_E = [
+  {spk:'BẠN', text:'Vết cào trên kệ sách... vũng chất lỏng đen sệt giữa sàn. Dấu vết của The TIU, giữa ban ngày ban mặt.'},
+  {spk:'BẠN', text:'Chàng Lính Ngu Lắm thì mình chưa đủ thân, nhưng Wibu Việt Nhật chắc sẽ nghe mình nói.'},
+  {spk:'BẠN', text:'(Tìm đến gần Nhà E, thấy Wibu Việt Nhật đang ngồi thẫn thờ)'},
+  {spk:'WIBU VIỆT NHẬT', text:'"Ơ, mày còn sống à! Mà sao mặt như thấy ma vậy?"'},
+  {spk:'BẠN', text:'"Đi ra Tòa A với tao. Có chuyện quan trọng."'},
+  {spk:'BẠN', text:'(Hai người ra hiên Tòa A ngồi xuống, ánh đèn hành lang chớp tắt yếu ớt dù trời đã sáng)'},
+  {spk:'BẠN', text:'"Sáng nay tao thấy vết cào với vũng chất lỏng đen trong Thư viện. Y hệt thứ The TIU để lại."'},
+  {spk:'WIBU VIỆT NHẬT', text:'"Khoan, tụi mình chỉ thấy nó vào ban đêm thôi mà. Ban ngày cũng có dấu vết luôn hả?"'},
+  {spk:'BẠN', text:'"Tao cũng không chắc. Nhưng nếu đúng vậy thì ba đêm vừa qua có khi chỉ là màn khởi đầu thôi."'},
+  {spk:'WIBU VIỆT NHẬT', text:'"Điên vậy... Nghe mày nói xong tao thấy khu KHTN của tao còn nguy hiểm hơn tao tưởng."'},
+  {spk:'BẠN', text:'"Dù gì cũng phải tìm hiểu thêm. Đáng lẽ có thêm Chàng Lính Ngu Lắm thì tốt, nhưng thôi, hai đứa mình xoay xở trước."'},
+  {spk:'BẠN', text:'Hai người ngồi lặng lẽ dưới hiên Tòa A, cố ghép lại từng manh mối — nhưng câu trả lời vẫn còn xa lắm.'}
+];
+
+/* ---- Normal: chỉ Chàng Lính Ngu Lắm (Tòa B) đủ tin tưởng ---- */
+const CHAPTER2_OPEN_NORMAL_SINGLE_B = [
+  {spk:'BẠN', text:'Vết cào trên kệ sách... vũng chất lỏng đen sệt giữa sàn. Dấu vết của The TIU, giữa ban ngày ban mặt.'},
+  {spk:'BẠN', text:'Wibu Việt Nhật thì mình chưa đủ thân, nhưng Chàng Lính Ngu Lắm chắc sẽ tin mình.'},
+  {spk:'BẠN', text:'(Tìm đến gần Nhà B, thấy Chàng Lính Ngu Lắm đang ngáp ngắn ngáp dài)'},
+  {spk:'CHÀNG LÍNH NGU LẮM', text:'"Ơ, mày tìm tao có việc gì á?"'},
+  {spk:'BẠN', text:'"Đi ra Tòa A với tao. Có chuyện quan trọng."'},
+  {spk:'BẠN', text:'(Hai người ra hiên Tòa A ngồi xuống, ánh đèn hành lang chớp tắt yếu ớt dù trời đã sáng)'},
+  {spk:'BẠN', text:'"Sáng nay tao thấy vết cào với vũng chất lỏng đen trong Thư viện. Y hệt thứ The TIU để lại."'},
+  {spk:'CHÀNG LÍNH NGU LẮM', text:'"Khoan, tụi mình chỉ thấy nó vào ban đêm thôi mà. Ban ngày cũng ra tay luôn hả?"'},
+  {spk:'BẠN', text:'"Tao cũng không chắc. Nhưng nếu đúng vậy thì ba đêm vừa qua có khi chỉ là màn khởi đầu thôi."'},
+  {spk:'CHÀNG LÍNH NGU LẮM', text:'"Chàng lính ngu lắm này không ngu đến mức không sợ đâu nha... nhưng dù sao cũng phải tìm hiểu cho ra lẽ."'},
+  {spk:'BẠN', text:'"Đáng lẽ có thêm Wibu Việt Nhật thì tốt, nhưng thôi, hai đứa mình xoay xở trước."'},
+  {spk:'BẠN', text:'Hai người ngồi lặng lẽ dưới hiên Tòa A, cố ghép lại từng manh mối — nhưng câu trả lời vẫn còn xa lắm.'}
+];
+
+/* ---- Normal: không NPC nào đủ tin tưởng, người chơi một mình ---- */
+const CHAPTER2_OPEN_NORMAL_SOLO = [
+  {spk:'BẠN', text:'Vết cào, vũng chất lỏng đen sệt... The TIU để lại dấu vết ngay giữa ban ngày. Không thể tin nổi.'},
+  {spk:'BẠN', text:'Ba đêm qua mình toàn tự xoay xở một mình, giờ chắc cũng vậy thôi.'},
+  {spk:'BẠN', text:'(Đi bộ một mình ra Tòa A, ngồi xuống bậc thềm quen thuộc)'},
+  {spk:'BẠN', text:'"Nếu nó hoạt động cả ban ngày... thì ba đêm mình vừa sống sót, có khi chỉ là màn dạo đầu."'},
+  {spk:'BẠN', text:'"Không có ai để bàn bạc cùng. Được thôi — tự mình suy luận vậy."'},
+  {spk:'BẠN', text:'Cố ghép lại từng manh mối: cái bóng ở Tòa A, tiếng bước chân gần Tòa C... liệu có liên hệ gì không?'},
+  {spk:'BẠN', text:'Nắng đã lên, nhưng không khí vẫn lạnh như thể đêm qua chưa từng kết thúc.'}
+];
+
+/* ---- Secret: Trọng xuất hiện, giải thích sự thật, hỏi người chơi đoán con giáp của
+   TIU (đáp án đúng: Sửu), rồi tự kể thân thế của mình trước khi cả nhóm — có thêm
+   Trọng — tập hợp tại Tòa A. ---- */
+const CHAPTER2_OPEN_SECRET = [
+  {spk:'BẠN', text:'Trước khi kịp đi tìm hai đứa kia, một bóng người khoác áo choàng bước ra từ góc khuất của Thư viện.'},
+  {spk:'TRỌNG', text:'"...Tao biết thế nào mày cũng tìm ra thôi. La Peace không giữ được nó mãi mãi."'},
+  {spk:'BẠN', text:'"Trọng?! Mày... mày?? nó không biến mất sau tế lễ à?"'},
+  {spk:'TRỌNG', text:'"Tế lễ chỉ xoa dịu, không tiêu diệt. Về cơ bản thì TIU chính là những gì còn thiếu của UIT, một cách nói khác là mặt trái."'},
+  {spk:'TRỌNG', text:'"Sự thật là... TIU chưa từng là một con quái vật thuần túy. Nó vốn dĩ là một con người."'},
+  {spk:'BẠN', text:'"...Cái gì cơ?"'},
+  {spk:'TRỌNG', text:'"Một con người đã giao kèo với tà thần. Đổi lấy sức mạnh, đổi lấy một điều ước — và cái giá là để tà thần dần dần chiếm lấy thân xác, dung hợp với mặt trái của UIT để tạo ra TIU."'},
+  {spk:'TRỌNG', text:'"Đó là lý do vì sao ta không thể ra tay dứt điểm với nó. Sâu bên trong lớp vỏ đó, vẫn còn một con người đang mắc kẹt."'},
+  {spk:'TRỌNG', text:'"Ta đã cố khống chế nó bằng La Peace... nhưng nó đã xổng mất. Ý chí của tà thần bên trong có lẽ vẫn còn quá mạnh."'},
+  {spk:'BẠN', text:'"Vậy La Peace — thứ năng lượng ôn hòa mày nói tới — thực chất là gì?"'},
+  {spk:'TRỌNG', text:'"Là mana thuần khiết, được ngưng tụ lại từ linh hồn con người. Càng có nhiều La Peace, tà thần cần nó để hồi sinh."'},
+  {spk:'TRỌNG', text:'"Đó là lý do ta phải giữ La Peace tránh xa TIU bằng mọi giá."'},
+  {spk:'BẠN', text:'"..."'},
+  {spk:'TRỌNG', text:'"Ngươi có biết TIU vốn mang dáng dấp của con vật nào trong 12 con giáp không?"',
+   choices:[
+     {label:'Tý (Chuột)', insert:[{spk:'TRỌNG', text:'"Không phải. Thử nghĩ lại xem."'}]},
+     {label:'Sửu (Trâu)', insert:[{spk:'TRỌNG', text:'"...Đúng vậy. Sửu."'}]},
+     {label:'Dần (Hổ)', insert:[{spk:'TRỌNG', text:'"Không phải, nhưng cách nó gầm gừ cũng dễ khiến người ta nghĩ vậy."'}]},
+     {label:'Mão (Mèo)', insert:[{spk:'TRỌNG', text:'"Không, nhưng cách nó rình rập trong bóng tối cũng khiến người ta liên tưởng."'}]}
+   ]},
+  {spk:'TRỌNG', text:'"Là Sửu — con Trâu."'},
+  {spk:'TRỌNG', text:'"Tà thần đó ban phát sức mạnh của cả 12 con giáp cho những kẻ khốn khổ và bất lực nhất."'},
+  {spk:'TRỌNG', text:'"Đổi lại là một lời hứa: nó sẽ thực hiện điều ước của họ — nếu họ thu thập đủ La Peace để giúp nó hồi sinh sang dạng hoàn chỉnh."'},
+  {spk:'BẠN', text:'"Vậy con người mang hình dạng Sửu đó... đã ước điều gì mà phải trả giá bằng cả thân xác mình?"'},
+  {spk:'TRỌNG', text:'"Ta không biết. Có lẽ chính người đó cũng không còn nhớ nữa."'},
+  {spk:'BẠN', text:'"Còn mày? Sao mày lại biết rõ đến vậy, Trọng?"'},
+  {spk:'TRỌNG', text:'"...Vì ta cũng đang mang trên mình một phần của tà thần đó."'},
+  {spk:'BẠN', text:'"!!"'},
+  {spk:'TRỌNG', text:'"Ta sinh ra với hai linh hồn trong cùng một cơ thể. Một là của ta, một là của người anh song sinh."'},
+  {spk:'TRỌNG', text:'"Anh ấy đã mất từ trong bụng mẹ — một hiện tượng hiếm gặp gọi là thai trong thai."'},
+  {spk:'TRỌNG', text:'"Nhưng linh hồn anh ấy chưa từng hoàn toàn biến mất. Nó vẫn ở đó, gắn chặt lấy tao."'},
+  {spk:'TRỌNG', text:'"Tà thần tìm đến những kẻ mang bất lực nhất.. vừa hay là... mấy hiểu đúng chứ. Tao đoán, đó là lý do nó chọn ký sinh lên tao."'},
+  {spk:'BẠN', text:'"Vậy... mày cũng có thể trở thành như TIU sao?"'},
+  {spk:'TRỌNG', text:'"Có thể lắm. Nhưng hiện tại nó chỉ chiếm được linh hồn kia nên tao vẫn kiểm soát được."'},
+  {spk:'TRỌNG', text:'"Thôi, không còn nhiều thời gian đâu. Gọi hai đứa kia lại, ra Tòa A. Lần này ta sẽ đi cùng."'},
+  {spk:'BẠN', text:'"...Được."'},
+  {spk:'BẠN', text:'(Wibu Việt Nhật và Chàng Lính Ngu Lắm gấp rút chạy đến khi nghe tiếng gọi)'},
+  {spk:'WIBU VIỆT NHẬT', text:'"Trọng?? Ủa mày còn sống — ý tao là, còn ở đây à??"'},
+  {spk:'CHÀNG LÍNH NGU LẮM', text:'"Chuyện gì đang xảy ra vậy trời..."'},
+  {spk:'TRỌNG', text:'"Chuyện dài lắm. Ra Tòa A rồi kể."'},
+  {spk:'BẠN', text:'Bốn người lặng lẽ tập hợp dưới hiên Tòa A — lần này, có thêm một người mà không ai ngờ tới.'}
+];
