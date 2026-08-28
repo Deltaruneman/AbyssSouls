@@ -187,6 +187,88 @@ const COMPONENT_META = {
   pipe: {name:'Ống thép',  icon:'🔧', desc:'Nguyên liệu chế tạo. Đem tới Bàn chế tạo trong khu an toàn để làm ra vật phẩm.'}
 };
 
+/* ================= CHAPTER 2 — GIAI ĐOẠN 2 (ĐỘI HÌNH 3 NGƯỜI) =================
+   Toàn bộ hằng số & helper cho hệ thống Bộ Đàm, Chàng Lính (B) / Wibu Việt Nhật (E)
+   làm việc độc lập, Stress/Safety, Setup Gauge (Đêm 1) và 3 giai đoạn Đêm 2.
+   Chỉ có hiệu lực khi S.chapter===2 (xem freshState()). */
+
+/* Mỗi lệnh gửi qua Bộ Đàm tốn bấy nhiêu phút game — rẻ hơn nhiều so với việc
+   người chơi tự di chuyển (BASE_MOVE_COST_MIN=10), vì đây là hành động từ xa. */
+const RADIO_COMMAND_COST_MIN = 2;
+
+/* Thời lượng (phút game) mỗi nhiệm vụ chuyên môn cần hoàn thành, xem Phần 4 design doc. */
+const TASK_DURATION_MIN = {
+  scavengeHeavy: 40,   // Chàng Lính (B) — thu gom thiết bị cơ khí tại B hoặc E
+  scavengeTech:  40,   // Wibu (E) — lấy linh kiện máy tính tại D
+  buildTrap:     120,  // Chàng Lính (B) — dựng Bẫy Quang Học tại FIELD
+  wireBoosterC:  120,  // Wibu (E) — đấu nối điện cao áp tại C
+};
+
+/* Phòng đích ứng với từng loại nhiệm vụ. scavengeHeavy phụ thuộc S.scavengeRoomB
+   (chốt ngẫu nhiên B hoặc E lúc freshState mỗi đêm). */
+function taskRoomFor(npcKey, task){
+  const map = {
+    scavengeHeavy: S.scavengeRoomB,
+    buildTrap:     'FIELD',
+    scavengeTech:  'D',
+    wireBoosterC:  'C',
+  };
+  return map[task] || null;
+}
+
+/* 3 mốc phát sóng cố định dùng ở Đêm 2 — Giai đoạn Lùa Địch (Phần 6.1). */
+const LURE_STATIONS = ['B','E','D'];
+const LURE_STATION_OWNER = { B:'npcB', E:'npcE', D:'player' };
+
+/* Khoảng cách ngắn nhất (số bước) giữa 2 phòng, tính qua đồ thị ROOM_DEF.connects
+   bằng BFS. Dùng cho hệ thống Stress (Phần 3) và pathfinding NPC tự động (Phần 2.3). */
+function roomGraphDistance(fromRoom, toRoom){
+  if(fromRoom === toRoom) return 0;
+  const visited = new Set([fromRoom]);
+  let frontier = [fromRoom];
+  let dist = 0;
+  while(frontier.length){
+    dist++;
+    const next = [];
+    for(const r of frontier){
+      const neighbors = (ROOM_DEF[r] && ROOM_DEF[r].connects) || [];
+      for(const n of neighbors){
+        if(n === toRoom) return dist;
+        if(!visited.has(n)){ visited.add(n); next.push(n); }
+      }
+    }
+    frontier = next;
+  }
+  return Infinity; // không có đường nối (không nên xảy ra với map hiện tại)
+}
+
+/* Bước đi kế tiếp trên đường đi ngắn nhất từ fromRoom -> toRoom (BFS, trả về 1 phòng
+   liền kề). Dùng cho pathfinding tự động của NPC — mỗi lượt cập nhật NPC chỉ tiến 1 phòng. */
+function nextStepToward(fromRoom, toRoom){
+  if(fromRoom === toRoom) return fromRoom;
+  const cameFrom = { [fromRoom]: null };
+  let frontier = [fromRoom];
+  while(frontier.length){
+    const next = [];
+    for(const r of frontier){
+      const neighbors = (ROOM_DEF[r] && ROOM_DEF[r].connects) || [];
+      for(const n of neighbors){
+        if(n in cameFrom) continue;
+        cameFrom[n] = r;
+        if(n === toRoom){
+          // truy ngược từ toRoom về fromRoom để lấy bước đầu tiên
+          let cur = n;
+          while(cameFrom[cur] !== fromRoom) cur = cameFrom[cur];
+          return cur;
+        }
+        next.push(n);
+      }
+    }
+    frontier = next;
+  }
+  return fromRoom; // không tìm được đường — đứng yên
+}
+
 /* Vật phẩm/linh kiện được giữ lại xuyên suốt các đêm của một lượt chơi thường (đêm 1 -> 3).
    Được ghi lại mỗi khi thắng một đêm, áp dụng lại khi đêm tiếp theo (hoặc lúc retry sau khi
    thua) bắt đầu. Reset về null khi bắt đầu lại hẳn từ Đêm 1. Vật phẩm ở chế độ chơi lẻ từng
@@ -299,6 +381,14 @@ function freshState(night, chapter){
   const loreClues = {};
   chosenClueIds.forEach((id,i)=>{ loreClues[chosenLoreRooms[i]] = id; });
 
+  // --- Đội hình 3 người (Chapter 2, Đêm 1 & 2): Chàng Lính (B) / Wibu (E) ---
+  // scavengeRoomB: nơi Chàng Lính đi thu gom thiết bị cơ khí — random B hoặc E mỗi đêm.
+  const scavengeRoomB = chapter===2 ? pick(['B','E']) : null;
+  const npcTeam = chapter===2 ? {
+    B: { name:'Chàng Lính', room:'CANTEEN', task:null, taskProgress:0, stress:0, status:'idle', downSince:null },
+    E: { name:'Wibu Việt Nhật', room:'CANTEEN', task:null, taskProgress:0, stress:0, status:'idle', downSince:null },
+  } : null;
+
   return {
     chapter,
     night,
@@ -349,7 +439,30 @@ function freshState(night, chapter){
     scavenge: scavenge,       // roomKey -> component type còn nằm đó
     noiseTrap: null,          // {room, until}
     // --- Lore sub-quests ---
-    loreClues: loreClues      // roomKey -> clue id còn nằm đó
+    loreClues: loreClues,     // roomKey -> clue id còn nằm đó
+
+    // ===== Chapter 2 — Đội hình 3 người (chỉ có ý nghĩa khi chapter===2) =====
+    scavengeRoomB: scavengeRoomB,     // 'B' | 'E' | null — nơi Chàng Lính thu gom đêm nay
+    npc: npcTeam,                     // {B:{...}, E:{...}} | null — xem PHẦN 1 design doc
+    setupGauge: 0,                    // 0-100, chốt cuối Đêm 1 (finalizeSetupGauge()), quyết định độ khó Đêm 2
+    setupGaugeCapPenalty: 0,          // phạt cộng dồn khi NPC bị TIU bắt lúc đang 'down' (Phần 3.2)
+    laPeaceIntegrated: 0,             // số mảnh La Peace đã nạp vào bộ khuếch đại (04:00-07:30 Đêm 1)
+    laPeaceNeeded: 4,                 // tổng số mảnh cần cho 100% phần đóng góp Setup Gauge
+    spellMastery: 0,                  // 0-100, học từ Trọng trước Đêm 1/Đêm 2 (buổi 16:30-20:45)
+    night2: {                         // trạng thái riêng cho 3 giai đoạn Đêm 2 (Phần 6)
+      phase: 'luring',                // luring | lockdown | overload | resolved
+      lureSync: { B:false, E:false, D:false },
+      overloadMeter: 0,               // 0-100, tuyến tính theo thời gian 04:30->07:30, luôn chạm 100 lúc 07:30
+      trapIntegrity: 100,             // 0-100, giảm khi bị TIU tấn công ở Overload Phase, phải giữ >0
+      syncWindowActive: false,
+      activeThreats: [],              // [{id, lane, deadline}] — Overload Phase (Phần 6.3)
+    },
+    chapter3: {                       // chỉ dùng nếu endingRoute==='secret' (Đêm 3, xem Phần 8.2)
+      active: false,
+      downCount: 0,                   // 0,1,2 = có thể "đứng dậy"; chạm 3 = trigger tiến hoá
+      soulsAwakened: false,
+    },
+    endingRoute: null,                // 'normal' | 'secret' — chốt ở đỉnh điểm Overload Phase (Phần 6.4)
   };
 }
 
@@ -365,6 +478,7 @@ let campaignNpcTalks = { E: new Set(), B: new Set() };
 
 function rand(a,b){return a+Math.random()*(b-a);}
 function pick(arr){return arr[Math.floor(Math.random()*arr.length)];}
+function clamp(v,lo,hi){ return Math.min(hi, Math.max(lo, v)); }
 
 /* Chỗ Gửi Xe & Sân Bóng có tỉ lệ xuất hiện La Peace cao hơn: mỗi phòng trong danh sách
    này được nhân trọng số LA_PEACE_HOTSPOT_WEIGHT lần so với các phòng thường khác. */
