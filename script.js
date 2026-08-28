@@ -269,7 +269,13 @@ function loadGame(){
   return true;
 }
 
-function freshState(night){
+/* Chapter 2 (bản dựng thử) là nơi các tính năng khó hơn — cúp điện/cầu dao và
+   thu gom & chế tạo vật phẩm — được kích hoạt. Chapter 1 không còn dùng các
+   tính năng này nữa (xem freshState, checkPhaseTransition, refreshActionPane). */
+function isHardMode(){ return !!(S && S.chapter===2); }
+
+function freshState(night, chapter){
+  chapter = chapter || 1;
   const startRoom = ROOM_KEYS[Math.floor(Math.random()*ROOM_KEYS.length)];
   let monsterRoom = ROOM_KEYS.filter(r=>r!==startRoom && !ROOM_DEF[r].safe)[Math.floor(Math.random()*4)];
   // --- La Peace: mảnh năng lượng ôn hòa, 1 mảnh ẩn xuất hiện ngẫu nhiên mỗi đêm.
@@ -278,8 +284,9 @@ function freshState(night){
   const laPeaceRoom = weightedPeaceRoom(peaceSpots.length ? peaceSpots : ROOM_KEYS.filter(r=>!ROOM_DEF[r].safe));
 
   // --- Thu gom: rải linh kiện ngẫu nhiên vào các góc tối (tối đa 5 phòng không an toàn) ---
+  // Chỉ áp dụng ở Chapter 2 — thu gom & chế tạo là tính năng độ khó cao dành riêng cho đó.
   const nonSafeRooms = ROOM_KEYS.filter(r=>!ROOM_DEF[r].safe);
-  const scavengeRooms = pickDistinctRooms(nonSafeRooms, Math.min(5, nonSafeRooms.length));
+  const scavengeRooms = chapter===2 ? pickDistinctRooms(nonSafeRooms, Math.min(5, nonSafeRooms.length)) : [];
   const scavenge = {};
   scavengeRooms.forEach(r=>{ scavenge[r] = pick(COMPONENT_TYPES); });
 
@@ -293,6 +300,7 @@ function freshState(night){
   chosenClueIds.forEach((id,i)=>{ loreClues[chosenLoreRooms[i]] = id; });
 
   return {
+    chapter,
     night,
     gameMinutes: 0,
     running: true,
@@ -460,6 +468,7 @@ function applyVNReward(reward){
 /* Trả về thông tin NPC hiện diện tại 1 phòng vào đêm hiện tại (nếu có) */
 function getRoomNPCMeta(roomKey){
   if(S.epilogue) return null;
+  if(S.chapter===2) return null; // Hội thoại NPC riêng cho Chapter 2 sẽ được bổ sung sau
   if(roomKey==='C' && S.night===3 && S.hp===1 && !S.trongSeen){
     return {key:'TRONG', name:'TRỌNG', avatarBg:'#7a1a1a', avatarText:'✦', talkable:true};
   }
@@ -603,7 +612,7 @@ function setRoomTitleGlitch(on){
 function refreshHud(){
   document.getElementById('clockVal').textContent = formatClock(S.gameMinutes);
   document.getElementById('pointsHud').textContent = S.points;
-  document.getElementById('nightBadge').textContent = S.epilogue ? 'BUỔI SÁNG' : NIGHT_CFG[S.night].name;
+  document.getElementById('nightBadge').textContent = S.epilogue ? 'BUỔI SÁNG' : (S.chapter===2 ? 'CH.2 · ' : '')+NIGHT_CFG[S.night].name;
   const hpWrap = document.getElementById('hpWrap');
   hpWrap.innerHTML='';
   for(let i=0;i<3;i++){
@@ -756,11 +765,13 @@ function refreshActionPane(){
     b.onclick=openShop;
     itemGroup.row.appendChild(b);
 
-    const bench=document.createElement('button');
-    bench.className='btn';
-    bench.textContent='🛠 Bàn chế tạo';
-    bench.onclick=openCraftBench;
-    itemGroup.row.appendChild(bench);
+    if(isHardMode()){
+      const bench=document.createElement('button');
+      bench.className='btn';
+      bench.textContent='🛠 Bàn chế tạo';
+      bench.onclick=openCraftBench;
+      itemGroup.row.appendChild(bench);
+    }
   }
 
   const useBim=document.createElement('button');
@@ -784,26 +795,28 @@ function refreshActionPane(){
   useCam.onclick=()=>{ useCameraItem(); refreshActionPane(); };
   itemGroup.row.appendChild(useCam);
 
-  const useBreaker=document.createElement('button');
-  useBreaker.className='btn danger';
-  useBreaker.textContent='Sập Cầu Dao (vô hiệu hóa TIU 60p, tối màn hình)';
-  useBreaker.disabled = !canUseBreakerItem();
-  useBreaker.onclick=()=>{ useBreakerItem(); refreshActionPane(); };
-  itemGroup.row.appendChild(useBreaker);
+  if(isHardMode()){
+    const useBreaker=document.createElement('button');
+    useBreaker.className='btn danger';
+    useBreaker.textContent='Sập Cầu Dao (vô hiệu hóa TIU 60p, tối màn hình)';
+    useBreaker.disabled = !canUseBreakerItem();
+    useBreaker.onclick=()=>{ useBreakerItem(); refreshActionPane(); };
+    itemGroup.row.appendChild(useBreaker);
 
-  const useUV=document.createElement('button');
-  useUV.className='btn';
-  useUV.textContent='💡 Dùng Đèn UV (làm choáng TIU nếu ở gần)';
-  useUV.disabled = S.inventory.uvlight<=0;
-  useUV.onclick=useUVLight;
-  itemGroup.row.appendChild(useUV);
+    const useUV=document.createElement('button');
+    useUV.className='btn';
+    useUV.textContent='💡 Dùng Đèn UV (làm choáng TIU nếu ở gần)';
+    useUV.disabled = S.inventory.uvlight<=0;
+    useUV.onclick=useUVLight;
+    itemGroup.row.appendChild(useUV);
 
-  const useNoise=document.createElement('button');
-  useNoise.className='btn';
-  useNoise.textContent='📢 Đặt Bẫy gây nhiễu tại đây';
-  useNoise.disabled = S.inventory.noisetrap<=0;
-  useNoise.onclick=useNoiseTrap;
-  itemGroup.row.appendChild(useNoise);
+    const useNoise=document.createElement('button');
+    useNoise.className='btn';
+    useNoise.textContent='📢 Đặt Bẫy gây nhiễu tại đây';
+    useNoise.disabled = S.inventory.noisetrap<=0;
+    useNoise.onclick=useNoiseTrap;
+    itemGroup.row.appendChild(useNoise);
+  }
 
   if(S.laPeaceRoom===S.playerRoom && !S.laPeaceFound){
     const usePeace=document.createElement('button');
@@ -846,7 +859,7 @@ function refreshActionPane(){
      Độ tin tưởng NPC cũng được ẩn, chỉ xem qua nút nhỏ "⋮" cạnh ô Túi đồ
      (xem refreshHiddenStats()). Ở đây chỉ giữ lại các chỉ số tổng quan. */
   const inv = document.getElementById('invRow');
-  inv.innerHTML = `<div class="itemChip">Linh kiện: <b>${COMPONENT_TYPES.map(k=>COMPONENT_NAMES[k]+' '+S.components[k]).join(' / ')}</b></div>
+  inv.innerHTML = `${isHardMode() ? '<div class="itemChip">Linh kiện: <b>'+COMPONENT_TYPES.map(k=>COMPONENT_NAMES[k]+' '+S.components[k]).join(' / ')+'</b></div>' : ''}
                     <div class="itemChip">Manh mối: <b>${campaignLoreFound.size}/${LORE_CLUES.length}</b></div>
                     <div class="itemChip">Giai đoạn: <b>${PHASE_NAMES[S.phase]}</b></div>
                     <div class="itemChip">Buff tốc độ: <b>${S.gameMinutes<S.speedBuffUntil?'ĐANG BẬT':'—'}</b></div>
@@ -1103,8 +1116,9 @@ function checkPhaseTransition(){
   if(newPhase === S.phase) return;
   S.phase = newPhase;
   markActionDirty();
-  if(newPhase===2 && !S.gridIncidentDone && !S.gridIncidentActive) triggerGridIncident();
-  if(newPhase===3 && !S.frenzyStarted) startFrenzy();
+  // Cúp điện toàn trường & khóa cửa dồn dập là các tính năng độ khó cao — chỉ có ở Chapter 2.
+  if(newPhase===2 && isHardMode() && !S.gridIncidentDone && !S.gridIncidentActive) triggerGridIncident();
+  if(newPhase===3 && isHardMode() && !S.frenzyStarted) startFrenzy();
 }
 
 function triggerGridIncident(){
@@ -1353,7 +1367,15 @@ function startChapter2Opening(){
   hideAllOverlays();
   const variant = S && S.epilogueVariant;
   const lines = variant==='secret' ? CHAPTER2_OPEN_SECRET : pickChapter2NormalOpening();
-  playVN(lines, showChapter2ComingSoon);
+  playVN(lines, startChapter2Gameplay);
+}
+
+/* Clone của engine đêm/tòa nhà Chapter 1, dùng làm phần mở đầu Chapter 2 — cầu dao điện,
+   thu gom & chế tạo (các tính năng độ khó cao) chỉ xuất hiện từ đây trở đi (xem isHardMode()).
+   Nội dung phòng ốc/hội thoại chi tiết riêng cho Chapter 2 sẽ được bổ sung sau. */
+function startChapter2Gameplay(){
+  hideAllOverlays();
+  beginNight(1, false, 2);
 }
 
 function showChapter2ComingSoon(){
@@ -2292,9 +2314,35 @@ function gameOver(){
 function endNightSuccess(){
   if(!S.running) return;
   S.running=false;
+  // VN_OUTRO hiện chỉ có nội dung cho Chapter 1 — Chapter 2 chuyển thẳng sang màn hình kết quả.
+  if(S.chapter===2){ showEndScreen(); return; }
   playVN(VN_OUTRO[S.night], showEndScreen);
 }
 function showEndScreen(){
+  if(S.chapter===2){
+    if(S.standalone){
+      document.getElementById('winTitle').textContent='ĐÃ ĐẾN 7:30 SÁNG';
+      document.getElementById('winSub').textContent='CHAPTER 2 — '+NIGHT_CFG[S.night].name+' hoàn thành với '+S.hp+' HP còn lại.';
+      document.getElementById('nextNightBtn').textContent='CHƠI LẠI ĐÊM NÀY';
+      document.getElementById('nextNightBtn').onclick=()=>{ document.getElementById('winScreen').classList.add('hidden'); beginNight(S.night,true,2); };
+    } else if(S.night>=3){
+      document.getElementById('winTitle').textContent='HẾT PHẦN CHƠI THỬ CHAPTER 2';
+      document.getElementById('winSub').textContent='Đây là toàn bộ nội dung Chapter 2 hiện đang xây dựng — cầu dao, thu gom & chế tạo bạn vừa trải nghiệm sẽ được lồng vào câu chuyện chi tiết hơn ở bản cập nhật sau.';
+      document.getElementById('nextNightBtn').textContent='VỀ MÀN HÌNH CHÍNH';
+      document.getElementById('nextNightBtn').onclick=()=>{ document.getElementById('winScreen').classList.add('hidden'); showTitle(); };
+    } else {
+      document.getElementById('winTitle').textContent='ĐÃ ĐẾN 7:30 SÁNG';
+      document.getElementById('winSub').textContent='CHAPTER 2 — '+NIGHT_CFG[S.night].name+' hoàn thành với '+S.hp+' HP còn lại. Cẩn thận — cầu dao điện và The TIU sẽ khó lường hơn.';
+      document.getElementById('nextNightBtn').textContent='BẮT ĐẦU ĐÊM '+(S.night+1);
+      document.getElementById('nextNightBtn').onclick=()=>{
+        document.getElementById('winScreen').classList.add('hidden');
+        campaignCarry = { inventory: Object.assign({}, S.inventory), components: Object.assign({}, S.components) };
+        beginNight(S.night+1, false, 2);
+      };
+    }
+    document.getElementById('winScreen').classList.remove('hidden');
+    return;
+  }
   if(S.standalone){
     document.getElementById('winTitle').textContent='ĐÃ ĐẾN 7:30 SÁNG';
     document.getElementById('winSub').textContent=NIGHT_CFG[S.night].name+' hoàn thành với '+S.hp+' HP còn lại.';
@@ -3018,14 +3066,15 @@ function showSecretEndScreen(){
 function refreshAll(){
   refreshHud(); refreshMap(); refreshActionPane();
 }
-function beginNight(n, standalone){
+function beginNight(n, standalone, chapter){
+  chapter = chapter || 1;
   if(n===1){
     campaignLaPeace = 0; // mỗi lượt chơi mới (từ Đêm 1) reset lại số La Peace đã nhặt
     campaignNpcTalks = { E: new Set(), B: new Set() }; // ... và reset lại tiến độ tin tưởng NPC
     campaignLoreFound = new Set(); // ... và reset lại các manh mối đã tìm thấy
     campaignCarry = null; // ... và reset lại vật phẩm/linh kiện mang theo qua từng đêm
   }
-  S = freshState(n);
+  S = freshState(n, chapter);
   S.standalone = !!standalone;
   // Vật phẩm & linh kiện được giữ lại xuyên suốt các đêm của một lượt chơi thường (không áp
   // dụng cho chế độ chơi lẻ từng đêm qua "CHỌN MÀN", vốn luôn bắt đầu với vật phẩm mặc định).
@@ -3033,7 +3082,7 @@ function beginNight(n, standalone){
     S.inventory = Object.assign({}, S.inventory, campaignCarry.inventory);
     S.components = Object.assign({}, S.components, campaignCarry.components);
   }
-  addLog('Ca trực '+NIGHT_CFG[n].name+' bắt đầu lúc 00:00. Bạn xuất phát tại '+ROOM_DEF[S.playerRoom].name+'.','');
+  addLog((chapter===2?'[CHAPTER 2] ':'')+'Ca trực '+NIGHT_CFG[n].name+' bắt đầu lúc 00:00. Bạn xuất phát tại '+ROOM_DEF[S.playerRoom].name+'.','');
   buildMap();
   refreshAll();
   hideAllOverlays();
@@ -3047,7 +3096,8 @@ function beginNight(n, standalone){
   updateBlackoutUI();
   refreshBagBadge();
   persistSave();
-  playVN(VN_INTRO[n], ()=>{});
+  // VN_INTRO hiện chỉ có nội dung cho Chapter 1 — Chapter 2 sẽ có hội thoại mở đầu riêng sau.
+  if(chapter===1) playVN(VN_INTRO[n], ()=>{});
 }
 function hideAllOverlays(){
   ['titleScreen','chapterSelectScreen','chapterIntroScreen','nightSelectScreen','settingsScreen','gameOverScreen','winScreen','chapterEndScreen','chapter2ComingSoonScreen'].forEach(id=>{
@@ -3065,11 +3115,13 @@ function refreshContinueBtn(){
   btn.classList.toggle('hidden', !hasSaveGame());
 }
 
-/* ---- Chapters: hiện tại chỉ có Chapter 1 (nội dung đầy đủ trong file này).
-   Chapter 2 trở đi sẽ được bổ sung sau — placeholder "SẮP RA MẮT" cho đến lúc đó. ---- */
+/* ---- Chapters: Chapter 1 có đầy đủ nội dung câu chuyện. Chapter 2 hiện là bản dựng thử
+   dùng lại engine đêm/tòa nhà của Chapter 1 — nội dung phòng ốc/hội thoại riêng và cân bằng
+   độ khó chi tiết sẽ được bổ sung/tinh chỉnh sau. Các tính năng độ khó cao (cúp điện/cầu dao,
+   thu gom & chế tạo vật phẩm) đã được chuyển hẳn sang đây, xem isHardMode(). ---- */
 const CHAPTERS = [
   { id:1, name:'CHAPTER 1', title:'ĐỪNG NGỦ QUÊN Ở UIT', desc:'3 đêm lén ở lại khuôn viên trường để trốn The TIU.', locked:false },
-  { id:2, name:'CHAPTER 2', title:'???', desc:'Sắp ra mắt.', locked:true }
+  { id:2, name:'CHAPTER 2', title:'???', desc:'Bản dựng thử — khó hơn: có cúp điện & chế tạo vật phẩm. Chi tiết sẽ được bổ sung sau.', locked:false }
 ];
 
 /* ---- Panel tóm tắt / hướng dẫn hiện ra khi bắt đầu một chapter ---- */
@@ -3083,9 +3135,16 @@ const CHAPTER_INTRO = {
     sẽ khiến <b style="color:var(--blood-bright)">The TIU</b> hoạt động mạnh hơn và dễ phát hiện ra bạn hơn. Nếu bạn đứng cùng tòa với The TIU, bạn sẽ bị jumpscare
     và mất 1 HP. Mất 3 HP là thua. <b>Căn tin chỉ an toàn khi mở cửa</b> (01:00-02:00 &amp; 04:00-05:00) — nán lại đó quá lâu cũng khiến bạn cạn <b>Thể lực</b> và bị đói.
     Khi thanh mức độ hoạt động chạm 100%, <b style="color:var(--blood-bright)">Huyết Nguyệt</b> sẽ kích hoạt và không nơi nào còn an toàn. Hãy để ý các sinh viên khác cũng đang lén ở lại trong khuôn viên — họ có thể giúp bạn.</p>
-    <p>Mỗi đêm chia làm 3 giai đoạn: <b>Khởi động</b> (tuần tra, thu gom linh kiện), <b>Biến cố trung tâm</b> (mất điện toàn trường — phải chạy đến <b>Tòa C</b> khởi động lại cầu dao tổng), rồi <b>Săn đuổi dồn dập</b> (The TIU nhanh hơn hẳn và một số cửa bị khóa, cần gỡ khóa hoặc đi vòng).
-    Hãy nhặt <b>linh kiện</b> (pin cũ, dây điện, băng keo, ống thép) rải rác trong các góc tối rồi ghé <b>Bàn chế tạo</b> ở Căn tin để tự chế Camera, Cầu dao, Đèn UV hay Bẫy gây nhiễu. Đừng quên tìm các <b>manh mối</b> ẩn (nhật ký, đĩa ghi âm, mật mã) để hiểu thêm về The TIU.
+    <p>Mỗi đêm chia làm 3 giai đoạn: <b>Khởi động</b> (tuần tra, xử lý sự cố nhỏ), rồi <b>Săn đuổi dồn dập</b> về cuối đêm khi The TIU nhanh hơn hẳn. Đừng quên tìm các <b>manh mối</b> ẩn (nhật ký, đĩa ghi âm, mật mã) để hiểu thêm về The TIU.
     Bấm <b>ESC</b> khi đang chơi để mở bảng tạm dừng.</p>`
+  },
+  2:{
+    title:'CHAPTER 2',
+    subtitle:'BẢN DỰNG THỬ',
+    html:`<p>Chapter 2 hiện đang dùng lại đúng bản đồ và cách chơi của Chapter 1 làm phần mở đầu — nội dung câu chuyện, phòng ốc riêng sẽ được bổ sung sau.
+    Điểm khác biệt lớn nhất: đây là nơi các tính năng <b>độ khó cao</b> được kích hoạt.</p>
+    <p>Đêm sẽ có thêm <b>biến cố trung tâm</b> — mất điện toàn trường, buộc bạn phải chạy đến <b>Tòa C</b> khởi động lại cầu dao tổng trước khi The TIU lợi dụng bóng tối. Về cuối đêm, một số cửa nối giữa các tòa còn bị <b>khóa ngẫu nhiên</b>.
+    Bạn cũng có thể nhặt <b>linh kiện</b> (pin cũ, dây điện, băng keo, ống thép) rải trong các góc tối rồi ghé <b>Bàn chế tạo</b> ở Căn tin để tự chế Camera, Bộ Sập Cầu Dao, Đèn UV hay Bẫy gây nhiễu — những vật phẩm này chỉ có ở Chapter 2.</p>`
   }
 };
 
@@ -3115,7 +3174,9 @@ function buildChapterSelect(){
     } else {
       card.onclick=()=>{
         showChapterIntro(ch.id, ()=>{
-          buildNightSelect();
+          buildNightSelect(ch.id);
+          const titleEl = document.getElementById('nightSelectTitle');
+          if(titleEl) titleEl.textContent = 'CHỌN MÀN — '+ch.name;
           document.getElementById('nightSelectScreen').classList.remove('hidden');
         }, ()=>{
           hideAllOverlays(); buildChapterSelect();
@@ -3133,14 +3194,15 @@ const NIGHT_DESCR = {
   2:"Nhịp độ tăng — sự cố dày hơn, The TIU di chuyển nhanh hơn.",
   3:"Đêm cuối — sự cố dồn dập, The TIU gần như không nghỉ."
 };
-function buildNightSelect(){
+function buildNightSelect(chapter){
+  chapter = chapter || 1;
   const wrap = document.getElementById('nightCardWrap');
   wrap.innerHTML='';
   [1,2,3].forEach(n=>{
     const card=document.createElement('div');
     card.className='nightCard';
     card.innerHTML = `<b>${NIGHT_CFG[n].name}</b><span>${NIGHT_DESCR[n]}</span>`;
-    card.onclick=()=>{ hideAllOverlays(); beginNight(n, true); };
+    card.onclick=()=>{ hideAllOverlays(); beginNight(n, true, chapter); };
     wrap.appendChild(card);
   });
 }
