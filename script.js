@@ -96,15 +96,30 @@ const NIGHT_CFG = [
   {name:"ĐÊM 3", eventEvery:[30,52], monsterMoveEvery:[11,19], meterMoveSpeedFactor:1.55, meterGainFail:20, meterGainIgnore:13, meterDecay:0.04, startMeter:20},
 ];
 
-const GAME_MINUTES_TOTAL = 7.5*60; // 00:00 -> 07:30
-const REAL_MS_PER_GAME_MIN = (15*60*1000) / GAME_MINUTES_TOTAL; // 1 màn ~ 15 phút thực tế
+const GAME_MINUTES_TOTAL = 7.5*60; // 00:00 -> 07:30 — MẶC ĐỊNH cho Chapter 1 (không đổi)
+const REAL_MS_PER_GAME_MIN = (15*60*1000) / GAME_MINUTES_TOTAL; // 1 màn ~ 15 phút thực tế (Chapter 1)
+
+/* ---- Chapter 2: đêm chạy 21:00 -> 07:30 (630 phút game), KHÁC với Chapter 1 (00:00 -> 07:30,
+   450 phút). S.gameMinutes vẫn luôn bắt đầu từ 0 ở đầu mỗi đêm (duration kể từ lúc bắt đầu ca
+   trực) — S.nightStartClockMin là GIỜ THỰC (tính bằng phút kể từ 00:00) mà mốc gameMinutes=0
+   tương ứng, dùng để quy đổi ra giờ hiển thị HUD + khung giờ mở Căn Tin (xem formatClock,
+   isCanteenOpen). S.nightTotalMin thay thế GAME_MINUTES_TOTAL làm mốc kết thúc đêm.
+   REAL_MS_PER_GAME_MIN KHÔNG đổi theo chapter -> đêm Chapter 2 dài hơn (630 vs 450 phút game)
+   nên sẽ tốn nhiều thời gian thực hơn tương ứng (~21 phút thay vì ~15 phút) — hợp lý vì nội
+   dung Chapter 2 (đội hình 3 người, 3 giai đoạn/đêm) nhiều hơn hẳn. */
+function nightClockCfg(chapter){
+  return chapter===2
+    ? { startClockMin: 21*60, totalMin: 10.5*60 } // 21:00 -> 07:30
+    : { startClockMin: 0,     totalMin: GAME_MINUTES_TOTAL }; // 00:00 -> 07:30
+}
 const BASE_MOVE_COST_MIN = 10; // mỗi lượt di chuyển giữa 2 tòa liền kề LUÔN mất đúng 10 phút (game-time)
 const BUFF_MOVE_COST_MIN = 5;  // đang có buff Nước tăng lực -> mỗi lượt di chuyển chỉ mất 5 phút
 
 /* ---- Camping fix: Căn tin chỉ mở trong khung giờ cố định ---- */
-const CANTEEN_WINDOWS = [[60,120],[240,300]]; // 01:00-02:00 & 04:00-05:00 (tính bằng phút kể từ 00:00)
+const CANTEEN_WINDOWS = [[60,120],[240,300]]; // 01:00-02:00 & 04:00-05:00 (giờ THỰC trong ngày, không phải phút kể từ lúc bắt đầu ca trực)
 function isCanteenOpen(gmin){
-  const t = gmin % (24*60);
+  const startOffset = (S && S.nightStartClockMin) || 0;
+  const t = (gmin + startOffset) % (24*60);
   return CANTEEN_WINDOWS.some(([a,b])=>t>=a && t<b);
 }
 /* Phòng có thực sự an toàn ngay lúc này không (tính cả trạng thái Huyết Nguyệt) */
@@ -141,7 +156,7 @@ const BIMBIM_NIGHT_LIMIT = [null, 3, 2, 1];
    hẳn, một số cửa nối giữa các tòa bị khóa ngẫu nhiên. ---- */
 const PHASE_NAMES = {1:'KHỞI ĐỘNG', 2:'BIẾN CỐ TRUNG TÂM', 3:'SĂN ĐUỔI DỒN DẬP'};
 function getPhase(gmin){
-  const total = GAME_MINUTES_TOTAL;
+  const total = (S && S.nightTotalMin) || GAME_MINUTES_TOTAL; // co giãn theo tổng thời lượng đêm thật (450 Chapter 1 / 630 Chapter 2)
   if(gmin < total*0.375) return 1;
   if(gmin < total*0.75) return 2;
   return 3;
@@ -204,6 +219,27 @@ const TASK_DURATION_MIN = {
   wireBoosterC:  120,  // Wibu (E) — đấu nối điện cao áp tại C
 };
 
+/* Nhãn hiển thị + giai đoạn (stage) của từng nhiệm vụ — nhiệm vụ stage 1 (buildTrap/
+   wireBoosterC) chỉ mở khoá SAU KHI nhiệm vụ stage 0 tương ứng đã hoàn thành
+   (npc.stage tăng dần 0 -> 1 -> 2 mỗi khi completeNPCTask(), xem PHẦN 2). */
+const TASK_LABELS = {
+  scavengeHeavy: 'Thu gom thiết bị cơ khí',
+  scavengeTech:  'Lấy linh kiện máy tính',
+  buildTrap:     'Dựng Bẫy Quang Học tại Trận Địa',
+  wireBoosterC:  'Đấu nối điện cao áp tại Tòa C',
+};
+const TASK_STAGE = { scavengeHeavy:0, scavengeTech:0, buildTrap:1, wireBoosterC:1 };
+
+/* Nhiệm vụ khả dụng tiếp theo cho 1 NPC dựa trên npc.stage hiện tại.
+   stage 0 -> nhiệm vụ thu gom; stage 1 -> nhiệm vụ thi công/đấu nối; stage 2 -> hết việc. */
+function availableTaskFor(k){
+  const npc = S.npc[k];
+  if(!npc || npc.stage>=2) return null;
+  if(k==='B') return npc.stage===0 ? 'scavengeHeavy' : 'buildTrap';
+  if(k==='E') return npc.stage===0 ? 'scavengeTech' : 'wireBoosterC';
+  return null;
+}
+
 /* Phòng đích ứng với từng loại nhiệm vụ. scavengeHeavy phụ thuộc S.scavengeRoomB
    (chốt ngẫu nhiên B hoặc E lúc freshState mỗi đêm). */
 function taskRoomFor(npcKey, task){
@@ -220,53 +256,18 @@ function taskRoomFor(npcKey, task){
 const LURE_STATIONS = ['B','E','D'];
 const LURE_STATION_OWNER = { B:'npcB', E:'npcE', D:'player' };
 
-/* Khoảng cách ngắn nhất (số bước) giữa 2 phòng, tính qua đồ thị ROOM_DEF.connects
-   bằng BFS. Dùng cho hệ thống Stress (Phần 3) và pathfinding NPC tự động (Phần 2.3). */
-function roomGraphDistance(fromRoom, toRoom){
-  if(fromRoom === toRoom) return 0;
-  const visited = new Set([fromRoom]);
-  let frontier = [fromRoom];
-  let dist = 0;
-  while(frontier.length){
-    dist++;
-    const next = [];
-    for(const r of frontier){
-      const neighbors = (ROOM_DEF[r] && ROOM_DEF[r].connects) || [];
-      for(const n of neighbors){
-        if(n === toRoom) return dist;
-        if(!visited.has(n)){ visited.add(n); next.push(n); }
-      }
-    }
-    frontier = next;
-  }
-  return Infinity; // không có đường nối (không nên xảy ra với map hiện tại)
-}
+/* Khoảng cách ngắn nhất (số bước) giữa 2 phòng — TÁI DÙNG roomDistance() đã có sẵn
+   trong file (đặt gần bfsPath()/moveMonster, phía dưới). Alias để code Phần 3 (Stress)
+   đọc rõ nghĩa hơn khi dùng trong ngữ cảnh "khoảng cách NPC <-> TIU". */
+function roomGraphDistance(fromRoom, toRoom){ return roomDistance(fromRoom, toRoom); }
 
-/* Bước đi kế tiếp trên đường đi ngắn nhất từ fromRoom -> toRoom (BFS, trả về 1 phòng
-   liền kề). Dùng cho pathfinding tự động của NPC — mỗi lượt cập nhật NPC chỉ tiến 1 phòng. */
+/* Bước đi kế tiếp trên đường đi ngắn nhất từ fromRoom -> toRoom, TÁI DÙNG bfsPath()
+   đã có sẵn (dùng cho AI của TIU) thay vì viết lại BFS riêng. avoidSafe=false vì NPC
+   đồng đội được phép băng qua khu an toàn khi di chuyển. */
 function nextStepToward(fromRoom, toRoom){
   if(fromRoom === toRoom) return fromRoom;
-  const cameFrom = { [fromRoom]: null };
-  let frontier = [fromRoom];
-  while(frontier.length){
-    const next = [];
-    for(const r of frontier){
-      const neighbors = (ROOM_DEF[r] && ROOM_DEF[r].connects) || [];
-      for(const n of neighbors){
-        if(n in cameFrom) continue;
-        cameFrom[n] = r;
-        if(n === toRoom){
-          // truy ngược từ toRoom về fromRoom để lấy bước đầu tiên
-          let cur = n;
-          while(cameFrom[cur] !== fromRoom) cur = cameFrom[cur];
-          return cur;
-        }
-        next.push(n);
-      }
-    }
-    frontier = next;
-  }
-  return fromRoom; // không tìm được đường — đứng yên
+  const path = bfsPath(fromRoom, toRoom, false);
+  return (path && path.length>1) ? path[1] : fromRoom;
 }
 
 /* Vật phẩm/linh kiện được giữ lại xuyên suốt các đêm của một lượt chơi thường (đêm 1 -> 3).
@@ -385,14 +386,18 @@ function freshState(night, chapter){
   // scavengeRoomB: nơi Chàng Lính đi thu gom thiết bị cơ khí — random B hoặc E mỗi đêm.
   const scavengeRoomB = chapter===2 ? pick(['B','E']) : null;
   const npcTeam = chapter===2 ? {
-    B: { name:'Chàng Lính', room:'CANTEEN', task:null, taskProgress:0, stress:0, status:'idle', downSince:null },
-    E: { name:'Wibu Việt Nhật', room:'CANTEEN', task:null, taskProgress:0, stress:0, status:'idle', downSince:null },
+    B: { name:'Chàng Lính', room:'CANTEEN', task:null, taskProgress:0, stress:0, status:'idle', downSince:null, moveAccum:0, stage:0 },
+    E: { name:'Wibu Việt Nhật', room:'CANTEEN', task:null, taskProgress:0, stress:0, status:'idle', downSince:null, moveAccum:0, stage:0 },
   } : null;
+
+  const clockCfg = nightClockCfg(chapter);
 
   return {
     chapter,
     night,
     gameMinutes: 0,
+    nightStartClockMin: clockCfg.startClockMin, // 0 (Chapter 1) | 1260=21:00 (Chapter 2)
+    nightTotalMin: clockCfg.totalMin,            // 450 (Chapter 1) | 630 (Chapter 2)
     running: true,
     hp: 3,
     points: 0,
@@ -447,8 +452,12 @@ function freshState(night, chapter){
     setupGauge: 0,                    // 0-100, chốt cuối Đêm 1 (finalizeSetupGauge()), quyết định độ khó Đêm 2
     setupGaugeCapPenalty: 0,          // phạt cộng dồn khi NPC bị TIU bắt lúc đang 'down' (Phần 3.2)
     laPeaceIntegrated: 0,             // số mảnh La Peace đã nạp vào bộ khuếch đại (04:00-07:30 Đêm 1)
-    laPeaceNeeded: 4,                 // tổng số mảnh cần cho 100% phần đóng góp Setup Gauge
+    laPeaceCarried: 0,                // số mảnh đã nhặt nhưng CHƯA nạp vào bộ khuếch đại (xem depositLaPeace())
+    laPeaceNeeded: 1,                 // ⚠ tạm đặt =1 vì hệ thống spawn hiện tại (weightedPeaceRoom) chỉ rải
+                                       // ĐÚNG 1 mảnh La Peace/đêm — cần mở thêm điểm spawn riêng cho Chapter 2
+                                       // Đêm 1 nếu muốn khớp đúng ý "các mảnh" (số nhiều) trong bản thiết kế gốc.
     spellMastery: 0,                  // 0-100, học từ Trọng trước Đêm 1/Đêm 2 (buổi 16:30-20:45)
+    phaseN1: 'scout',                 // scout | construct | charge — xem checkNight1Phase() (PHẦN 5)
     night2: {                         // trạng thái riêng cho 3 giai đoạn Đêm 2 (Phần 6)
       phase: 'luring',                // luring | lockdown | overload | resolved
       lureSync: { B:false, E:false, D:false },
@@ -632,7 +641,8 @@ function renderLog(){
 
 /* ============== CLOCK ============== */
 function formatClock(gmin){
-  let total = gmin; // 0 = 00:00
+  const startOffset = (S && S.nightStartClockMin) || 0; // 0 (Chapter 1) hoặc 21:00=1260 (Chapter 2)
+  let total = gmin + startOffset;
   let h = Math.floor(total/60);
   let m = Math.floor(total%60);
   h = h%24;
@@ -940,6 +950,14 @@ function refreshActionPane(){
     itemGroup.row.appendChild(usePeace);
   }
 
+  if(canDepositLaPeace()){
+    const useDeposit=document.createElement('button');
+    useDeposit.className='btn peace';
+    useDeposit.textContent='⚡ Nạp La Peace vào bộ khuếch đại ('+S.laPeaceCarried+' đang mang theo)';
+    useDeposit.onclick=depositLaPeace;
+    itemGroup.row.appendChild(useDeposit);
+  }
+
   if(S.scavenge[S.playerRoom]){
     const type = S.scavenge[S.playerRoom];
     const usePickup=document.createElement('button');
@@ -957,6 +975,11 @@ function refreshActionPane(){
     itemGroup.row.appendChild(useLore);
   }
   btnWrap.appendChild(itemGroup.g);
+
+  /* ---- Nhóm mới: BỘ ĐÀM (Chapter 2, Đêm 1) — điều phối Chàng Lính (B) & Wibu (E) ---- */
+  if(radioTeamActive() && S.night===1){
+    btnWrap.appendChild(buildRadioGroup());
+  }
 
   /* ---- Nhóm 3: TƯƠNG TÁC ---- */
   if(npcMeta && npcMeta.talkable){
@@ -978,7 +1001,10 @@ function refreshActionPane(){
                     <div class="itemChip">Giai đoạn: <b>${PHASE_NAMES[S.phase]}</b></div>
                     <div class="itemChip">Buff tốc độ: <b>${S.gameMinutes<S.speedBuffUntil?'ĐANG BẬT':'—'}</b></div>
                     <div class="itemChip">Thể lực: <b>${Math.round(Math.max(0,S.stamina))}%</b></div>
-                    <div class="itemChip">La Peace: <b>${campaignLaPeace}/3</b></div>`;
+                    <div class="itemChip">La Peace: <b>${campaignLaPeace}/3</b></div>
+                    ${(isHardMode() && S.night===1) ? `<div class="itemChip">Đêm 1: <b>${PHASE_N1_NAMES[S.phaseN1]}</b></div>
+                    <div class="itemChip">Trận Địa: <b>${S.setupGauge}%</b></div>
+                    <div class="itemChip">Đang mang La Peace: <b>${S.laPeaceCarried||0}</b></div>` : ''}`;
   refreshHiddenStats();
 }
 
@@ -997,7 +1023,34 @@ function pickupLaPeace(){
   if(!S || S.laPeaceFound || S.playerRoom!==S.laPeaceRoom) return;
   S.laPeaceFound = true;
   campaignLaPeace++;
-  addLog('✦ Bạn tìm thấy một mảnh La Peace (năng lượng ôn hòa) ẩn tại '+ROOM_DEF[S.playerRoom].name+'! ('+campaignLaPeace+'/3)', '');
+  // Chapter 2 (đội hình 3 người): mảnh La Peace nhặt được CHƯA tính vào Setup Gauge ngay —
+  // phải mang tới Căn tin/Tòa C để "nạp vào bộ khuếch đại" ở giai đoạn 04:00-07:30 (xem
+  // depositLaPeace() + PHẦN 5 design doc). laPeaceCarried tách biệt hoàn toàn khỏi
+  // campaignLaPeace (biến đó chỉ phục vụ điều kiện mở khoá secret ending riêng của Chapter 1).
+  if(isHardMode()){
+    S.laPeaceCarried = (S.laPeaceCarried||0) + 1;
+    addLog('✦ Bạn tìm thấy một mảnh La Peace ẩn tại '+ROOM_DEF[S.playerRoom].name+'! Mang về Căn tin hoặc Tòa C để nạp vào bộ khuếch đại.', '');
+  } else {
+    addLog('✦ Bạn tìm thấy một mảnh La Peace (năng lượng ôn hòa) ẩn tại '+ROOM_DEF[S.playerRoom].name+'! ('+campaignLaPeace+'/3)', '');
+  }
+  markActionDirty();
+  refreshHud(); refreshActionPane();
+}
+
+/* Nạp 1 mảnh La Peace đang mang theo vào bộ khuếch đại — chỉ khả dụng tại Căn tin/Tòa C,
+   trong giai đoạn "charge" (04:00-07:30) của Đêm 1 Chapter 2. Xem PHẦN 5 design doc. */
+const LA_PEACE_CHARGE_ROOMS = ['CANTEEN','C'];
+function canDepositLaPeace(){
+  return !!S && isHardMode() && S.night===1 && S.phaseN1==='charge'
+    && (S.laPeaceCarried||0) > 0
+    && LA_PEACE_CHARGE_ROOMS.includes(S.playerRoom)
+    && S.laPeaceIntegrated < S.laPeaceNeeded;
+}
+function depositLaPeace(){
+  if(!canDepositLaPeace()) return;
+  S.laPeaceCarried--;
+  S.laPeaceIntegrated = Math.min(S.laPeaceNeeded, S.laPeaceIntegrated+1);
+  addLog('⚡ Bạn nạp 1 mảnh La Peace vào bộ khuếch đại tại '+ROOM_DEF[S.playerRoom].name+'! ('+S.laPeaceIntegrated+'/'+S.laPeaceNeeded+')', 'good');
   markActionDirty();
   refreshHud(); refreshActionPane();
 }
@@ -1541,10 +1594,375 @@ function movePlayer(dest){
   refreshAll();
 }
 
-/* ============== WORLD / EVENTS / MONSTER ============== */
+/* ============== CHAPTER 2 — BỘ ĐÀM (QUICK COMMAND) & NPC ĐỒNG ĐỘI ==============
+   Chỉ hoạt động khi isHardMode() (chapter===2) và S.npc tồn tại. Xem PHẦN 2 design doc.
+   4 lệnh cơ bản: MOVE_TO, DO_TASK, RETREAT, NOISE_LURE — gửi qua sendRadioCommand(). */
+
+function radioTeamActive(){
+  return !!(S && isHardMode() && S.npc);
+}
+
+/* Gửi 1 lệnh tới 1 hoặc cả 2 NPC. target: 'B' | 'E' | 'both'. cmd: 'MOVE_TO' | 'DO_TASK' | 'RETREAT' | 'NOISE_LURE'.
+   payload: {room} cho MOVE_TO/DO_TASK (room chỉ cần cho MOVE_TO — DO_TASK tự suy ra phòng từ npc.task). */
+function sendRadioCommand(target, cmd, payload){
+  if(!radioTeamActive() || !S.running || S.paused) return false;
+  payload = payload || {};
+
+  if(cmd === 'NOISE_LURE'){
+    // Lệnh này áp dụng cho chính người chơi (đặt bẫy tại chỗ), không nhắm vào NPC nào.
+    if(S.inventory.noisetrap<=0){
+      addLog('[BỘ ĐÀM] Hết Bẫy gây nhiễu, không thể ra hiệu thu hút TIU.', 'warn');
+      return false;
+    }
+    useNoiseTrap();
+    advanceWorld(RADIO_COMMAND_COST_MIN);
+    refreshAll();
+    return true;
+  }
+
+  const npcKeys = target==='both' ? ['B','E'] : [target];
+  let anyValid = false;
+
+  npcKeys.forEach(k=>{
+    const npc = S.npc[k];
+    if(!npc || npc.status==='down' || npc.status==='captured'){
+      addLog(`[BỘ ĐÀM] ${npc?npc.name:k} không phản hồi.`, 'warn');
+      return;
+    }
+
+    switch(cmd){
+      case 'MOVE_TO': {
+        const dest = payload.room;
+        if(!dest || !ROOM_DEF[dest]){ return; }
+        npc.pendingDestination = dest;
+        npc.status = 'moving';
+        npc.moveAccum = npc.moveAccum || 0;
+        addLog(`[BỘ ĐÀM] ${npc.name}: "Rõ, đang di chuyển tới ${ROOM_DEF[dest].name}."`, 'radio');
+        anyValid = true;
+        break;
+      }
+      case 'DO_TASK': {
+        // Lệnh này BAO HÀM cả di chuyển: giao nhiệm vụ kế tiếp cho NPC, NPC tự pathfind
+        // tới đúng phòng rồi tự chuyển sang 'working' khi tới nơi (xem tickNPC()).
+        const task = payload.task || availableTaskFor(k);
+        if(!task){
+          addLog(`[BỘ ĐÀM] ${npc.name} hiện không còn nhiệm vụ nào để giao.`, 'warn');
+          return;
+        }
+        if(TASK_STAGE[task] !== npc.stage){
+          addLog(`[BỘ ĐÀM] ${npc.name}: "Nhiệm vụ đó chưa tới lượt — phải xong việc trước đã."`, 'warn');
+          return;
+        }
+        assignNPCTask(k, task);
+        const destRoom = taskRoomFor(k, task);
+        if(npc.room === destRoom){
+          npc.status = 'working';
+          addLog(`[BỘ ĐÀM] ${npc.name}: "Rõ, bắt tay vào ${TASK_LABELS[task]} ngay."`, 'radio');
+        } else {
+          npc.pendingDestination = destRoom;
+          npc.status = 'moving';
+          npc.moveAccum = npc.moveAccum || 0;
+          addLog(`[BỘ ĐÀM] ${npc.name}: "Rõ, lên đường tới ${ROOM_DEF[destRoom].name} để ${TASK_LABELS[task].toLowerCase()}."`, 'radio');
+        }
+        anyValid = true;
+        break;
+      }
+      case 'RETREAT': {
+        npc.pendingDestination = 'CANTEEN';
+        npc.status = 'moving';
+        npc.moveAccum = npc.moveAccum || 0;
+        // Huỷ trạng thái làm việc NHƯNG giữ nguyên taskProgress -> tiếp tục được sau này.
+        addLog(`[BỘ ĐÀM] ${npc.name}: "Rõ, rút lui về Căn tin!"`, 'radio');
+        anyValid = true;
+        break;
+      }
+    }
+  });
+
+  if(anyValid){
+    advanceWorld(RADIO_COMMAND_COST_MIN);
+    markActionDirty();
+    refreshAll();
+  }
+  return anyValid;
+}
+
+/* Giao nhiệm vụ chuyên môn kế tiếp cho 1 NPC (không tốn lượt riêng — người chơi vẫn cần
+   MOVE_TO rồi DO_TASK để thực thi). Dùng khi mở bảng lệnh để liệt kê nhiệm vụ khả dụng. */
+function assignNPCTask(k, task){
+  const npc = S.npc[k];
+  if(!npc || npc.status==='down' || npc.status==='captured') return false;
+  npc.task = task;
+  npc.taskProgress = npc.taskProgress || 0; // giữ nguyên nếu đang tiếp tục nhiệm vụ dở
+  return true;
+}
+
+/* Cập nhật cả 2 NPC mỗi tick — gọi từ advanceWorld(). Chỉ chạy ở Đêm 1 (nơi có hệ thống
+   nhiệm vụ thu gom/thi công); Đêm 2 dùng luồng riêng (Giai đoạn Lùa Địch/Sập Bẫy/Quá Tải). */
+function tickTeamNPCs(dtMin){
+  if(!radioTeamActive() || S.night!==1) return;
+  ['B','E'].forEach(k=> tickNPC(k, dtMin));
+  checkNPCCapture();
+}
+
+function tickNPC(k, dtMin){
+  const npc = S.npc[k];
+  if(!npc || npc.status==='captured') return;
+
+  if(npc.status==='moving'){
+    npc.moveAccum = (npc.moveAccum||0) + dtMin;
+    while(npc.moveAccum >= BASE_MOVE_COST_MIN && npc.room !== npc.pendingDestination){
+      npc.moveAccum -= BASE_MOVE_COST_MIN;
+      npc.room = nextStepToward(npc.room, npc.pendingDestination);
+    }
+    if(npc.room === npc.pendingDestination){
+      npc.moveAccum = 0;
+      npc.pendingDestination = null;
+      const onTaskRoom = npc.task && taskRoomFor(k, npc.task)===npc.room;
+      npc.status = onTaskRoom ? 'working' : 'idle';
+      addLog(`[BỘ ĐÀM] ${npc.name} đã đến ${ROOM_DEF[npc.room].name}.`, 'radio');
+      markActionDirty();
+    }
+  }
+
+  if(npc.status==='working'){
+    npc.taskProgress += dtMin;
+    if(npc.taskProgress >= TASK_DURATION_MIN[npc.task]){
+      completeNPCTask(k);
+    }
+  }
+
+  updateNPCStress(k, dtMin);
+}
+
+function completeNPCTask(k){
+  const npc = S.npc[k];
+  addLog(`[BỘ ĐÀM] ${npc.name}: "Xong việc rồi!"`, 'good');
+  npc.task = null;
+  npc.taskProgress = 0;
+  npc.status = 'idle';
+  npc.stage = Math.min(2, npc.stage + 1);
+  markActionDirty();
+}
+
+/* ---- Stress/Safety (Phần 3 design doc) ---- */
+function updateNPCStress(k, dtMin){
+  const npc = S.npc[k];
+  if(npc.status!=='working' && npc.status!=='down') return;
+
+  const dist = roomGraphDistance(npc.room, S.monsterRoom);
+  let ratePerMin;
+  if(dist === 0)      ratePerMin = 6.5;
+  else if(dist === 1) ratePerMin = 2.2;
+  else if(dist === 2) ratePerMin = 0.6;
+  else                ratePerMin = -0.5;
+
+  npc.stress = clamp(npc.stress + ratePerMin*dtMin, 0, 100);
+
+  if(npc.stress >= 100 && npc.status==='working'){
+    resolveStressBreak(k);
+  }
+}
+
+function resolveStressBreak(k){
+  const npc = S.npc[k];
+  const roll = Math.random();
+  if(roll < 0.5){
+    npc.status = 'moving';
+    npc.pendingDestination = 'CANTEEN';
+    npc.moveAccum = 0;
+    // taskProgress KHÔNG bị reset — chỉ đóng băng, tiếp tục được sau này.
+    addLog(`⚠ ${npc.name} hoảng loạn, bỏ chạy về Căn Tin!`, 'danger');
+  } else {
+    npc.status = 'down';
+    npc.downSince = S.gameMinutes;
+    addLog(`⚠ ${npc.name} đã gục ngã tại ${ROOM_DEF[npc.room].name}! Cần hỗ trợ ngay.`, 'danger');
+  }
+  markActionDirty();
+}
+
+/* Người chơi đứng cùng phòng với NPC đang 'down' và bấm nút hỗ trợ (UI ở Phần 9) ->
+   gọi hàm này. Cứu xong NPC tiếp tục làm dở nhiệm vụ, stress hồi về mức trung bình. */
+function tryRescueNPC(k){
+  const npc = S.npc[k];
+  if(!npc || npc.status!=='down' || S.playerRoom!==npc.room) return false;
+  npc.status = npc.task ? 'working' : 'idle';
+  npc.stress = 40;
+  npc.downSince = null;
+  addLog(`Bạn đã đỡ ${npc.name} dậy, trấn an và tiếp tục công việc.`, 'good');
+  markActionDirty();
+  advanceWorld(BASE_MOVE_COST_MIN); // hô hấp/dựng dậy tốn 1 lượt (10 phút game), như thiết kế
+  refreshAll();
+  return true;
+}
+
+/* TIU bắt gặp NPC đang bất tỉnh -> NPC bị bắt, mất luôn nhiệm vụ đêm nay (phạt Setup Gauge).
+   Đây là fail-state cục bộ, KHÔNG phải Game Over toàn cục. */
+function checkNPCCapture(){
+  ['B','E'].forEach(k=>{
+    const npc = S.npc[k];
+    if(npc.status==='down' && npc.room===S.monsterRoom){
+      npc.status = 'captured';
+      S.setupGaugeCapPenalty = (S.setupGaugeCapPenalty||0) + 25;
+      addLog(`☠ ${npc.name} đã bị TIU bắt! Nhiệm vụ của họ thất bại đêm nay.`, 'critical');
+      markActionDirty();
+    }
+  });
+}
+
+const NPC_STATUS_LABELS = {
+  idle: 'Đang rảnh, chờ lệnh',
+  moving: 'Đang di chuyển...',
+  working: 'Đang làm việc...',
+  down: '⚠ ĐÃ GỤC NGÃ — CẦN HỖ TRỢ',
+  captured: '☠ ĐÃ BỊ TIU BẮT',
+};
+
+/* Dựng UI nhóm "BỘ ĐÀM" trong actionButtons — gọi từ refreshActionPane() (Đêm 1, Chapter 2). */
+function buildRadioGroup(){
+  const g = document.createElement('div');
+  g.className = 'actionGroup radioGroup';
+  const h = document.createElement('div');
+  h.className = 'actionGroupTitle';
+  h.textContent = '📻 BỘ ĐÀM';
+  g.appendChild(h);
+
+  ['B','E'].forEach(k=>{
+    const npc = S.npc[k];
+    const card = document.createElement('div');
+    card.className = 'radioNpcCard status-'+npc.status;
+
+    const head = document.createElement('div');
+    head.className = 'radioNpcHead';
+    head.innerHTML = `<b>${npc.name}</b> <span class="radioNpcRoom">— ${ROOM_DEF[npc.room].name}</span>`;
+    card.appendChild(head);
+
+    const statusLine = document.createElement('div');
+    statusLine.className = 'radioNpcStatus';
+    statusLine.textContent = NPC_STATUS_LABELS[npc.status] || npc.status;
+    card.appendChild(statusLine);
+
+    // Thanh Stress
+    const stressWrap = document.createElement('div');
+    stressWrap.className = 'radioBarWrap';
+    stressWrap.innerHTML = `<span class="radioBarLabel">Áp lực</span>
+      <div class="radioBar"><div class="radioBarFill stress" style="width:${Math.round(npc.stress)}%"></div></div>`;
+    card.appendChild(stressWrap);
+
+    // Thanh tiến độ nhiệm vụ (nếu đang có task)
+    if(npc.task){
+      const dur = TASK_DURATION_MIN[npc.task];
+      const pct = Math.min(100, Math.round(npc.taskProgress/dur*100));
+      const taskWrap = document.createElement('div');
+      taskWrap.className = 'radioBarWrap';
+      taskWrap.innerHTML = `<span class="radioBarLabel">${TASK_LABELS[npc.task]}</span>
+        <div class="radioBar"><div class="radioBarFill progress" style="width:${pct}%"></div></div>`;
+      card.appendChild(taskWrap);
+    }
+
+    const btnRow = document.createElement('div');
+    btnRow.className = 'radioBtnRow';
+
+    if(npc.status==='captured'){
+      // Không còn lệnh nào khả dụng — NPC đã mất cho đêm nay.
+    } else if(npc.status==='down'){
+      if(S.playerRoom===npc.room){
+        const rescueBtn = document.createElement('button');
+        rescueBtn.className = 'btn primary';
+        rescueBtn.textContent = '🤝 Đỡ dậy & trấn an';
+        rescueBtn.onclick = ()=>{ tryRescueNPC(k); refreshActionPane(); };
+        btnRow.appendChild(rescueBtn);
+      } else {
+        const hint = document.createElement('div');
+        hint.className = 'radioHint';
+        hint.textContent = 'Cần bạn có mặt tại '+ROOM_DEF[npc.room].name+' để hỗ trợ.';
+        btnRow.appendChild(hint);
+      }
+    } else {
+      const task = availableTaskFor(k);
+      if(task && npc.status!=='working'){
+        const taskBtn = document.createElement('button');
+        taskBtn.className = 'btn';
+        taskBtn.textContent = '[Thực hiện nhiệm vụ] '+TASK_LABELS[task];
+        taskBtn.onclick = ()=>{ sendRadioCommand(k,'DO_TASK',{task}); refreshActionPane(); };
+        btnRow.appendChild(taskBtn);
+      }
+      if(npc.status!=='moving'){
+        const retreatBtn = document.createElement('button');
+        retreatBtn.className = 'btn danger';
+        retreatBtn.textContent = '[Rút lui về Căn tin]';
+        retreatBtn.onclick = ()=>{ sendRadioCommand(k,'RETREAT',{}); refreshActionPane(); };
+        btnRow.appendChild(retreatBtn);
+      }
+    }
+    card.appendChild(btnRow);
+    g.appendChild(card);
+  });
+
+  // Lệnh dùng chung: Gây tiếng ồn thu hút TIU (tiêu hao Bẫy gây nhiễu, tái dùng useNoiseTrap()).
+  const noiseBtn = document.createElement('button');
+  noiseBtn.className = 'btn';
+  noiseBtn.textContent = `[Gây tiếng ồn thu hút TIU] (còn ${S.inventory.noisetrap||0})`;
+  noiseBtn.disabled = (S.inventory.noisetrap||0) <= 0;
+  noiseBtn.onclick = ()=>{ sendRadioCommand(null,'NOISE_LURE',{}); refreshActionPane(); };
+  g.appendChild(noiseBtn);
+
+  return g;
+}
+
+/* ============== CHAPTER 2 — ĐÊM 1: 3 GIAI ĐOẠN (PHẦN 5 design doc) ==============
+   Hoàn toàn TÁCH BIỆT với S.phase (KHỞI ĐỘNG/BIẾN CỐ TRUNG TÂM/SĂN ĐUỔI DỒN DẬP) đã có sẵn —
+   hệ đó vẫn tiếp tục chạy song song để quyết định tốc độ TIU/khoá cửa/sự cố bắt buộc như cũ.
+   S.phaseN1 chỉ phục vụ NHÃN + LOGIC RIÊNG cho đội hình 3 người (trinh sát/thi công/nạp năng
+   lượng) — dùng đúng mốc giờ 21:00/00:00/04:00/07:30 nhờ đồng hồ đã lệch offset ở trên. */
+const PHASE_N1_NAMES = { scout:'TRINH SÁT & THU GOM', construct:'THI CÔNG BẪY', charge:'NẠP NĂNG LƯỢNG LA PEACE' };
+
+function checkNight1Phase(){
+  if(!isHardMode() || S.night!==1) return;
+  let next;
+  if(S.gameMinutes < 180)      next = 'scout';      // 21:00–00:00
+  else if(S.gameMinutes < 420) next = 'construct';   // 00:00–04:00
+  else                          next = 'charge';      // 04:00–07:30
+
+  if(next !== S.phaseN1){
+    S.phaseN1 = next;
+    addLog('— '+PHASE_N1_NAMES[next]+' —', 'radio');
+    markActionDirty();
+  }
+}
+
+/* Chốt % hoàn thiện Trận Địa cuối Đêm 1 — công thức Phần 5: 35% Bẫy Quang Học (Chàng Lính)
+   + 35% Đấu nối điện cao áp (Wibu) + 30% La Peace đã nạp, trừ đi phạt nếu NPC bị TIU bắt. */
+function finalizeSetupGauge(){
+  if(!S.npc) return;
+  const buildRatio = npcTaskCompletionRatio('B','buildTrap');
+  const wireRatio  = npcTaskCompletionRatio('E','wireBoosterC');
+  const peaceRatio = clamp((S.laPeaceIntegrated||0) / (S.laPeaceNeeded||1), 0, 1);
+
+  let gauge = Math.round(buildRatio*35 + wireRatio*35 + peaceRatio*30);
+  gauge -= (S.setupGaugeCapPenalty||0);
+  S.setupGauge = clamp(gauge, 0, 100);
+  addLog('📊 Trận Địa hoàn thiện '+S.setupGauge+'% khi kết thúc Đêm 1.', 'radio');
+}
+
+/* Tỉ lệ hoàn thành (0-1) của MỘT nhiệm vụ stage-1 (buildTrap/wireBoosterC) cụ thể cho 1 NPC —
+   trả về 1 nếu NPC đã hoàn thành hẳn (stage===2), tỉ lệ dở dang nếu đang làm đúng task đó,
+   hoặc 0 nếu chưa tới lượt (còn ở stage 0) hoặc đang làm nhiệm vụ khác. */
+function npcTaskCompletionRatio(k, stage1Task){
+  const npc = S.npc[k];
+  if(!npc) return 0;
+  if(npc.stage>=2) return 1; // đã xong cả 2 nhiệm vụ
+  if(npc.task===stage1Task) return clamp((npc.taskProgress||0)/TASK_DURATION_MIN[stage1Task], 0, 1);
+  return 0; // vẫn còn ở stage 0 (thu gom) hoặc đang idle/di chuyển giữa 2 stage
+}
+
+/* ============== HẾT PHẦN ĐÊM 1 (3 GIAI ĐOẠN) ============== */
+
 function advanceWorld(minutesPassed, opts={}){
   // --- Giai đoạn đêm: kiểm tra xem đã bước sang mốc mới chưa ---
   checkPhaseTransition();
+  // --- Chapter 2, Đêm 1: 3 giai đoạn trinh sát/thi công/nạp năng lượng (Phần 5) ---
+  checkNight1Phase();
 
   // decay meter slowly (chậm hơn khi đang Huyết Nguyệt)
   if(!S.enraged){
@@ -1611,6 +2029,9 @@ function advanceWorld(minutesPassed, opts={}){
     }
   }
 
+  // --- Chapter 2: cập nhật 2 NPC đồng đội (di chuyển tự động, tiến độ nhiệm vụ, Stress) ---
+  tickTeamNPCs(minutesPassed);
+
   // spawn new events
   S.nextEventAt -= minutesPassed;
   if(S.nextEventAt<=0){
@@ -1629,7 +2050,7 @@ function advanceWorld(minutesPassed, opts={}){
     S.nextMonsterMoveAt += rand(...NIGHT_CFG[S.night].monsterMoveEvery) * meterSpeed / factor;
     guard++;
   }
-  if(S.gameMinutes >= GAME_MINUTES_TOTAL) endNightSuccess();
+  if(S.gameMinutes >= S.nightTotalMin) endNightSuccess();
 }
 
 function spawnEvent(){
@@ -2428,6 +2849,8 @@ function gameOver(){
 function endNightSuccess(){
   if(!S.running) return;
   S.running=false;
+  // Chốt % hoàn thiện Trận Địa ngay khi Đêm 1 (Chapter 2) kết thúc — quyết định độ khó Đêm 2.
+  if(S.chapter===2 && S.night===1) finalizeSetupGauge();
   // VN_OUTRO hiện chỉ có nội dung cho Chapter 1 — Chapter 2 chuyển thẳng sang màn hình kết quả.
   if(S.chapter===2){ showEndScreen(); return; }
   playVN(VN_OUTRO[S.night], showEndScreen);
@@ -2445,12 +2868,20 @@ function showEndScreen(){
       document.getElementById('nextNightBtn').textContent='VỀ MÀN HÌNH CHÍNH';
       document.getElementById('nextNightBtn').onclick=()=>{ document.getElementById('winScreen').classList.add('hidden'); showTitle(); };
     } else {
+      const setupPct = isHardMode() ? S.setupGauge : null;
       document.getElementById('winTitle').textContent='ĐÃ ĐẾN 7:30 SÁNG';
-      document.getElementById('winSub').textContent='CHAPTER 2 — '+NIGHT_CFG[S.night].name+' hoàn thành với '+S.hp+' HP còn lại. Cẩn thận — cầu dao điện và The TIU sẽ khó lường hơn.';
+      document.getElementById('winSub').textContent='CHAPTER 2 — '+NIGHT_CFG[S.night].name+' hoàn thành với '+S.hp+' HP còn lại.'
+        + (setupPct!==null ? ' Trận Địa đã hoàn thiện '+setupPct+'% — mức độ này sẽ quyết định độ khó của Đêm 2.' : ' Cẩn thận — cầu dao điện và The TIU sẽ khó lường hơn.');
       document.getElementById('nextNightBtn').textContent='BẮT ĐẦU ĐÊM '+(S.night+1);
       document.getElementById('nextNightBtn').onclick=()=>{
         document.getElementById('winScreen').classList.add('hidden');
-        campaignCarry = { inventory: Object.assign({}, S.inventory), components: Object.assign({}, S.components) };
+        campaignCarry = {
+          inventory: Object.assign({}, S.inventory),
+          components: Object.assign({}, S.components),
+          // Chỉ có ý nghĩa khi chuyển từ Đêm 1 -> Đêm 2 của Chapter 2 (xem PHẦN 5/7 design doc).
+          setupGauge: S.setupGauge,
+          spellMastery: S.spellMastery,
+        };
         beginNight(S.night+1, false, 2);
       };
     }
@@ -3195,8 +3626,11 @@ function beginNight(n, standalone, chapter){
   if(!S.standalone && campaignCarry){
     S.inventory = Object.assign({}, S.inventory, campaignCarry.inventory);
     S.components = Object.assign({}, S.components, campaignCarry.components);
+    // Setup Gauge & mức thành thạo phép ấn được mang từ Đêm 1 sang Đêm 2 (Chapter 2 — Phần 5/7).
+    if(campaignCarry.setupGauge!=null) S.setupGauge = campaignCarry.setupGauge;
+    if(campaignCarry.spellMastery!=null) S.spellMastery = campaignCarry.spellMastery;
   }
-  addLog((chapter===2?'[CHAPTER 2] ':'')+'Ca trực '+NIGHT_CFG[n].name+' bắt đầu lúc 00:00. Bạn xuất phát tại '+ROOM_DEF[S.playerRoom].name+'.','');
+  addLog((chapter===2?'[CHAPTER 2] ':'')+'Ca trực '+NIGHT_CFG[n].name+' bắt đầu lúc '+formatClock(0)+'. Bạn xuất phát tại '+ROOM_DEF[S.playerRoom].name+'.','');
   buildMap();
   refreshAll();
   hideAllOverlays();

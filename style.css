@@ -192,6 +192,12 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
   font-size:11px;line-height:1.5;z-index:20;backdrop-filter:blur(2px);box-shadow:0 4px 20px rgba(0,0,0,0.5);}
 #logPane .logHead{font-size:9px;letter-spacing:2px;color:var(--text-dim);margin-bottom:6px;border-bottom:1px solid var(--line);padding-bottom:4px;}
 #logPane div.entry{margin-bottom:6px;color:var(--text-dim);border-left:2px solid var(--line);padding-left:8px;}
+#logPane div.entry.warn{color:var(--amber);border-left-color:var(--amber);}
+#logPane div.entry.danger{color:var(--blood-bright);border-left-color:var(--blood-bright);}
+#logPane div.entry.critical{color:var(--blood-bright);border-left-color:var(--blood-bright);font-weight:700;}
+#logPane div.entry.tiu{color:#ff8a70;border-left-color:#ff8a70;}
+#logPane div.entry.good{color:var(--scan);border-left-color:var(--scan);}
+#logPane div.entry.radio{color:#7fb8ff;border-left-color:#7fb8ff;}
 #logPane div.warn{color:var(--amber);border-color:var(--amber);}
 #logPane div.danger{color:var(--blood-bright);border-color:var(--blood-bright);}
 #logPane div.tiu{color:#c98cff;border-color:#6a3fa0;}
@@ -245,6 +251,28 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
 .actionGroup:last-child{margin-bottom:0;}
 .actionGroupTitle{font-size:10px;letter-spacing:3px;color:var(--text-dim);margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--line);}
 .actionGroupRow{display:flex;flex-wrap:wrap;gap:0;}
+
+/* ---- Bộ Đàm (Chapter 2, Đêm 1) — panel điều phối Chàng Lính / Wibu ---- */
+.radioGroup{border:1px solid #2a4a5f;background:rgba(20,35,45,0.35);padding:10px;border-radius:3px;}
+.radioGroup .actionGroupTitle{color:#7fb8ff;border-bottom-color:#2a4a5f;}
+.radioNpcCard{border:1px solid var(--line);border-left:3px solid var(--text-dim);padding:8px 10px;margin-bottom:8px;background:rgba(0,0,0,0.2);}
+.radioNpcCard:last-of-type{margin-bottom:10px;}
+.radioNpcCard.status-working{border-left-color:var(--scan);}
+.radioNpcCard.status-moving{border-left-color:#7fb8ff;}
+.radioNpcCard.status-down{border-left-color:var(--blood-bright);animation:pulse .8s infinite;}
+.radioNpcCard.status-captured{border-left-color:var(--blood-bright);opacity:0.6;}
+.radioNpcHead{font-family:var(--font-disp);font-size:13px;letter-spacing:0.5px;}
+.radioNpcRoom{color:var(--text-dim);font-weight:400;}
+.radioNpcStatus{font-size:11px;color:var(--text-dim);margin:2px 0 6px;}
+.radioBarWrap{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
+.radioBarLabel{font-size:10px;color:var(--text-dim);min-width:64px;flex-shrink:0;}
+.radioBar{flex:1;height:8px;background:#1c1e24;border:1px solid var(--line);position:relative;overflow:hidden;}
+.radioBarFill{height:100%;transition:width .3s;}
+.radioBarFill.stress{background:linear-gradient(90deg,var(--scan-dim),var(--blood-bright));}
+.radioBarFill.progress{background:linear-gradient(90deg,var(--scan-dim),var(--scan));}
+.radioBtnRow{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;}
+.radioBtnRow .btn{margin:2px 4px 2px 0;padding:6px 10px;font-size:10.5px;}
+.radioHint{font-size:11px;color:var(--blood-bright);}
 #roomDesc{font-size:12px;color:var(--text-dim);margin-bottom:10px;min-height:20px;}
 .btn{display:inline-block;background:linear-gradient(180deg,#211d1a,#161311);border:1px solid var(--line);color:var(--text);padding:9px 14px;font-family:var(--font-disp);font-weight:700;font-size:12px;text-transform:uppercase;cursor:pointer;margin:3px 5px 4px 0;letter-spacing:1.2px;transition:box-shadow .15s,color .15s,border-color .15s,transform .1s;border-radius:2px;
   box-shadow:0 2px 0 rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04);}
