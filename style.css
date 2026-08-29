@@ -440,6 +440,12 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
 .bookTile{background:#1a1d23;border:1px solid var(--line);padding:10px 6px;width:44px;text-align:center;cursor:pointer;font-size:14px;}
 .bookTile.picked{border-color:var(--scan);color:var(--scan);opacity:0.4;}
 .stageGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;}
+
+/* ---- Minigame đồng bộ 3 điểm (Đêm 2, Giải đoạn Sập Bẫy) ---- */
+.syncBarWrap{position:relative;height:34px;background:#1c1e24;border:1px solid var(--line);margin-top:10px;overflow:hidden;}
+.syncBarZoneGood{position:absolute;left:30%;width:40%;top:0;bottom:0;background:rgba(230,180,41,0.25);}
+.syncBarZonePerfect{position:absolute;left:45%;width:10%;top:0;bottom:0;background:rgba(41,230,120,0.45);}
+.syncBarMarker{position:absolute;top:0;bottom:0;width:3px;background:var(--blood-bright);left:0;box-shadow:0 0 8px var(--blood-bright);}
 .stageCell{aspect-ratio:1;background:#1a1d23;border:1px solid var(--line);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;}
 .stageCell.odd{background:#241614;border-color:var(--blood);}
 

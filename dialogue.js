@@ -345,3 +345,33 @@ const CHAPTER2_OPEN_SECRET = [
   {spk:'TRỌNG', text:'"Chuyện dài lắm. Ra Tòa A rồi kể."'},
   {spk:'BẠN', text:'Bốn người lặng lẽ tập hợp dưới hiên Tòa A — lần này, có thêm một người mà không ai ngờ tới.'}
 ];
+/* ==============================================================
+   CHAPTER 2 — ĐÊM 2: HỘI THOẠI SAU TRẬN QUÁ TẢI CẦU DAO (NORMAL ENDING)
+   Chạy ngay sau khi party cầm cự đủ số lượt trong màn đánh boss cuối cùng của
+   Chapter 2 (xem triggerNight2Climax() trong script.js). Route Normal duy nhất —
+   route Secret (do dự trước đòn kết liễu) hiện CHƯA implement, để dành cho phần sau.
+   ============================================================== */
+const VN_CH2_VICTORY_DIALOGUE = {
+  lines:[
+    {spk:'BẠN', text:'Dòng điện cuối cùng cũng phóng thẳng vào TIU. Một tiếng rú xé toạc màn đêm, rồi... im bặt.'},
+    {spk:'WIBU VIỆT NHẬT', text:'"...Xong thật rồi à? Tao không dám tin luôn."'},
+    {spk:'CHÀNG LÍNH NGU LẮM', text:'"Ê ê, sống rồi tụi mày ơi! SỐNG RỒI!!"'},
+    {spk:'BẠN', text:'Giữa lúc cả hai còn đang reo hò, Trọng vẫn đứng lặng một góc, mắt dán vào đám tro tàn còn vương mùi điện cháy nơi TIU vừa tan biến.'},
+    {spk:'BẠN', text:'"Trọng? Xong rồi mà, sao mặt mày như vậy?"'},
+    {spk:'TRỌNG', text:'"...Xong rồi. Chúng ta thật sự thắng rồi nhỉ."'},
+    {spk:'TRỌNG', text:'Trọng trầm ngân nghĩ về vài chuyện.'},
+    {spk:'TRỌNG', text:'(Về một ông chú, một kẻ bình thường cũng có thể gọi là khốn cùng.)'},
+    {spk:'TRỌNG', text:'(Chấp nhận giao kèo để rồi kẻ khốn cùng ấy lại trở thành một tên sát nhân.)'},
+    {spk:'TRỌNG', text:'(Hy sinh mạng sống kẻ khác để đổi lấy điều ước hồi sinh con gái mình.)'},
+    {spk:'TRỌNG', text:'(Và rồi... mình cũng đã trở thành 1 tên sát nhân.)'},
+    {spk:'TRỌNG', text:'(Chính mình là người đã giết Tông dồ Tý.)'},
+    {spk:'BẠN', text:'"...Này sao mày im lặng vậy"'},
+    {spk:'TRỌNG', text:'"Mày biết không...đêm nay không phải lần đầu tao tiếp tay giết một mạng người."'},
+    {spk:'TRỌNG', text:'"Tý, và giờ là Sửu. Cả hai đều là người, trước khi trở thành thứ mà tụi mày phải run rẩy chạy trốn."'},
+    {spk:'WIBU VIỆT NHẬT', text:'"Trọng... không phải lỗi của mày."'},
+    {spk:'TRỌNG', text:'"Ừ. Có lẽ vậy."'},
+    {spk:'TRỌNG', text:'"Tụi mày cứ về nghỉ đi. Tao... muốn đi dạo một mình."'},
+    {spk:'BẠN', text:'Trọng quay lưng, bước chậm rãi về phía chân trời đang ửng hồng, không nói thêm lời nào.'},
+    {spk:'BẠN', text:'Bình minh đã lên. UIT lại một lần nữa im lìm như chưa từng có chuyện gì xảy ra. Nhưng có lẽ, không ai trong ba người bọn tôi còn nhìn nó bằng ánh mắt như cũ nữa.'},
+  ]
+};

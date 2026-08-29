@@ -419,7 +419,7 @@ function freshState(night, chapter){
     stamina: 100,
     nextStarveTickAt: 0,
     // --- Huyết Nguyệt ---
-    enraged: false,
+    enraged: (chapter===2 && night===2), // Đêm 2 Chapter 2: TIU Cuồng Nộ NGAY TỪ ĐẦU đêm (Phần 6.1), giữ mãi tới hết đêm — xem advanceWorld()
     enrageUntil: 0,
     // --- item hiệu ứng ---
     cameraMovesLeft: 0,
@@ -979,6 +979,10 @@ function refreshActionPane(){
   /* ---- Nhóm mới: BỘ ĐÀM (Chapter 2, Đêm 1) — điều phối Chàng Lính (B) & Wibu (E) ---- */
   if(radioTeamActive() && S.night===1){
     btnWrap.appendChild(buildRadioGroup());
+  }
+  /* ---- Nhóm mới: ĐÊM 2 — Lùa Địch / Sập Bẫy / Quá Tải Cầu Dao (Phần 6) ---- */
+  if(radioTeamActive() && S.night===2){
+    btnWrap.appendChild(buildNight2Panel());
   }
 
   /* ---- Nhóm 3: TƯƠNG TÁC ---- */
@@ -1676,6 +1680,11 @@ function sendRadioCommand(target, cmd, payload){
         anyValid = true;
         break;
       }
+      case 'RESOLVE_THREAT': {
+        // Chapter 2, Đêm 2 — Giai đoạn Quá Tải (Phần 6.3): xử lý sự cố đe doạ Trận Địa.
+        if(resolveOverloadThreatByNPC(payload.threatId, k)) anyValid = true;
+        break;
+      }
     }
   });
 
@@ -1910,6 +1919,128 @@ function buildRadioGroup(){
   return g;
 }
 
+/* Dựng UI nhóm "ĐÊM 2" — thay thế buildRadioGroup() ở Đêm 2 (khác luồng hoàn toàn: không có
+   task/stage, chỉ có kích hoạt trạm phát sóng (luring) và xử lý sự cố (overload)). */
+function buildNight2Panel(){
+  const n2 = S.night2;
+  const g = document.createElement('div');
+  g.className = 'actionGroup radioGroup';
+  const h = document.createElement('div');
+  h.className = 'actionGroupTitle';
+  h.textContent = '📻 ĐIỀU PHỐI ĐÊM 2 — '+NIGHT2_PHASE_NAMES[n2.phase];
+  g.appendChild(h);
+
+  if(n2.phase==='luring'){
+    const hint = document.createElement('div');
+    hint.className = 'radioHint';
+    hint.style.color = 'var(--text-dim)';
+    hint.textContent = 'Đưa cả 3 người tới đúng trạm (Chàng Lính→Tòa B, Wibu→Tòa E, Bạn→Tòa D) rồi kích hoạt CÙNG LÚC để lùa TIU vào Trận Địa.';
+    g.appendChild(hint);
+
+    ['B','E'].forEach(k=>{
+      const npc = S.npc[k];
+      const card = document.createElement('div');
+      card.className = 'radioNpcCard status-'+npc.status;
+      card.innerHTML = `<div class="radioNpcHead"><b>${npc.name}</b> <span class="radioNpcRoom">— ${ROOM_DEF[npc.room].name}</span></div>
+        <div class="radioNpcStatus">Trạm phụ trách: ${ROOM_DEF[k].name} ${n2.lureSync[k]?'✅ ĐÃ ĐỒNG BỘ':''}</div>`;
+      const btnRow = document.createElement('div');
+      btnRow.className = 'radioBtnRow';
+      if(npc.status!=='down' && npc.status!=='captured' && !n2.lureSync[k]){
+        if(npc.room!==k){
+          const moveBtn = document.createElement('button');
+          moveBtn.className = 'btn';
+          moveBtn.textContent = '[Đến vị trí] '+ROOM_DEF[k].name;
+          moveBtn.onclick = ()=>{ sendRadioCommand(k,'MOVE_TO',{room:k}); refreshActionPane(); };
+          btnRow.appendChild(moveBtn);
+        } else {
+          const actBtn = document.createElement('button');
+          actBtn.className = 'btn primary';
+          actBtn.textContent = '📡 Kích hoạt trạm';
+          actBtn.onclick = ()=>{ tryActivateLureStation(k); refreshActionPane(); };
+          btnRow.appendChild(actBtn);
+        }
+      }
+      card.appendChild(btnRow);
+      g.appendChild(card);
+    });
+
+    const dCard = document.createElement('div');
+    dCard.className = 'radioNpcCard';
+    dCard.innerHTML = `<div class="radioNpcHead"><b>Trạm của bạn</b> <span class="radioNpcRoom">— ${ROOM_DEF.D.name}</span></div>
+      <div class="radioNpcStatus">${n2.lureSync.D?'✅ ĐÃ ĐỒNG BỘ':'Chưa kích hoạt'}</div>`;
+    if(!n2.lureSync.D && S.playerRoom==='D'){
+      const actBtn = document.createElement('button');
+      actBtn.className = 'btn primary';
+      actBtn.textContent = '📡 Kích hoạt trạm';
+      actBtn.onclick = ()=>{ tryActivateLureStation('D'); refreshActionPane(); };
+      const row = document.createElement('div'); row.className='radioBtnRow'; row.appendChild(actBtn);
+      dCard.appendChild(row);
+    }
+    g.appendChild(dCard);
+  }
+
+  if(n2.phase==='lockdown'){
+    const hint = document.createElement('div');
+    hint.className = 'radioHint';
+    hint.style.color = 'var(--text-dim)';
+    hint.textContent = 'Đang chờ đồng bộ giật cầu dao...';
+    g.appendChild(hint);
+  }
+
+  if(n2.phase==='overload'){
+    const meterLine = document.createElement('div');
+    meterLine.className = 'radioNpcStatus';
+    meterLine.innerHTML = `Quá tải: <b>${n2.overloadMeter}%</b> — Độ bền Trận Địa: <b>${n2.trapIntegrity}%</b>`;
+    g.appendChild(meterLine);
+
+    if(n2.activeThreats.length===0){
+      const okLine = document.createElement('div');
+      okLine.className = 'radioHint';
+      okLine.style.color = 'var(--text-dim)';
+      okLine.textContent = 'Trận Địa tạm ổn định — chưa có sự cố nào.';
+      g.appendChild(okLine);
+    }
+
+    n2.activeThreats.forEach(t=>{
+      const card = document.createElement('div');
+      card.className = 'radioNpcCard status-down';
+      const owner = OVERLOAD_LANE_OWNER[t.lane];
+      const ownerName = owner==='player' ? 'Bạn' : S.npc[owner].name;
+      const room = OVERLOAD_LANE_ROOM[t.lane];
+      card.innerHTML = `<div class="radioNpcStatus">${OVERLOAD_LANE_LABELS[t.lane]}<br>Người phụ trách: <b>${ownerName}</b> (cần có mặt tại ${ROOM_DEF[room].name})</div>`;
+      const btnRow = document.createElement('div');
+      btnRow.className = 'radioBtnRow';
+      if(owner==='player'){
+        const btn = document.createElement('button');
+        btn.className = 'btn primary';
+        btn.textContent = canResolveUVBlockThreat() ? '💡 Dùng Đèn UV chặn ngay' : 'Cần có mặt tại '+ROOM_DEF[room].name;
+        btn.disabled = !canResolveUVBlockThreat();
+        btn.onclick = ()=>{ resolvePlayerUVBlock(); refreshActionPane(); };
+        btnRow.appendChild(btn);
+      } else {
+        const npc = S.npc[owner];
+        if(npc.room!==room){
+          const moveBtn = document.createElement('button');
+          moveBtn.className = 'btn';
+          moveBtn.textContent = '[Đến vị trí] '+ROOM_DEF[room].name;
+          moveBtn.onclick = ()=>{ sendRadioCommand(owner,'MOVE_TO',{room}); refreshActionPane(); };
+          btnRow.appendChild(moveBtn);
+        } else {
+          const fixBtn = document.createElement('button');
+          fixBtn.className = 'btn primary';
+          fixBtn.textContent = '🔧 Ra lệnh xử lý ngay';
+          fixBtn.onclick = ()=>{ sendRadioCommand(owner,'RESOLVE_THREAT',{threatId:t.id}); refreshActionPane(); };
+          btnRow.appendChild(fixBtn);
+        }
+      }
+      card.appendChild(btnRow);
+      g.appendChild(card);
+    });
+  }
+
+  return g;
+}
+
 /* ============== CHAPTER 2 — ĐÊM 1: 3 GIAI ĐOẠN (PHẦN 5 design doc) ==============
    Hoàn toàn TÁCH BIỆT với S.phase (KHỞI ĐỘNG/BIẾN CỐ TRUNG TÂM/SĂN ĐUỔI DỒN DẬP) đã có sẵn —
    hệ đó vẫn tiếp tục chạy song song để quyết định tốc độ TIU/khoá cửa/sự cố bắt buộc như cũ.
@@ -1956,13 +2087,293 @@ function npcTaskCompletionRatio(k, stage1Task){
   return 0; // vẫn còn ở stage 0 (thu gom) hoặc đang idle/di chuyển giữa 2 stage
 }
 
-/* ============== HẾT PHẦN ĐÊM 1 (3 GIAI ĐOẠN) ============== */
+/* ============== CHAPTER 2 — ĐÊM 2: 3 GIAI ĐOẠN (PHẦN 6 design doc) ==============
+   Lùa Địch (luring) -> Sập Bẫy (lockdown) -> Quá Tải Cầu Dao (overload) -> Trận đánh cuối.
+   TIU ở trạng thái Cuồng Nộ (S.enraged) NGAY TỪ ĐẦU đêm (ép buộc trong freshState/advanceWorld
+   ở trên) — không có khu an toàn nào bảo vệ được người chơi/NPC trong suốt Đêm 2.
+   ⚠ Route Secret (do dự trước đòn kết liễu -> Trọng The Curse One) CHƯA implement — theo yêu
+   cầu, hiện luôn đi thẳng vào route Normal khi hoàn tất Giai đoạn Quá Tải. */
+
+const NIGHT2_PHASE_NAMES = { luring:'LÙA ĐỊCH VÀO TRẬN ĐỊA', lockdown:'SẬP BẪY MA TRẬN', overload:'QUÁ TẢI CẦU DAO', resolved:'HOÀN TẤT' };
+
+/* ---- Giai đoạn 1: LÙA ĐỊCH ---- */
+function tryActivateLureStation(stationKey){
+  if(!isHardMode() || S.night!==2 || S.night2.phase!=='luring') return false;
+  if(S.night2.lureSync[stationKey]) return false; // đã kích hoạt rồi
+
+  if(stationKey==='D'){
+    if(S.playerRoom!=='D'){ addLog('Bạn cần có mặt tại '+ROOM_DEF.D.name+' để kích hoạt trạm này.', 'warn'); return false; }
+  } else {
+    const npc = S.npc[stationKey];
+    if(!npc || npc.room!==stationKey || npc.status==='down' || npc.status==='captured'){
+      addLog((npc?npc.name:stationKey)+' hiện chưa có mặt tại '+ROOM_DEF[stationKey].name+'.', 'warn');
+      return false;
+    }
+  }
+
+  S.night2.lureSync[stationKey] = true;
+  addLog('📡 Trạm phát sóng tại '+ROOM_DEF[stationKey].name+' đã đồng bộ.', 'radio');
+  markActionDirty();
+
+  if(LURE_STATIONS.every(k=>S.night2.lureSync[k])) startLureRoute();
+  return true;
+}
+
+/* Tái dùng CHÍNH XÁC cơ chế "Bẫy gây nhiễu" (S.noiseTrap) đã có sẵn để lôi kéo TIU về FIELD —
+   TIU sẽ tự bám theo đường ngắn nhất tới đó (bfsPath), không cần script hoá tuyến đường thủ công.
+   Đơn giản hoá so với mô tả gốc ("đúng tuyến đường định sẵn") nhưng tận dụng được AI có sẵn. */
+function startLureRoute(){
+  addLog('🔊 Cả 3 trạm đã đồng bộ! Sóng âm đang lùa TIU về phía Trận Địa Chính (Sân Bóng)...', 'radio');
+  S.noiseTrap = { room:'FIELD', until: S.gameMinutes + 99999 };
+}
+
+function checkNight2Phase(){
+  if(!isHardMode() || S.night!==2) return;
+  const n2 = S.night2;
+
+  if(n2.phase==='luring'){
+    if(S.gameMinutes>=240 && !n2.warnedLateLuring){
+      n2.warnedLateLuring = true;
+      addLog('⚠ Đã quá 01:00 mà vẫn chưa lùa được TIU vào Trận Địa — cố gắng lên, thời gian cho Giai đoạn Quá Tải sẽ càng eo hẹp.', 'warn');
+    }
+    if(S.monsterRoom==='FIELD' && LURE_STATIONS.every(k=>n2.lureSync[k])){
+      enterLockdownPhase();
+    }
+    return;
+  }
+
+  if(n2.phase==='overload'){
+    const total = Math.max(1, S.nightTotalMin - n2.overloadStartMin);
+    const elapsed = S.gameMinutes - n2.overloadStartMin;
+    n2.overloadMeter = clamp(Math.round(elapsed/total*100), 0, 100);
+
+    if(S.gameMinutes >= n2.nextThreatAt && n2.activeThreats.length < 3){
+      spawnOverloadThreat();
+      n2.nextThreatAt = S.gameMinutes + rand(8,14);
+    }
+    checkThreatDeadlines();
+
+    if(n2.trapIntegrity<=0){
+      trapBreakFailState();
+    } else if(n2.overloadMeter>=100){
+      n2.phase = 'resolved';
+      triggerNight2Climax();
+    }
+  }
+}
+
+/* ---- Giai đoạn 2: SẬP BẪY (minigame đồng bộ 3 điểm) ---- */
+function enterLockdownPhase(){
+  S.night2.phase = 'lockdown';
+  S.noiseTrap = null; // đã hoàn thành lôi kéo, không cần bẫy nữa
+  addLog('⚡ TIU đã lọt vào Trận Địa Chính! Phát lệnh SẬP BẪY ngay!', 'danger');
+  markActionDirty();
+  refreshAll();
+  openLockdownSyncModal();
+}
+
+function openLockdownSyncModal(){
+  const modal = document.getElementById('mgModal');
+  modal.classList.remove('hidden');
+  document.getElementById('mgTitle').textContent = '⚡ SẬP BẪY MA TRẬN — GIẬT CẦU DAO ĐỒNG BỘ';
+  document.getElementById('mgTimer').textContent = '';
+  const body = document.getElementById('mgBody');
+  const footer = document.getElementById('mgFooter');
+  body.innerHTML = `<p style="font-size:12px;color:var(--text-dim);margin-bottom:10px;">
+      Bấm GIẬT CẦU DAO đúng lúc con trỏ nằm trong vùng xanh để đồng bộ với Chàng Lính & Wibu
+      (độ chính xác của họ phụ thuộc mức thành thạo phép ấn: ${Math.round(50+(S.spellMastery||0)/2)}%).</p>
+    <div class="syncBarWrap"><div class="syncBarZoneGood"></div><div class="syncBarZonePerfect"></div><div class="syncBarMarker" id="syncMarker"></div></div>`;
+  footer.innerHTML = '';
+  const btn = document.createElement('button');
+  btn.className = 'bigbtn';
+  btn.textContent = '⚡ GIẬT CẦU DAO';
+  footer.appendChild(btn);
+
+  let pos = 0, dir = 1, raf = null, resolved = false;
+  const speed = 2.2;
+  function tick(){
+    pos += dir*speed;
+    if(pos>=100){ pos=100; dir=-1; }
+    if(pos<=0){ pos=0; dir=1; }
+    const marker = document.getElementById('syncMarker');
+    if(marker) marker.style.left = pos+'%'; else return; // modal đã đóng -> dừng loop
+    raf = requestAnimationFrame(tick);
+  }
+  raf = requestAnimationFrame(tick);
+
+  btn.onclick = ()=>{
+    if(resolved) return;
+    resolved = true;
+    if(raf) cancelAnimationFrame(raf);
+    const quality = lockdownSyncQualityFor(pos);
+    modal.classList.add('hidden');
+    resolveLockdownSync(quality);
+  };
+}
+
+/* Vùng "hoàn hảo" 45-55%, vùng "tốt" 30-70%, ngoài ra là trượt — tách riêng thành hàm thuần
+   để test được không cần DOM/animation. */
+function lockdownSyncQualityFor(pos){
+  if(pos>=45 && pos<=55) return 'perfect';
+  if(pos>=30 && pos<=70) return 'good';
+  return 'miss';
+}
+
+function resolveLockdownSync(playerQuality){
+  const npcAccuracy = 0.5 + (S.spellMastery||0)/200; // 50%-100% tuỳ spellMastery
+  const npcBHit = Math.random() < npcAccuracy;
+  const npcEHit = Math.random() < npcAccuracy;
+  const playerHit = playerQuality !== 'miss';
+  const hits = (playerHit?1:0) + (npcBHit?1:0) + (npcEHit?1:0);
+
+  addLog('[BỘ ĐÀM] Đồng bộ: Bạn '+(playerHit?'✔':'✘')+' — Chàng Lính '+(npcBHit?'✔':'✘')+' — Wibu '+(npcEHit?'✔':'✘')+' ('+hits+'/3)', 'radio');
+
+  if(hits>=3){
+    addLog('✦ ĐỒNG BỘ HOÀN HẢO! Ma trận La Peace xích chặt TIU tại chỗ!', 'good');
+    S.night2.trapIntegrity = 100;
+    enterOverloadPhase();
+  } else if(hits===2){
+    addLog('Đồng bộ một phần — TIU bị khống chế nhưng bẫy không thật sự ổn định.', 'warn');
+    S.night2.trapIntegrity = 60;
+    enterOverloadPhase();
+  } else {
+    addLog('☠ Đồng bộ thất bại — TIU giật tung một góc bẫy và thoát khỏi Trận Địa!', 'danger');
+    S.night2.phase = 'luring';
+    S.night2.lureSync = { B:false, E:false, D:false };
+    const opts = ROOM_DEF['FIELD'].connects;
+    S.monsterRoom = pick(opts);
+  }
+  markActionDirty();
+  refreshAll();
+}
+
+/* ---- Giai đoạn 3: QUÁ TẢI CẦU DAO ---- */
+function enterOverloadPhase(){
+  S.night2.phase = 'overload';
+  S.night2.overloadStartMin = S.gameMinutes;
+  S.night2.overloadMeter = 0;
+  S.night2.activeThreats = [];
+  S.night2.nextThreatAt = S.gameMinutes + rand(8,14);
+  addLog('⚡ GIAI ĐOẠN QUÁ TẢI CẦU DAO bắt đầu — cầm cự tới bình minh (07:30)!', 'danger');
+  markActionDirty();
+}
+
+const OVERLOAD_LANE_LABELS = {
+  fence:  'Hàng rào bẫy đang rung chuyển dữ dội!',
+  powerC: 'Dòng điện tại Tòa C mất ổn định!',
+  uvBlock:'Một luồng ảo giác đang lao thẳng vào Trận Địa!',
+};
+const OVERLOAD_LANE_OWNER = { fence:'B', powerC:'E', uvBlock:'player' };
+const OVERLOAD_LANE_ROOM  = { fence:'FIELD', powerC:'C', uvBlock:'FIELD' };
+const OVERLOAD_THREAT_DEADLINE_MIN = 15;
+const OVERLOAD_INTEGRITY_PENALTY = 15;
+
+function spawnOverloadThreat(){
+  const lane = pick(Object.keys(OVERLOAD_LANE_LABELS));
+  const threat = { id: 't'+Date.now()+Math.random().toString(36).slice(2,6), lane, deadline: S.gameMinutes + OVERLOAD_THREAT_DEADLINE_MIN };
+  S.night2.activeThreats.push(threat);
+  addLog('⚠ '+OVERLOAD_LANE_LABELS[lane], 'danger');
+  markActionDirty();
+}
+
+function checkThreatDeadlines(){
+  const n2 = S.night2;
+  const remaining = [];
+  n2.activeThreats.forEach(t=>{
+    if(S.gameMinutes > t.deadline){
+      n2.trapIntegrity = clamp(n2.trapIntegrity - OVERLOAD_INTEGRITY_PENALTY, 0, 100);
+      addLog('☠ Không xử lý kịp sự cố — Trận Địa mất '+OVERLOAD_INTEGRITY_PENALTY+'% độ bền! ('+n2.trapIntegrity+'%)', 'critical');
+    } else {
+      remaining.push(t);
+    }
+  });
+  n2.activeThreats = remaining;
+}
+
+function resolveOverloadThreatByNPC(threatId, k){
+  const npc = S.npc[k];
+  const threat = S.night2.activeThreats.find(t=>t.id===threatId);
+  if(!npc || !threat) return false;
+  if(OVERLOAD_LANE_OWNER[threat.lane] !== k){
+    addLog('[BỘ ĐÀM] '+npc.name+' không đảm nhiệm sự cố này.', 'warn');
+    return false;
+  }
+  const requiredRoom = OVERLOAD_LANE_ROOM[threat.lane];
+  if(npc.room !== requiredRoom){
+    addLog('[BỘ ĐÀM] '+npc.name+': "Tôi chưa ở '+ROOM_DEF[requiredRoom].name+', không xử lý được từ đây!"', 'warn');
+    return false;
+  }
+  S.night2.activeThreats = S.night2.activeThreats.filter(t=>t.id!==threatId);
+  addLog('✔ '+npc.name+' đã xử lý xong: '+OVERLOAD_LANE_LABELS[threat.lane], 'good');
+  markActionDirty();
+  return true;
+}
+
+function canResolveUVBlockThreat(){
+  return !!S && isHardMode() && S.night===2 && S.night2.phase==='overload'
+    && S.playerRoom==='FIELD'
+    && S.night2.activeThreats.some(t=>t.lane==='uvBlock');
+}
+function resolvePlayerUVBlock(){
+  if(!canResolveUVBlockThreat()) return;
+  const threat = S.night2.activeThreats.find(t=>t.lane==='uvBlock');
+  S.night2.activeThreats = S.night2.activeThreats.filter(t=>t.id!==threat.id);
+  addLog('✔ Bạn dùng Đèn UV chặn đứng luồng ảo giác tại Trận Địa!', 'good');
+  markActionDirty();
+  advanceWorld(2);
+  refreshAll();
+}
+
+function trapBreakFailState(){
+  addLog('☠ Trận Địa đã bị phá vỡ hoàn toàn! TIU thoát khỏi Ma Trận La Peace!', 'critical');
+  S.night2.phase = 'luring';
+  S.night2.lureSync = { B:false, E:false, D:false };
+  S.night2.trapIntegrity = 100;
+  S.night2.activeThreats = [];
+  const opts = ROOM_DEF['FIELD'].connects;
+  S.monsterRoom = pick(opts);
+  markActionDirty();
+  refreshAll();
+}
+
+/* ---- Trận đánh cuối cùng (tái dùng hệ thống battleOverlay của Chapter 1) ---- */
+function triggerNight2Climax(){
+  addLog('☀ 07:30 — Dòng điện quá tải đã tích đủ năng lượng La Peace. Đối đầu cuối cùng bắt đầu!', 'danger');
+  startSecretBattle({
+    introLog: [
+      {msg:'Ma trận La Peace bùng cháy dữ dội trong dòng điện quá tải — TIU gầm rú, bị xích chặt nhưng chưa gục ngã!', cls:''},
+      {msg:'THE TIU vùng vẫy điên cuồng trước party!', cls:'danger'},
+      {msg:'Đòn đánh của party không thể hạ gục TIU — chỉ cần CẦM CỰ đủ '+BATTLE_MAX_TURN+' lượt để dòng điện tích đủ năng lượng!', cls:'warn'},
+    ],
+    victoryShatterMsg: 'Dòng điện quá tải chứa đầy La Peace phóng thẳng vào TIU dưới ánh bình minh — hình hài nó rạn nứt rồi vỡ tan thành từng mảnh!',
+    victoryLightMsg: 'Một luồng ánh sáng trắng ấm áp lan tỏa khắp Trận Địa, nuốt trọn những mảnh vỡ cuối cùng của TIU!',
+    onVictory: ()=>{ playVN(VN_CH2_VICTORY_DIALOGUE.lines, ()=>{ triggerChapter2NormalEnding(); }); },
+    defeatLogMsg: 'Cả party gục ngã... dòng điện quá tải phóng điện vô ích trước khi kịp tích đủ năng lượng.',
+    defeatScreenMsg: 'Trận chiến cuối thất bại — TIU đã áp đảo cả party trước khi dòng điện kịp phóng ra dưới ánh bình minh.',
+  });
+}
+
+function triggerChapter2NormalEnding(){
+  if(!S) return;
+  S.running = false;
+  S.endingRoute = 'normal';
+  document.getElementById('winTitle').textContent = '✦ NORMAL ENDING — GÁNH NẶNG CÒN LẠI ✦';
+  document.getElementById('winSub').textContent = 'The TIU đã bị thanh tẩy hoàn toàn dưới ánh bình minh. Nhưng cái giá phải trả không hề nhẹ nhàng như ba người tưởng.';
+  const nextBtn = document.getElementById('nextNightBtn');
+  nextBtn.textContent = 'VỀ MÀN HÌNH CHÍNH';
+  nextBtn.onclick = showTitle;
+  document.getElementById('winScreen').classList.remove('hidden');
+}
+
+/* ============== HẾT PHẦN ĐÊM 2 ============== */
 
 function advanceWorld(minutesPassed, opts={}){
   // --- Giai đoạn đêm: kiểm tra xem đã bước sang mốc mới chưa ---
   checkPhaseTransition();
   // --- Chapter 2, Đêm 1: 3 giai đoạn trinh sát/thi công/nạp năng lượng (Phần 5) ---
   checkNight1Phase();
+  // --- Chapter 2, Đêm 2: Lùa Địch / Sập Bẫy / Quá Tải Cầu Dao (Phần 6) ---
+  checkNight2Phase();
 
   // decay meter slowly (chậm hơn khi đang Huyết Nguyệt)
   if(!S.enraged){
@@ -1976,7 +2387,7 @@ function advanceWorld(minutesPassed, opts={}){
     addLog('🩸 HUYẾT NGUYỆT! The TIU đã mất kiểm soát — mọi khu an toàn không còn tác dụng!','danger');
     markActionDirty();
   }
-  if(S.enraged && S.gameMinutes >= S.enrageUntil){
+  if(S.enraged && S.gameMinutes >= S.enrageUntil && !(isHardMode() && S.night===2)){
     S.enraged = false;
     S.meter = 50;
     addLog('Huyết Nguyệt đã hạ nhiệt... The TIU tạm thời bình thường trở lại.','tiu');
@@ -2964,15 +3375,31 @@ function freshBattleState(){
   };
 }
 
-function startSecretBattle(){
+/* opts (tất cả optional, mặc định = đúng hành vi trận đánh bí mật Chapter 1 như cũ):
+   - introLog: [{msg,cls}] — log hiển thị lúc mở màn
+   - onVictory: callback khi thắng (mặc định: hội thoại chiến thắng của Trọng -> triggerSecretEnding)
+   - onDefeat: callback khi thua (mặc định: hiện gameOverScreen với thông báo trận bí mật)
+   - defeatLogMsg / defeatScreenMsg: text tuỳ biến cho 2 trường hợp trên
+   - victoryShatterMsg / victoryLightMsg: 2 dòng log hiệu ứng vỡ màn hình lúc thắng */
+function startSecretBattle(opts){
+  opts = opts || {};
   BS = freshBattleState();
+  BS.onVictory = opts.onVictory || null;              // null -> dùng default (Chapter 1) trong finishBattle()
+  BS.onDefeat = opts.onDefeat || null;
+  BS.defeatLogMsg = opts.defeatLogMsg || 'Cả party gục ngã... nghi lễ thanh tẩy thất bại.';
+  BS.defeatScreenMsg = opts.defeatScreenMsg || 'Trận chiến bí mật thất bại — TIU đã áp đảo cả party trước khi Trọng kịp hoàn thành tế lễ thanh tẩy.';
+  BS.victoryShatterMsg = opts.victoryShatterMsg || 'Trọng hoàn tất tế lễ thanh tẩy — hình hài TIU rạn nứt rồi vỡ tan thành từng mảnh!';
+  BS.victoryLightMsg = opts.victoryLightMsg || 'Một luồng ánh sáng trắng ấm áp lan tỏa khắp không gian, nuốt trọn những mảnh vỡ cuối cùng của TIU!';
   if(S) S.paused = true;
   document.getElementById('battleOverlay').classList.remove('hidden');
   playShatterFx();
   startBattleMusic();
-  addBattleLog('Trọng dang tay truyền mana cho cả ba người — không gian vỡ tan thành từng mảnh...','sys');
-  addBattleLog('THE TIU hiện nguyên hình trước party!','danger');
-  addBattleLog('Đòn đánh của party không thể hạ gục TIU — chỉ cần CẦM CỰ đủ '+BS.maxTurn+' lượt để Trọng hoàn tất nghi lễ!','warn');
+  const introLog = opts.introLog || [
+    {msg:'Trọng dang tay truyền mana cho cả ba người — không gian vỡ tan thành từng mảnh...', cls:''},
+    {msg:'THE TIU hiện nguyên hình trước party!', cls:'danger'},
+    {msg:'Đòn đánh của party không thể hạ gục TIU — chỉ cần CẦM CỰ đủ '+BS.maxTurn+' lượt để Trọng hoàn tất nghi lễ!', cls:'warn'},
+  ];
+  introLog.forEach(l=> addBattleLog(l.msg, l.cls));
   renderBattle();
   promptNextAction();
 }
@@ -3505,28 +3932,31 @@ function endRound(){
   promptNextAction();
 }
 
-/* ---- Thắng/thua trận đánh bí mật ---- */
+/* ---- Thắng/thua trận đánh (dùng chung cho trận bí mật Chapter 1 VÀ màn Quá Tải Cầu Dao
+   Chapter 2 Đêm 2 — xem opts của startSecretBattle() ở trên) ---- */
 function finishBattle(won){
   BS.over = true;
   document.getElementById('battleMenu').innerHTML='';
   stopBattleMusic();
   if(won){
-    addBattleLog('Trọng hoàn tất tế lễ thanh tẩy — hình hài TIU rạn nứt rồi vỡ tan thành từng mảnh!','sys');
+    addBattleLog(BS.victoryShatterMsg,'sys');
     playBossShatterFx(()=>{
-      addBattleLog('Một luồng ánh sáng trắng ấm áp lan tỏa khắp không gian, nuốt trọn những mảnh vỡ cuối cùng của TIU!','sys');
+      addBattleLog(BS.victoryLightMsg,'sys');
       playWhiteFlashFx(()=>{
         document.getElementById('battleVictoryFx').classList.remove('go');
         document.getElementById('battleOverlay').classList.add('hidden');
-        playVN(TRONG_VICTORY_DIALOGUE.lines, ()=>{ triggerSecretEnding(); });
+        if(BS.onVictory) BS.onVictory();
+        else playVN(TRONG_VICTORY_DIALOGUE.lines, ()=>{ triggerSecretEnding(); });
       });
     });
   } else {
-    addBattleLog('Cả party gục ngã... nghi lễ thanh tẩy thất bại.','danger');
+    addBattleLog(BS.defeatLogMsg,'danger');
     setTimeout(()=>{
       document.getElementById('battleOverlay').classList.add('hidden');
-      if(S){
+      if(BS.onDefeat){ BS.onDefeat(); }
+      else if(S){
         S.running = false;
-        document.getElementById('goSub').textContent = 'Trận chiến bí mật thất bại — TIU đã áp đảo cả party trước khi Trọng kịp hoàn thành tế lễ thanh tẩy.';
+        document.getElementById('goSub').textContent = BS.defeatScreenMsg;
         document.getElementById('gameOverScreen').classList.remove('hidden');
       }
     }, 1400);
