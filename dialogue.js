@@ -339,11 +339,14 @@ const CHAPTER2_OPEN_SECRET = [
   {spk:'TRỌNG', text:'"Có thể lắm. Nhưng hiện tại nó chỉ chiếm được linh hồn kia nên tao vẫn kiểm soát được."'},
   {spk:'TRỌNG', text:'"Thôi, không còn nhiều thời gian đâu. Gọi hai đứa kia lại, ra Tòa A. Lần này ta sẽ đi cùng."'},
   {spk:'BẠN', text:'"...Được."'},
-  {spk:'BẠN', text:'(Wibu Việt Nhật và Chàng Lính Ngu Lắm gấp rút chạy đến khi nghe tiếng gọi)'},
+  {spk:'TRỌNG', text:'"Tạm thời nhờ bọn mày vậy, tao đã trọng thương rồi."'},
+  {spk:'BẠN', text:'"Trọng à, mày có lẽ đã bị TRỌNG thương NẶNG lắm nhỉ??'},
+  {spk:'TRỌNG', text:'"Mày... mày không hài đâu."'},
+  {spk:'...', text:'(Wibu Việt Nhật và Chàng Lính Ngu Lắm gấp rút chạy đến khi nghe tiếng gọi)'},
   {spk:'WIBU VIỆT NHẬT', text:'"Trọng?? Ủa mày còn sống — ý tao là, còn ở đây à??"'},
   {spk:'CHÀNG LÍNH NGU LẮM', text:'"Chuyện gì đang xảy ra vậy trời..."'},
   {spk:'TRỌNG', text:'"Chuyện dài lắm. Ra Tòa A rồi kể."'},
-  {spk:'BẠN', text:'Bốn người lặng lẽ tập hợp dưới hiên Tòa A — lần này, có thêm một người mà không ai ngờ tới.'}
+  {spk:'BẠN', text:'Bốn người lặng lẽ tập hợp dưới hiên Tòa A.'}
 ];
 /* ==============================================================
    CHAPTER 2 — ĐÊM 2: HỘI THOẠI SAU TRẬN QUÁ TẢI CẦU DAO (NORMAL ENDING)
@@ -451,5 +454,50 @@ const VN_TRONG_TEACH_GROUP_FAIL = {
     {spk:'TRỌNG', text:'"Nghĩa là lúc đồng bộ giật cầu dao đêm nay, khả năng trật nhịp sẽ cao hơn bình thường. Tụi mày phải bù lại bằng sự tập trung."'},
     {spk:'BẠN', text:'"...Được. Tụi tôi sẽ cẩn thận hơn."'},
     {spk:'TRỌNG', text:'"Hy vọng vậy. 21:00, không còn thời gian để hối hận nữa đâu."'},
+  ]
+};
+
+/* ==============================================================
+   CHAPTER 2 — ĐÊM 2: SECRET ENDING (KHỞI ĐẦU ĐÊM 3)
+   Chạy thay cho VN_CH2_VICTORY_DIALOGUE khi người chơi DO DỰ không tung đòn kết liễu lúc
+   dòng điện quá tải đã tích đủ 100% (đỉnh điểm Giai đoạn Quá Tải — xem PHẦN 6.4 design doc).
+   Route này hiện CHƯA được nối vào logic rẽ nhánh trong script.js (triggerNight2Climax() vẫn
+   luôn đi thẳng route Normal) — đây là bước chuẩn bị nội dung, phần trigger/Đêm 3 sẽ làm sau.
+   ============================================================== */
+const VN_CH2_SECRET_HESITATION_DIALOGUE = {
+  lines:[
+    {spk:'BẠN', text:'Dòng điện đã tích đủ. Chỉ cần một cái gật đầu, ma trận sẽ phóng thẳng luồng năng lượng cuối cùng vào TIU.'},
+    {spk:'BẠN', text:'Nhưng tay tôi không nhấc lên nổi.'},
+    {spk:'CHÀNG LÍNH NGU LẮM', text:'"Ơ? Sao còn chưa hô lệnh? Giờ là lúc đó mà!"'},
+    {spk:'BẠN', text:'Tôi nhìn TIU — hay đúng hơn là cái thứ từng là Sửu — đang run rẩy trong xích điện, gần như kiệt sức. Nó không còn gầm gừ nữa. Chỉ còn thở dốc, từng nhịp yếu ớt.'},
+    {spk:'BẠN', text:'"...Tôi không làm được."'},
+    {spk:'WIBU VIỆT NHẬT', text:'"Mày điên à? Nó giết bao nhiêu người rồi đó!"'},
+    {spk:'BẠN', text:'"Tôi biết! Nhưng... nó cũng từng là người mà. Giống Sửu. Giống Tý."'},
+    {spk:'BẠN', text:'Trọng đứng lặng, không nói gì suốt cả phút. Rồi cuối cùng cũng lên tiếng, giọng khản đặc.'},
+    {spk:'TRỌNG', text:'"...Tao cũng không muốn giết nó."'},
+    {spk:'TRỌNG', text:'"Nhưng tao cũng không thể để nó sống. Không phải vì nó đáng chết — mà vì tao không tin bản thân tao đủ mạnh để canh giữ nó mãi mãi."'},
+    {spk:'TRỌNG', text:'(Một lần nữa... lại phải là mình sao?)'},
+    {spk:'BẠN', text:'"Trọng, mày định—"'},
+  ]
+};
+const VN_CH2_SECRET_TRANSFORM_DIALOGUE = {
+  lines:[
+    {spk:'BẠN', text:'Chưa kịp nói hết câu, một luồng sáng đen kịt bùng lên từ ngực Trọng, xé toạc cả không gian quanh Trận Địa.'},
+    {spk:'CHÀNG LÍNH NGU LẮM', text:'"TRỌNG?! CÁI GÌ VẬY?!"'},
+    {spk:'BẠN', text:'Thứ năng lượng đó không phóng vào TIU — nó NUỐT lấy TIU. Cả ma trận La Peace cũng bị hút theo, từng tia điện cuộn xoáy vào người Trọng như một cơn lốc.'},
+    {spk:'WIBU VIỆT NHẬT', text:'"Chạy! Tránh xa ra!!"'},
+    {spk:'BẠN', text:'Tiếng gào của TIU tắt lịm giữa chừng. Khi luồng sáng tan đi, thứ đứng đó không còn là Trọng như tôi từng biết.'},
+    {spk:'BẠN', text:'Đôi mắt hắn giờ đen kịt không còn tròng, những đường vân đỏ như máu bò lan khắp cơ thể, run lên theo từng nhịp thở nặng nề.'},
+    {spk:'TRỌNG', text:'"...ổn... tao... vẫn ổn..."'},
+    {spk:'BẠN', text:'Giọng nói đó vẫn là Trọng. Nhưng có gì đó khác — trầm hơn, vang hơn, như có một thứ khác đang nói CÙNG LÚC với hắn.'},
+    {spk:'WIBU VIỆT NHẬT', text:'"...Máy đo của tao vừa bắt được một tín hiệu lạ. Nó không nhận diện được là The TIU nữa."'},
+    {spk:'WIBU VIỆT NHẬT', text:'"Chỉ hiện đúng một dòng: TRỌNG — THE CURSE ONE."'},
+    {spk:'TRỌNG', text:'"Đi đi. Trước khi tao... không kiểm soát được nữa."'},
+    {spk:'BẠN', text:'Nói xong, cơ thể Trọng bốc lên không trung, xé toạc màn đêm bằng một vệt sáng đỏ thẫm, rồi mất hút về phía chân trời.'},
+    {spk:'CHÀNG LÍNH NGU LẮM', text:'"...tao vừa thấy gì vậy? Mọi người vừa thấy cái gì vậy?"'},
+    {spk:'WIBU VIỆT NHẬT', text:'"...Tao không biết. Nhưng tao nghĩ tụi mình nên im lặng, ít nhất là đêm nay."'},
+    {spk:'BẠN', text:'Không ai trong ba người dám nói thêm lời nào. Chúng tôi đứng đó, giữa Trận Địa đã tan hoang, chờ bình minh lên.'},
+    {spk:'BẠN', text:'Nó không quay lại tấn công. Có lẽ — dù đã trở thành thứ gì đi nữa — vẫn còn sót lại chút gì đó của Trọng, đủ để kìm nó lại. Ít nhất là đêm nay.'},
+    {spk:'BẠN', text:'Nhưng cả ba chúng tôi đều biết — chuyện này còn lâu mới kết thúc. Và đêm mai, 21:00, có lẽ chúng tôi sẽ phải đối mặt với chính người bạn của mình.'},
   ]
 };
