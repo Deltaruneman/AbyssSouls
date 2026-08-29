@@ -275,6 +275,12 @@ function nextStepToward(fromRoom, toRoom){
    thua) bắt đầu. Reset về null khi bắt đầu lại hẳn từ Đêm 1. Vật phẩm ở chế độ chơi lẻ từng
    đêm (standalone, chọn qua "CHỌN MÀN") KHÔNG dùng cơ chế này — luôn bắt đầu với vật phẩm mặc định. */
 let campaignCarry = null;
+/* Chapter 2 — buổi dạy phép của Trọng (16:30-20:45): mức thành thạo học được PHẢI sống sót
+   qua việc retry (chết giữa đêm rồi thử lại) mà không mất tiến độ, và KHÔNG được replay lại
+   toàn bộ cảnh học mỗi lần retry — nên tách thành biến cấp phiên chơi riêng, không nằm trong
+   S (vốn bị tạo mới hoàn toàn mỗi khi beginNight() chạy). Xem startTrongTrainingSequence(). */
+let campaignSpellMastery = 0;
+let trongTrainedForNight = { 1:false, 2:false };
 
 /* ---- Lưu game (localStorage) ----
    Cơ chế lưu/tải toàn bộ tiến trình (đêm hiện tại, vật phẩm, linh kiện, tiến độ manh mối/NPC...)
@@ -2367,6 +2373,104 @@ function triggerChapter2NormalEnding(){
 
 /* ============== HẾT PHẦN ĐÊM 2 ============== */
 
+/* ============== CHAPTER 2 — BUỔI HỌC PHÉP VỚI TRỌNG (16:30-20:45, PHẦN 0 #6 / PHẦN 7) ==============
+   Chạy từ beginNight() ngay khi bắt đầu Đêm 1 hoặc Đêm 2 của Chapter 2 (nếu chưa học đêm đó
+   trong phiên chơi hiện tại — xem trongTrainedForNight). Gồm 2 bước: (1) hội thoại mở đầu qua
+   playVN(), rồi (2) minigame bấm phím mũi tên theo đúng thứ tự qua #mgModal. Kết quả cộng vào
+   S.spellMastery (0-100), đồng thời lưu vào campaignSpellMastery để sống sót qua retry. */
+
+const ARROW_KEYS = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'];
+const ARROW_GLYPHS = { ArrowUp:'↑', ArrowDown:'↓', ArrowLeft:'←', ArrowRight:'→' };
+
+function randomArrowSequence(len){
+  const seq = [];
+  for(let i=0;i<len;i++) seq.push(pick(ARROW_KEYS));
+  return seq;
+}
+
+/* Hàm THUẦN (không đụng DOM) — so khớp input với target theo từng vị trí, trả về tỉ lệ đúng
+   0-1. Tách riêng để test được độc lập với bàn phím/animation. */
+function computeArrowSequenceAccuracy(targetSeq, inputSeq){
+  if(!targetSeq || !targetSeq.length) return 1;
+  let correct = 0;
+  for(let i=0;i<targetSeq.length;i++){
+    if(inputSeq[i]===targetSeq[i]) correct++;
+  }
+  return correct/targetSeq.length;
+}
+
+function startTrongTrainingSequence(n){
+  const introLines = n===1 ? VN_TRONG_TEACH_SOLO_INTRO.lines : VN_TRONG_TEACH_GROUP_INTRO.lines;
+  playVN(introLines, ()=>{
+    openTrongTrainingMinigame(n);
+  });
+}
+
+function openTrongTrainingMinigame(n){
+  S.paused = true; // playVN() đã tự unpause sau hội thoại mở đầu -> pause lại cho minigame
+  const participantCount = (n===1) ? 1 : 3;
+  const seqLen = 6 + participantCount*2; // 8 ký hiệu (solo) / 12 ký hiệu (cả 3)
+  const target = randomArrowSequence(seqLen);
+  const input = [];
+
+  const modal = document.getElementById('mgModal');
+  modal.classList.remove('hidden');
+  document.getElementById('mgTitle').textContent = participantCount===1
+    ? '🔮 TRỌNG DẠY BẠN DẤU ẤN CƠ BẢN'
+    : '🔮 TRỌNG DẠY CẢ BA DẤU ẤN CƠ BẢN';
+  document.getElementById('mgTimer').textContent = '';
+  const body = document.getElementById('mgBody');
+  const footer = document.getElementById('mgFooter');
+  footer.innerHTML = '';
+
+  function render(){
+    body.innerHTML = `<p style="font-size:12px;color:var(--text-dim);margin-bottom:10px;">
+        Dùng phím mũi tên trên bàn phím, lặp lại ĐÚNG thứ tự dấu ấn bên dưới (đã bấm ${input.length}/${target.length}).</p>
+      <div class="arrowSeqRow">${target.map((k,idx)=>{
+        const cls = idx<input.length ? (input[idx]===k?'hit':'miss') : (idx===input.length?'current':'');
+        return `<span class="arrowGlyph ${cls}">${ARROW_GLYPHS[k]}</span>`;
+      }).join('')}</div>`;
+  }
+  render();
+
+  function cleanup(){
+    document.removeEventListener('keydown', onKey);
+  }
+  function onKey(e){
+    if(!ARROW_KEYS.includes(e.key)) return;
+    e.preventDefault();
+    input.push(e.key);
+    render();
+    if(input.length>=target.length){
+      cleanup();
+      const accuracy = computeArrowSequenceAccuracy(target, input);
+      setTimeout(()=>{
+        modal.classList.add('hidden');
+        resolveTrongTraining(n, participantCount, accuracy);
+      }, 400);
+    }
+  }
+  document.addEventListener('keydown', onKey);
+}
+
+function resolveTrongTraining(n, participantCount, accuracy){
+  const gain = Math.round(accuracy * (participantCount===1 ? 40 : 60));
+  S.spellMastery = clamp((S.spellMastery||0) + gain, 0, 100);
+  campaignSpellMastery = S.spellMastery; // sống sót qua retry (xem beginNight())
+  trongTrainedForNight[n] = true;
+
+  const success = accuracy >= 0.5;
+  addLog('🔮 Buổi học phép với Trọng kết thúc ('+Math.round(accuracy*100)+'% chính xác) — mức thành thạo hiện tại: '+S.spellMastery+'%.', 'radio');
+  markActionDirty();
+
+  const outcomeLines = n===1
+    ? (success ? VN_TRONG_TEACH_SOLO_SUCCESS.lines  : VN_TRONG_TEACH_SOLO_FAIL.lines)
+    : (success ? VN_TRONG_TEACH_GROUP_SUCCESS.lines : VN_TRONG_TEACH_GROUP_FAIL.lines);
+  playVN(outcomeLines, ()=>{ refreshAll(); });
+}
+
+/* ============== HẾT PHẦN BUỔI HỌC PHÉP VỚI TRỌNG ============== */
+
 function advanceWorld(minutesPassed, opts={}){
   // --- Giai đoạn đêm: kiểm tra xem đã bước sang mốc mới chưa ---
   checkPhaseTransition();
@@ -3289,9 +3393,10 @@ function showEndScreen(){
         campaignCarry = {
           inventory: Object.assign({}, S.inventory),
           components: Object.assign({}, S.components),
-          // Chỉ có ý nghĩa khi chuyển từ Đêm 1 -> Đêm 2 của Chapter 2 (xem PHẦN 5/7 design doc).
+          // Chỉ có ý nghĩa khi chuyển từ Đêm 1 -> Đêm 2 của Chapter 2 (xem PHẦN 5 design doc).
+          // spellMastery KHÔNG cần mang qua đây nữa -> đã theo dõi bằng campaignSpellMastery
+          // (biến cấp phiên chơi, sống sót qua retry) và được beginNight() tự đồng bộ vào S.
           setupGauge: S.setupGauge,
-          spellMastery: S.spellMastery,
         };
         beginNight(S.night+1, false, 2);
       };
@@ -4048,17 +4153,25 @@ function beginNight(n, standalone, chapter){
     campaignNpcTalks = { E: new Set(), B: new Set() }; // ... và reset lại tiến độ tin tưởng NPC
     campaignLoreFound = new Set(); // ... và reset lại các manh mối đã tìm thấy
     campaignCarry = null; // ... và reset lại vật phẩm/linh kiện mang theo qua từng đêm
+    campaignSpellMastery = 0;
+    trongTrainedForNight = { 1:false, 2:false };
+  } else if(standalone){
+    // Chơi lẻ từng đêm (KHÔNG tiếp nối chiến dịch) -> luôn học lại phép ấn từ đầu, tránh dùng
+    // nhầm tiến độ còn sót lại từ một lượt chơi standalone khác trước đó trong cùng phiên.
+    campaignSpellMastery = 0;
+    trongTrainedForNight = { 1:false, 2:false };
   }
   S = freshState(n, chapter);
   S.standalone = !!standalone;
+  if(chapter===2) S.spellMastery = campaignSpellMastery; // luôn đồng bộ, kể cả khi retry cùng đêm
   // Vật phẩm & linh kiện được giữ lại xuyên suốt các đêm của một lượt chơi thường (không áp
   // dụng cho chế độ chơi lẻ từng đêm qua "CHỌN MÀN", vốn luôn bắt đầu với vật phẩm mặc định).
   if(!S.standalone && campaignCarry){
     S.inventory = Object.assign({}, S.inventory, campaignCarry.inventory);
     S.components = Object.assign({}, S.components, campaignCarry.components);
-    // Setup Gauge & mức thành thạo phép ấn được mang từ Đêm 1 sang Đêm 2 (Chapter 2 — Phần 5/7).
+    // Setup Gauge được mang từ Đêm 1 sang Đêm 2 (Chapter 2 — Phần 5). spellMastery KHÔNG còn
+    // lấy từ đây nữa — đã đồng bộ trực tiếp từ campaignSpellMastery ở trên (đúng cho cả retry).
     if(campaignCarry.setupGauge!=null) S.setupGauge = campaignCarry.setupGauge;
-    if(campaignCarry.spellMastery!=null) S.spellMastery = campaignCarry.spellMastery;
   }
   addLog((chapter===2?'[CHAPTER 2] ':'')+'Ca trực '+NIGHT_CFG[n].name+' bắt đầu lúc '+formatClock(0)+'. Bạn xuất phát tại '+ROOM_DEF[S.playerRoom].name+'.','');
   buildMap();
@@ -4075,7 +4188,13 @@ function beginNight(n, standalone, chapter){
   refreshBagBadge();
   persistSave();
   // VN_INTRO hiện chỉ có nội dung cho Chapter 1 — Chapter 2 sẽ có hội thoại mở đầu riêng sau.
-  if(chapter===1) playVN(VN_INTRO[n], ()=>{});
+  if(chapter===1){
+    playVN(VN_INTRO[n], ()=>{});
+  } else if(chapter===2 && (n===1 || n===2) && !trongTrainedForNight[n]){
+    // Buổi học phép 16:30-20:45 với Trọng — CHỈ diễn ra lần đầu tiên đêm đó được bắt đầu trong
+    // phiên chơi hiện tại (không replay khi retry sau khi chết giữa đêm). Xem PHẦN 7 design doc.
+    startTrongTrainingSequence(n);
+  }
 }
 function hideAllOverlays(){
   ['titleScreen','chapterSelectScreen','chapterIntroScreen','nightSelectScreen','settingsScreen','gameOverScreen','winScreen','chapterEndScreen','chapter2ComingSoonScreen'].forEach(id=>{
@@ -4314,7 +4433,7 @@ document.getElementById('backFromSettings').onclick = ()=>{
 };
 document.getElementById('retryBtn').onclick=()=>{
   document.getElementById('gameOverScreen').classList.add('hidden');
-  beginNight(S.night, S.standalone);
+  beginNight(S.night, S.standalone, S.chapter); // ⚠ bug cũ: thiếu tham số chapter khiến retry Chapter 2 bị tụt về luật Chapter 1
 };
 document.getElementById('menuFromGameOver').onclick = showTitle;
 document.getElementById('menuFromWin').onclick = showTitle;

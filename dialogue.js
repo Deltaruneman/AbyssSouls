@@ -375,3 +375,81 @@ const VN_CH2_VICTORY_DIALOGUE = {
     {spk:'BẠN', text:'Bình minh đã lên. UIT lại một lần nữa im lìm như chưa từng có chuyện gì xảy ra. Nhưng có lẽ, không ai trong ba người bọn tôi còn nhìn nó bằng ánh mắt như cũ nữa.'},
   ]
 };
+
+/* ==============================================================
+   CHAPTER 2 — BUỔI HỌC PHÉP VỚI TRỌNG (16:30 - 20:45)
+   Chạy trước Đêm 1 (chỉ Trọng + Bạn — Trọng chủ động tìm đến) và trước Đêm 2 (Trọng dạy
+   cùng lúc cho cả 3 người). Sau đoạn hội thoại mở đầu là minigame bấm phím mũi tên theo thứ
+   tự (xem startTrongTrainingSequence()/openTrongTrainingMinigame() trong script.js); kết quả
+   minigame quyết định dùng bộ thoại SUCCESS hay FAIL bên dưới.
+   ============================================================== */
+
+/* ---- Trước Đêm 1: chỉ có Trọng + Bạn ---- */
+const VN_TRONG_TEACH_SOLO_INTRO = {
+  lines:[
+    {spk:'BẠN', text:'Trời chạng vạng, tôi còn đang gói ghém đồ nghề thì Trọng bất ngờ xuất hiện, đứng chắn ngay lối đi.'},
+    {spk:'TRỌNG', text:'"Khoan đã. Trước khi mày mò vào trỏng đêm nay — tao có thứ cần dạy mày."'},
+    {spk:'BẠN', text:'"Dạy tôi? Giờ này á? Tôi tưởng ông chỉ đứng nhìn thôi chứ."'},
+    {spk:'TRỌNG', text:'"Bình thường thì đúng vậy. Nhưng lần này khác — tụi mày đang định NHỐT một con quái vào ma trận La Peace. Không có dấu ấn cơ bản, ma trận đó chỉ là đống dây điện vô dụng."'},
+    {spk:'TRỌNG', text:'"Dấu ấn không khó — chỉ cần mày nhớ đúng THỨ TỰ. Sai nhịp, năng lượng sẽ tản mất thay vì tụ lại."'},
+    {spk:'TRỌNG', text:'"Tao sẽ đọc một chuỗi ký hiệu. Mày lặp lại y hệt bằng phím mũi tên. Càng chuẩn, dấu ấn càng bám chắc vào mày."'},
+    {spk:'BẠN', text:'"...Rồi, thử thì thử."'},
+  ]
+};
+const VN_TRONG_TEACH_SOLO_SUCCESS = {
+  lines:[
+    {spk:'TRỌNG', text:'"...Ừ. Không tệ. Dấu ấn đã ăn vào tay mày rồi đó."'},
+    {spk:'BẠN', text:'Tôi thấy tay mình hơi ấm lên một chút, như thể vừa cầm một thứ gì đó vô hình.'},
+    {spk:'TRỌNG', text:'"Giữ cảm giác đó. Đêm nay khi làm việc cùng Chàng Lính với Wibu, mày sẽ cần đến nó — nhất là lúc đồng bộ giật cầu dao."'},
+    {spk:'TRỌNG', text:'"Tao sẽ dạy lại cho cả ba trước khi bước vào đêm quyết định. Còn giờ — cứ xem như bài khởi động."'},
+    {spk:'TRỌNG', text:'Trọng gật đầu một cái rồi lặng lẽ biến mất vào bóng tối, như chưa từng xuất hiện.'},
+  ]
+};
+const VN_TRONG_TEACH_SOLO_FAIL = {
+  lines:[
+    {spk:'TRỌNG', text:'"...Loạn nhịp hết trơn. Thứ tự sai lung tung."'},
+    {spk:'BẠN', text:'"Tại mày đọc nhanh quá! Tao có phải phù thuỷ đâu."'},
+    {spk:'TRỌNG', text:'"Không sao. Dấu ấn vẫn bám được — chỉ là lỏng lẻo hơn nhiều so với người luyện đúng nhịp."'},
+    {spk:'TRỌNG', text:'"Nghĩa là đêm sau, lúc cần đồng bộ với hai đứa kia, phần của mày sẽ dễ trật nhịp hơn. Cẩn thận."'},
+    {spk:'BẠN', text:'"...Được, tao sẽ cố gắng bù lại bằng cách khác."'},
+    {spk:'TRỌNG', text:'"Ừ. Tao sẽ dạy lại lần nữa trước khi vào đêm quyết định — cả ba đứa cùng lúc. May ra nhịp chung sẽ kéo mày lên."'},
+    {spk:'Trọng', text:'Trọng thở dài, rồi lặng lẽ biến mất vào bóng tối như chưa từng xuất hiện.'},
+  ]
+};
+
+/* ---- Trước Đêm 2: Trọng dạy cùng lúc cho cả 3 ---- */
+const VN_TRONG_TEACH_GROUP_INTRO = {
+  lines:[
+    {spk:'BẠN', text:'16:30. Trọng đã đứng đợi sẵn ở Căn tin, bên cạnh là Chàng Lính đang vươn vai và Wibu ôm khư khư cuốn sổ ghi chép.'},
+    {spk:'TRỌNG', text:'"Lại đây, đêm nay là đêm quyết định — không có chỗ cho sai sót."'},
+    {spk:'CHÀNG LÍNH NGU LẮM', text:'"Ơ, giờ tụi tao cũng phải học phép á? Tao tưởng tao chỉ vác đồ với dựng bẫy thôi chứ!"'},
+    {spk:'TRỌNG', text:'"Lúc giật cầu dao đồng bộ, CẢ BA đứa phải cùng lúc kích hoạt đúng nhịp. Một đứa trật, cả ma trận sụp."'},
+    {spk:'WIBU VIỆT NHẬT', text:'"...Nói vậy hồi nãy học một mình chưa đủ à?"'},
+    {spk:'BẠN', text:'"Ổng nói vậy từ đầu rồi mà, mày không để ý à."'},
+    {spk:'TRỌNG', text:'"Lần này tao sẽ đọc chuỗi ký hiệu dài hơn, khó hơn. Cả ba đứa cùng luyện chung một lượt — nhịp của đứa nào cũng ảnh hưởng tới đứa kia."'},
+    {spk:'TRỌNG', text:'"Tập trung vào. Bắt đầu."'},
+  ]
+};
+const VN_TRONG_TEACH_GROUP_SUCCESS = {
+  lines:[
+    {spk:'TRỌNG', text:'"...Tốt. Nhịp của cả ba khớp nhau gần như hoàn hảo."'},
+    {spk:'CHÀNG LÍNH NGU LẮM', text:'"Hehe, tao cũng có khiếu phết chứ bộ!"'},
+    {spk:'WIBU VIỆT NHẬT', text:'"...May mà tao là best osu VN, chứ không thì..."'},
+    {spk:'TRỌNG', text:'"Đừng chủ quan. Trong trận địa thật, TIU sẽ không đứng yên cho tụi mày tập trung như vầy đâu."'},
+    {spk:'TRỌNG', text:'"Nhưng ít nhất — nền tảng đã vững. Phần còn lại phụ thuộc vào lúc đó cả ba có giữ được bình tĩnh hay không."'},
+    {spk:'BẠN', text:'Trọng nhìn cả ba một lượt, ánh mắt có gì đó vừa tin tưởng, vừa nặng trĩu.'},
+    {spk:'TRỌNG', text:'"Nghỉ ngơi đi. 21:00 bắt đầu."'},
+  ]
+};
+const VN_TRONG_TEACH_GROUP_FAIL = {
+  lines:[
+    {spk:'TRỌNG', text:'"...Loạn hết. Ba đứa ba nhịp khác nhau, không đứa nào khớp đứa nào."'},
+    {spk:'CHÀNG LÍNH NGU LẮM', text:'"Ơ tại thằng Wibu bấm sai trước mà, em theo ổng lỡ nhịp luôn!"'},
+    {spk:'WIBU VIỆT NHẬT', text:'"...Tao mà sai? Mày nhìn lộn hướng nãy giờ kìa."'},
+    {spk:'TRỌNG', text:'"Thôi! Cãi nhau không giải quyết được gì."'},
+    {spk:'TRỌNG', text:'"Nghe đây — không kịp luyện lại nữa, trời sắp tối rồi. Dấu ấn của cả ba sẽ không thật sự vững."'},
+    {spk:'TRỌNG', text:'"Nghĩa là lúc đồng bộ giật cầu dao đêm nay, khả năng trật nhịp sẽ cao hơn bình thường. Tụi mày phải bù lại bằng sự tập trung."'},
+    {spk:'BẠN', text:'"...Được. Tụi tôi sẽ cẩn thận hơn."'},
+    {spk:'TRỌNG', text:'"Hy vọng vậy. 21:00, không còn thời gian để hối hận nữa đâu."'},
+  ]
+};
