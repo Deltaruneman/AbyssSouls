@@ -496,7 +496,7 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
 @keyframes breakerFloatPulse{0%,100%{transform:translateX(-50%) scale(1);}50%{transform:translateX(-50%) scale(1.045);}}
 
 /* ---------- visual novel ---------- */
-#vnOverlay{position:fixed;inset:0;z-index:95;background:linear-gradient(180deg, rgba(4,3,2,0) 55%, rgba(4,3,2,0.55) 100%);display:flex;align-items:flex-end;justify-content:center;padding:24px;pointer-events:none;}
+#vnOverlay{position:fixed;inset:0;z-index:100;background:linear-gradient(180deg, rgba(4,3,2,0) 55%, rgba(4,3,2,0.55) 100%);display:flex;align-items:flex-end;justify-content:center;padding:24px;pointer-events:none;}
 #vnOverlay.hidden{display:none;}
 #vnBox{width:min(760px,94vw);margin-bottom:10px;background:rgba(19,16,14,0.97);border:2px solid var(--amber);border-radius:6px;padding:20px 22px;box-shadow:0 0 30px rgba(0,0,0,0.85);pointer-events:auto;}
 #vnSpeaker{font-family:var(--font-disp);font-weight:900;color:var(--amber);font-size:17px;margin-bottom:8px;letter-spacing:1.5px;text-transform:uppercase;}
@@ -593,6 +593,18 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
 .dbullet.t-laser-v.telegraph{width:2px;margin-left:-1px;background:repeating-linear-gradient(180deg,rgba(255,255,255,0.9) 0 6px,transparent 6px 12px);}
 .dbullet.t-laser-v.firing{width:14px;margin-left:-7px;background:linear-gradient(90deg,transparent,#fff 35%,var(--blood-bright) 55%,#fff 65%,transparent);
   box-shadow:0 0 16px var(--blood-bright);}
+/* ---- Đêm 3 — các loại đạn mới cho Trọng — The Curse One ---- */
+.dbullet.t-dart{width:10px;height:14px;margin:-7px 0 0 -5px;border-radius:40% 40% 50% 50%;background:radial-gradient(circle,#d6ffb0,#5a9c2e 70%);box-shadow:0 0 8px #7ed321;}
+.dbullet.t-radial.swarm{width:8px;height:8px;margin:-4px 0 0 -4px;background:radial-gradient(circle,#fff,#a0522d 65%);box-shadow:0 0 6px #a0522d;}
+.dbullet.t-radial.ambush{background:radial-gradient(circle,#fff,#ff4d4d 60%);box-shadow:0 0 10px #ff4d4d;}
+.dbullet.t-laser-h.wide.telegraph{height:4px;margin-top:-2px;}
+.dbullet.t-laser-h.wide.firing{height:34px;margin-top:-17px;background:linear-gradient(180deg,transparent,#fff 25%,#c9433a 50%,#fff 75%,transparent);}
+.dbullet.t-laser-v.wide.telegraph{width:4px;margin-left:-2px;}
+.dbullet.t-laser-v.wide.firing{width:34px;margin-left:-17px;background:linear-gradient(90deg,transparent,#fff 25%,#c9433a 50%,#fff 75%,transparent);}
+.dbullet.t-quake{position:absolute;inset:0;left:0;top:0;margin:0;border-radius:0;width:100%;height:100%;}
+.dbullet.t-quake.telegraph{background:radial-gradient(circle var(--safe-r) at var(--safe-x) var(--safe-y), rgba(230,180,41,0.12) 0, rgba(230,180,41,0.12) var(--safe-r), rgba(230,41,63,0.16) calc(var(--safe-r) + 1px));border:2px dashed rgba(230,180,41,0.5);}
+.dbullet.t-quake.firing{background:radial-gradient(circle var(--safe-r) at var(--safe-x) var(--safe-y), transparent 0, transparent var(--safe-r), rgba(230,41,63,0.55) calc(var(--safe-r) + 1px));}
+
 
 #battleMid{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;align-items:center;gap:10px;overflow-y:auto;padding:6px 12px;}
 #partyPanel{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;width:100%;max-width:640px;}
