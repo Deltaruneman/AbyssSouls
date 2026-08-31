@@ -4866,8 +4866,14 @@ document.addEventListener('keydown', (e)=>{
   if(!S || !S.running) return;
   if(isBlockingOverlayOpen()) return;
   if(BS && !BS.over) return;
-  campaignLaPeace = 3;
-  startSecretBattle();
+  // Phím tắt debug: nhảy thẳng tới boss fight của secret ending — hoạt động cho cả
+  // Chapter 1 (trận bí mật Trọng mặc định) LẪN Chapter 2 (trận Trọng "The Curse One").
+  if(S.chapter === 2){
+    startTrongCurseOneBattle();
+  } else {
+    campaignLaPeace = 3;
+    startSecretBattle();
+  }
 });
 
 document.getElementById('miniMapExpand').onclick=()=>{
