@@ -501,3 +501,93 @@ const VN_CH2_SECRET_TRANSFORM_DIALOGUE = {
     {spk:'BẠN', text:'Nhưng cả ba chúng tôi đều biết — chuyện này còn lâu mới kết thúc. Và đêm mai, 21:00, có lẽ chúng tôi sẽ phải đối mặt với chính người bạn của mình.'},
   ]
 };
+
+/* ==============================================================
+   ĐÊM 3 — TRẬN CHIẾN VỚI TRỌNG "THE CURSE ONE"
+   Xem startTrongCurseOneBattle() trong script.js. Khi HP của Trọng chạm mốc 20%, trận đấu tạm
+   dừng và VN_TRONG_CURSE_SEAL_PROMPT hiện ra với 2 lựa chọn:
+     - "PHONG ẤN" -> chèn VN_TRONG_SEAL_CHOSEN, kết thúc trận đấu, dẫn tới VN_TRONG_SEALED_ENDING_DIALOGUE
+     - "KẾT LIỄU" -> chèn VN_TRONG_KILL_CHOSEN, trận đấu tiếp tục tới khi HP về 0, dẫn tới
+       VN_TRONG_BAD_ENDING_DIALOGUE (bad ending)
+   ============================================================== */
+const VN_TRONG_CURSE_SEAL_PROMPT = {
+  lines:[
+    {spk:'BẠN', text:'Một đòn cuối cùng xé toạc lớp giáp tà thuật quanh người Trọng. Hắn khuỵu xuống một chân, hơi thở đứt quãng.'},
+    {spk:'BẠN', text:'Trong khoảnh khắc đó, đôi mắt đen kịt của hắn thoáng ánh lên chút gì đó quen thuộc — như thể Trọng thật sự vẫn còn ở đâu đó bên trong.'},
+    {spk:'TRỌNG', text:'"...làm đi..."'},
+    {spk:'TRỌNG', text:'"...đừng để tao... hại thêm ai nữa..."'},
+    {spk:'BẠN', text:'Tôi siết chặt La Peace đang rung lên trong lòng bàn tay. Chỉ cần dồn thêm một chút sức mạnh nữa thôi — Trọng sẽ không bao giờ đứng dậy được nữa.'},
+    {spk:'BẠN', text:'Nhưng cũng chính sức mạnh đó, nếu dùng đúng cách, có thể GIAM CẦM thay vì HUỶ DIỆT. Không ai đảm bảo nó sẽ giữ được — nhưng ít nhất, Trọng còn có một cơ hội.'},
+    {spk:'BẠN', text:'Không còn nhiều thời gian để do dự.', choices:[
+      {label:'✦ PHONG ẤN — giữ lại một phần của Trọng', insert:[]},
+      {label:'⚔ KẾT LIỄU — không còn đường lui', insert:[]},
+    ]},
+  ]
+};
+const VN_TRONG_SEAL_CHOSEN = {
+  lines:[
+    {spk:'BẠN', text:'"...Không. Tôi sẽ không giết mày."'},
+    {spk:'BẠN', text:'Tôi dồn hết sức mạnh còn lại của Souls of the Undying One vào La Peace — không phải để đâm xuyên qua Trọng, mà để LỌC RA thứ không thuộc về hắn.'},
+    {spk:'TRỌNG', text:'"...mày định... tách tụi nó ra khỏi tao?"'},
+    {spk:'BẠN', text:'"Tao không biết có làm được không. Nhưng Sửu với Tý không đáng bị xoá sổ như vậy — và mày cũng không đáng phải mang chúng nó theo suốt đời."'},
+    {spk:'TRỌNG', text:'"...ngu... mày sẽ hối hận..."'},
+    {spk:'BẠN', text:'"Có thể. Nhưng tao thà hối hận vì đã cố cứu, còn hơn phải sống với việc đã giết thêm một người bạn."'},
+  ]
+};
+const VN_TRONG_KILL_CHOSEN = {
+  lines:[
+    {spk:'BẠN', text:'"...Xin lỗi, Trọng."'},
+    {spk:'BẠN', text:'Tôi siết chặt La Peace, dồn toàn bộ sức mạnh còn lại vào đòn đánh tiếp theo. Không còn đường lui nữa.'},
+    {spk:'TRỌNG', text:'"...vậy thì... tới đi..."'},
+  ]
+};
+
+const VN_TRONG_SEALED_ENDING_DIALOGUE = {
+  lines:[
+    {spk:'BẠN', text:'Ánh sáng từ La Peace không nuốt lấy Trọng như tôi tưởng — nó tách ra thành hai luồng khói, một xanh xám lạnh lẽo, một đỏ thẫm nặng nề, kéo ra khỏi lồng ngực hắn.'},
+    {spk:'BẠN', text:'Trọng đứng sững, mắt nhắm nghiền, như đang lắng nghe một thứ gì đó chỉ mình hắn nghe được.'},
+    {spk:'TÝ (linh hồn)', text:'"...Cuối cùng cũng xong rồi à..."'},
+    {spk:'SỬU (linh hồn)', text:'"...Mày định giam tụi tao ở đây mãi sao, Trọng?"'},
+    {spk:'TRỌNG', text:'"...Không phải giam. Là giữ lại. Để một ngày nào đó, nếu có cách... tao sẽ tìm cách chuộc lỗi thật sự."'},
+    {spk:'TÝ (linh hồn)', text:'"...Ừ thì. Ít ra mày không giả vờ như tụi tao chưa từng tồn tại."'},
+    {spk:'SỬU (linh hồn)', text:'"...Con gái tao... nếu có ngày mày gặp lại nó... đừng nói cho nó biết tao đã thành cái thứ như thế nào."'},
+    {spk:'TRỌNG', text:'"...Tao hứa."'},
+    {spk:'BẠN', text:'Hai luồng khói dần thu nhỏ lại, cô đặc thành hai viên đá nhỏ tối màu, nằm yên trong lòng bàn tay Trọng — không còn hơi thở, không còn tiếng nói, chỉ còn sự tĩnh lặng.'},
+    {spk:'BẠN', text:'Trọng mở mắt. Lần đầu tiên sau hai đêm, tôi thấy đúng đôi mắt của Trọng — không còn đen kịt, không còn đường vân đỏ, chỉ là một người đàn ông kiệt sức.'},
+    {spk:'TRỌNG', text:'"...Xong rồi."'},
+    {spk:'WIBU VIỆT NHẬT', text:'"Trọng?! Mày... mày tỉnh lại rồi à?"'},
+    {spk:'TRỌNG', text:'"Ừ. Tao vẫn còn ở đây. Ít ra là tạm thời."'},
+    {spk:'CHÀNG LÍNH NGU LẮM', text:'"TAO VẪN CHƯA HIỂU CÁI GÌ VỪA XẢY RA NHƯNG MÀ TAO MỪNG LÀ MÀY ỔN!!"'},
+    {spk:'BẠN', text:'Trọng nhìn xuống hai viên đá tối màu trong tay, im lặng một lúc lâu trước khi cất chúng vào túi áo.'},
+    {spk:'TRỌNG', text:'"Tao vừa nói chuyện với tụi nó. Sửu với Tý."'},
+    {spk:'BẠN', text:'"...Nói chuyện gì?"'},
+    {spk:'TRỌNG', text:'"Chuyện mà lẽ ra tao nên nói từ lâu rồi. Xin lỗi. Dù có muộn cỡ nào."'},
+    {spk:'BẠN', text:'Không ai trong chúng tôi hỏi thêm. Có những chuyện không cần phải hiểu hết mới cảm được sức nặng của nó.'},
+    {spk:'WIBU VIỆT NHẬT', text:'"...Vậy giờ sao? Mày định làm gì với hai viên đá đó?"'},
+    {spk:'TRỌNG', text:'"Giữ. Canh giữ, cho tới khi tao tìm ra cách làm đúng việc — không phải giết, không phải giam mãi mãi. Một cách thật sự chuộc lỗi."'},
+    {spk:'TRỌNG', text:'"Có thể mất rất lâu. Có thể tao sẽ không tìm ra. Nhưng ít nhất, lần này tao sẽ không bỏ cuộc giữa chừng."'},
+    {spk:'BẠN', text:'Bình minh lên. Lần đầu tiên sau hai đêm dài đằng đẵng, không khí quanh UIT không còn nặng nề như trước nữa.'},
+    {spk:'CHÀNG LÍNH NGU LẮM', text:'"Ê, vậy coi như xong hết rồi hả? Tụi mình... sống sót thật rồi hả?"'},
+    {spk:'TRỌNG', text:'"Đêm nay thì đúng vậy."'},
+    {spk:'BẠN', text:'Trọng nhìn cả ba chúng tôi, nở một nụ cười mệt mỏi nhưng chân thật — lần đầu tiên tôi từng thấy ở hắn.'},
+    {spk:'TRỌNG', text:'"Cảm ơn. Vì đã không bỏ tao lại, kể cả khi tao không còn là chính mình nữa."'},
+    {spk:'WIBU VIỆT NHẬT', text:'"...Đừng làm tao khóc chứ, ghê thấy mồ."'},
+    {spk:'BẠN', text:'Chúng tôi đứng đó, giữa Trận Địa đổ nát, giữa ánh nắng đầu tiên của một buổi sáng mà không ai trong chúng tôi dám chắc mình sẽ sống để thấy.'},
+    {spk:'BẠN', text:'Nhưng câu chuyện này — có lẽ chưa dừng lại ở đây. Còn Sửu, còn Tý, còn lời hứa của Trọng, còn cả những câu hỏi mà đêm nay chưa kịp trả lời.'},
+    {spk:'BẠN', text:'Có lẽ, đó sẽ là một câu chuyện khác. Vào một ngày khác.'},
+  ]
+};
+
+const VN_TRONG_BAD_ENDING_DIALOGUE = {
+  lines:[
+    {spk:'BẠN', text:'Đòn đánh cuối cùng xuyên thẳng qua lớp giáp tà thuật. Trọng gục xuống, không còn động đậy.'},
+    {spk:'BẠN', text:'Không có tiếng gầm rú nào nữa. Chỉ có sự im lặng — thứ im lặng nặng nề nhất tôi từng nghe thấy trong đời.'},
+    {spk:'WIBU VIỆT NHẬT', text:'"...Xong rồi."'},
+    {spk:'CHÀNG LÍNH NGU LẮM', text:'"...Ừ. Xong rồi."'},
+    {spk:'BẠN', text:'Không ai reo hò. Không ai thấy nhẹ nhõm. Ba chúng tôi đứng đó, nhìn cái xác không còn nhận ra là Trọng nữa, giữa đống đổ nát của Trận Địa.'},
+    {spk:'BẠN', text:'Tôi tự hỏi — liệu đây có phải là điều Trọng thật sự muốn không? Hay tôi vừa lặp lại đúng thứ mà chính hắn từng sợ hãi: tiếp tay giết thêm một người nữa?'},
+    {spk:'BẠN', text:'Sửu. Tý. Và giờ là Trọng.'},
+    {spk:'BẠN', text:'Bình minh lên, nhưng không mang lại cảm giác nhẹ nhõm nào cả. Chúng tôi đã thắng. Nhưng thắng để làm gì, khi cái giá phải trả là chính người đã dẫn đường cho chúng tôi suốt hai đêm qua?'},
+    {spk:'BẠN', text:'UIT lại im lìm như chưa từng có chuyện gì xảy ra. Nhưng lần này, không ai trong ba chúng tôi còn muốn quay lại nhìn nó thêm một lần nào nữa.'},
+  ]
+};
