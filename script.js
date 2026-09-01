@@ -60,7 +60,7 @@ const TIU_IMAGE = "assets/images/TIU.png";
 /* Đêm 3 (secret route) — ảnh/nhạc riêng cho Trọng "The Curse One", KHÁC hẳn TIU_IMAGE/
    BATTLE_MUSIC dùng cho các trận khác. Đường dẫn placeholder — thay bằng asset thật khi có. */
 const TRONG_CURSE_IMAGE = "assets/images/trong_curse.png";
-const TRONG_CURSE_MUSIC = "assets/sfx/OST/battle2";
+const TRONG_CURSE_MUSIC = "assets/sfx/OST/battle2.mp3";
 
 
 // SFX phát đúng lúc The TIU lao ra khỏi màn hình (jumpscare) — điền đường dẫn file âm thanh
