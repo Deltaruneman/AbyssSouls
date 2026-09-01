@@ -605,6 +605,28 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
 .dbullet.t-quake.telegraph{background:radial-gradient(circle var(--safe-r) at var(--safe-x) var(--safe-y), rgba(230,180,41,0.12) 0, rgba(230,180,41,0.12) var(--safe-r), rgba(230,41,63,0.16) calc(var(--safe-r) + 1px));border:2px dashed rgba(230,180,41,0.5);}
 .dbullet.t-quake.firing{background:radial-gradient(circle var(--safe-r) at var(--safe-x) var(--safe-y), transparent 0, transparent var(--safe-r), rgba(230,41,63,0.55) calc(var(--safe-r) + 1px));}
 
+/* ---- NÂNG CẤP bullet pattern — đạn lượn sóng (t-wave) & hiệu ứng vọt tốc (accel-burst) ----
+   LƯU Ý: vị trí .dbullet được set bằng el.style.transform=translate(x,y) ngay trong JS mỗi
+   khung hình, nên các hiệu ứng dưới đây KHÔNG được animate trực tiếp "transform" trên chính
+   .dbullet (sẽ đè mất vị trí translate) — dùng "filter" (an toàn, không đụng transform) cho
+   phần tử chính, và dùng pseudo-element ::after (không có transform riêng từ JS) cho vòng
+   hào quang phóng to/mờ dần. */
+.dbullet.t-wave{width:11px;height:11px;margin:-5.5px 0 0 -5.5px;position:absolute;
+  background:radial-gradient(circle,#fff,#ffb84d 60%,#e6293f 100%);
+  box-shadow:0 0 9px #ffb84d;animation:waveGlow 0.5s ease-in-out infinite;}
+@keyframes waveGlow{0%,100%{filter:brightness(1);}50%{filter:brightness(1.6);}}
+.dbullet.t-wave::after{content:'';position:absolute;inset:-4px;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle,rgba(255,184,77,0.5),transparent 70%);
+  animation:waveRing 0.5s ease-in-out infinite;}
+@keyframes waveRing{0%,100%{transform:scale(0.85);opacity:.6;}50%{transform:scale(1.35);opacity:.15;}}
+/* Khi đạn (bất kỳ loại nào) vừa vọt tốc — chớp sáng ngay lúc đó rồi 1 vòng hào quang bung ra tắt dần */
+.dbullet.accel-burst{animation:accelFlash 0.32s ease-out;}
+@keyframes accelFlash{0%{filter:brightness(2.6);}100%{filter:brightness(1);}}
+.dbullet.accel-burst::after{content:'';position:absolute;inset:-6px;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle,rgba(255,255,255,0.9),transparent 70%);
+  animation:accelRing 0.32s ease-out;}
+@keyframes accelRing{0%{transform:scale(0.4);opacity:1;}100%{transform:scale(2.6);opacity:0;}}
+
 
 #battleMid{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;align-items:center;gap:10px;overflow-y:auto;padding:6px 12px;}
 #partyPanel{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;width:100%;max-width:640px;}

@@ -60,7 +60,7 @@ const TIU_IMAGE = "assets/images/TIU.png";
 /* Đêm 3 (secret route) — ảnh/nhạc riêng cho Trọng "The Curse One", KHÁC hẳn TIU_IMAGE/
    BATTLE_MUSIC dùng cho các trận khác. Đường dẫn placeholder — thay bằng asset thật khi có. */
 const TRONG_CURSE_IMAGE = "assets/images/trong_curse.png";
-const TRONG_CURSE_MUSIC = "assets/sfx/OST/trong_curse.mp3";
+const TRONG_CURSE_MUSIC = "assets/sfx/OST/battle2";
 
 // SFX phát đúng lúc The TIU lao ra khỏi màn hình (jumpscare) — điền đường dẫn file âm thanh
 // vào đây, ví dụ: 'assets/sfx/jumpscare.mp3'. Để trống thì sẽ không phát SFX (chỉ có hiệu ứng hình).
@@ -3462,12 +3462,26 @@ const BATTLE_PARTY_ORDER = ['YOU','WIBU','LINH'];
 // người chơi phải điều khiển "linh hồn hợp nhất" (hình tròn) bằng WASD/mũi tên để né trong
 // #dodgeBox. dmg là sát thương của MỖI LẦN trúng đòn (có thể trúng nhiều lần trong 1 chuỗi).
 const BOSS_PATTERNS = [
+  // ---- simpleOnly: chỉ được State Machine chọn khi boss còn ở pha "KHỞI ĐỘNG" (HP cao) ----
+  {name:'ĐẠN THẲNG CƠ BẢN', desc:'Từng viên đạn bắn thẳng đều đặn từ trên xuống — tốc độ cố định, dễ đoán trước.', dmg:[3,5], bulletType:'straight', dodgeDuration:4000, simpleOnly:true},
   {name:'MƯA DỮ LIỆU LỖI', desc:'Từng đợt ký tự đỏ rực đổ xuống dồn dập như mưa.', dmg:[5,9], bulletType:'rain', dodgeDuration:4600},
-  {name:'VÒNG XOÁY HỖN LOẠN', desc:'TIU tan thành hàng trăm mảnh vỡ xoáy liên hồi quanh tâm.', dmg:[5,9], bulletType:'spiral', dodgeDuration:4800},
+  {name:'VÒNG XOÁY HỖN LOẠN', desc:'TIU tan thành hàng trăm mảnh vỡ, xoáy liên hồi quanh tâm rồi bắn ra theo từng viên nối tiếp.', dmg:[5,9], bulletType:'spiral', dodgeDuration:4800},
   {name:'TIA QUÉT KÝ ỨC', desc:'Nhiều luồng sáng trắng lần lượt quét ngang/dọc, chỉ báo trước rồi bắn thật.', dmg:[7,12], bulletType:'sweep', dodgeDuration:5000},
   {name:'BÓNG ĐÊM NUỐT CHỬNG', desc:'Nhiều đợt sóng nổ tỏa tròn dồn dập từ tâm lao ra.', dmg:[5,9], bulletType:'burst', dodgeDuration:4600},
-  {name:'GỌNG KÌM BỐN PHÍA', desc:'Đạn ập vào liên tục từ cả bốn phía, siết chặt không gian né tránh.', dmg:[6,10], bulletType:'cross', dodgeDuration:5000}
+  {name:'GỌNG KÌM BỐN PHÍA', desc:'Đạn ập vào liên tục từ cả bốn phía, siết chặt không gian né tránh.', dmg:[6,10], bulletType:'cross', dodgeDuration:5000},
+  {name:'SÓNG TRUY SÁT', desc:'Từng luồng đạn lượn sóng bay ra từ rìa màn hình, nhắm thẳng vào vị trí của bạn lúc phóng ra.', dmg:[5,9], bulletType:'wave', dodgeDuration:4800},
+  {name:'VỌT TỐC BẤT NGỜ', desc:'Đạn xuất phát chậm rãi rồi đột ngột tăng tốc gấp nhiều lần giữa chừng — chớ chủ quan!', dmg:[6,11], bulletType:'acceldash', dodgeDuration:4600},
 ];
+
+/* ---- Pattern KẾT HỢP dành riêng cho State Machine theo % HP (xem applyHpStateMachine bên
+   dưới): bắn ĐỒNG THỜI trong cùng 1 chuỗi đạn — vừa XOẮN ỐC (từ tâm, cộng dồn góc liên tục
+   từng viên một) VỪA ĐẠN LƯỢN SÓNG nhắm thẳng vào người chơi. combinedOnly:true nghĩa là
+   pattern này CHỈ xuất hiện sau khi boss đã "lộ bài" (HP tụt dưới ngưỡng chuyển pha). ---- */
+const BOSS_PATTERN_COMBO = {
+  name:'HỖN CHIẾN: XOẮN ỐC & SÓNG TRUY SÁT',
+  desc:'Boss vừa xoáy tít hàng loạt đạn xoắn ốc từ tâm, vừa tung thêm những luồng sóng lượn nhắm thẳng vào bạn!',
+  dmg:[6,10], bulletType:'combo', dodgeDuration:5600, combinedOnly:true
+};
 
 /* ============== ĐÊM 3 — BỘ CHIÊU THỨC CỦA TRỌNG "THE CURSE ONE" ==============
    7 pattern chia làm 2 nhóm theo Đặc Trưng Sức Mạnh mà Trọng đã hấp thụ:
@@ -3527,6 +3541,12 @@ function freshBattleState(opts){
     poisonStacks: 0,                                // Dạ Thử: mỗi lần trúng "Phi Tiêu Độc" cộng dồn, gây thêm sát thương cuối lượt boss
     souls: !!opts.souls,                            // true nếu MC đang chiến đấu dưới dạng "Souls of the Undying One" (đổi flavor text kỹ năng)
     musicSrc: opts.musicSrc || null,                 // null -> startBattleMusic() dùng BATTLE_MUSIC mặc định
+    // ---- State Machine chuyển pha bắn theo %HP (xem applyHpStateMachine) — mặc định BẬT,
+    // chỉ có tác dụng khi chainSelector đang dùng là chooseBossPatternChain (mặc định); trận
+    // Trọng — The Curse One dùng chainSelector riêng (chooseTrongPatternChain) nên không bị ảnh hưởng.
+    hpStateMachineEnabled: opts.hpStateMachineEnabled !== false,
+    hpPhaseThreshold: opts.hpPhaseThreshold != null ? opts.hpPhaseThreshold : 0.5,
+    hpPhase: 'SIMPLE',
   };
 }
 
@@ -3786,8 +3806,28 @@ function applyBattleSkill(key){
    Càng về các lượt sau, xác suất & độ dài của việc NỐI LIỀN nhiều pattern bullet-hell
    lại với nhau thành 1 chuỗi đòn dài càng tăng. Tới đúng lượt cuối cùng (BS.maxTurn),
    TIU dồn hết sức tàn — TẤT CẢ các pattern sẽ được nối liền lại thành 1 chuỗi duy nhất. */
+/* ============== STATE MACHINE: TỰ ĐỘNG CHUYỂN PHA THEO % MÁU BOSS ==============
+   2 trạng thái: 'SIMPLE' (mặc định lúc mới vào trận — chỉ dùng các pattern đánh dấu
+   simpleOnly, ví dụ ĐẠN THẲNG CƠ BẢN) và 'COMBINED' (bung ra sau khi HP boss tụt xuống
+   dưới BS.hpPhaseThreshold — loại hẳn các pattern simpleOnly ra khỏi vòng chọn và bổ sung
+   BOSS_PATTERN_COMBO — vừa xoắn ốc vừa đạn sóng nhắm người chơi). Việc chuyển pha là MỘT
+   CHIỀU (SIMPLE -> COMBINED), không quay lại dù HP có được hồi, đúng tinh thần "boss lộ
+   chiêu mới khi dồn máu vào thế đường cùng". Bật/tắt qua BS.hpStateMachineEnabled. */
+function applyHpStateMachine(patterns){
+  if(!BS.hpStateMachineEnabled) return patterns;
+  if(!BS.hpPhase) BS.hpPhase = 'SIMPLE';
+  const threshold = BS.hpPhaseThreshold!=null ? BS.hpPhaseThreshold : 0.5;
+  const ratio = clamp(BS.boss.hp / BS.boss.maxHp, 0, 1);
+  if(BS.hpPhase === 'SIMPLE' && ratio <= threshold){
+    BS.hpPhase = 'COMBINED';
+    addBattleLog(BS.bossName+' gầm lên giận dữ khi máu tụt xuống dưới '+Math.round(threshold*100)+'% — LỘ RA CHIÊU THỨC KẾT HỢP MỚI!', 'danger');
+  }
+  if(BS.hpPhase === 'COMBINED') return [...patterns.filter(p=>!p.simpleOnly), BOSS_PATTERN_COMBO];
+  return patterns.filter(p=>!p.combinedOnly);
+}
+
 function chooseBossPatternChain(turn){
-  const all = BS.patterns;
+  const all = applyHpStateMachine(BS.patterns);
   if(turn >= BS.maxTurn){
     // lượt cuối: bung hết mọi chiêu thức, nối liền thành 1 chuỗi đòn tổng lực
     return shuffle(all.slice());
@@ -4037,6 +4077,7 @@ function buildDodgeSpawnQueue(pattern, rect, turn, densityBoost){
     burst: genBurstQueue, cross: genCrossQueue,
     dart: genDartQueue, pillar: genPillarQueue, swarm: genSwarmQueue,
     ambush: genAmbushQueue, quake: genQuakeQueue, charge: genChargeQueue, shield: genShieldQueue,
+    straight: genStraightQueue, wave: genWaveQueue, acceldash: genAccelDashQueue, combo: genComboSpiralWaveQueue,
   };
   const fn = gens[pattern.bulletType] || genRainQueue;
   return fn(rect, (pattern.dodgeDuration||4600), density);
@@ -4053,14 +4094,28 @@ function genRainQueue(rect, duration, density){
   }
   return q;
 }
-function genSpiralQueue(rect, duration, density){
-  const q=[]; let t=150; let ang=Math.random()*360;
+/* NÂNG CẤP — Đạn xoắn ốc (Spiral) đúng kiểu bullet-hell: thay vì bắn cả cụm đạn cùng lúc,
+   ta bắn TỪNG VIÊN MỘT theo nhịp thời gian đều đặn, và sau mỗi viên lại CỘNG DỒN thêm 1 góc
+   cố định (angStep, mặc định +12°) vào hướng bắn của viên tiếp theo — quỹ đạo tổng thể của
+   cả chuỗi đạn sẽ tự vẽ ra hình xoắn ốc lan dần ra khỏi tâm. opts cho phép tuỳ biến số "cánh"
+   xoắn (armCount — bắn armCount viên đối xứng đều 360° quanh tâm mỗi nhịp, mặc định 2 cánh
+   để giữ độ dày hình ảnh như bản gốc), tốc độ, góc bắt đầu... dùng lại được cho pattern COMBO. */
+function genSpiralQueue(rect, duration, density, opts){
+  opts = opts || {};
+  const q=[]; let t = opts.startDelay!=null ? opts.startDelay : 150;
+  let ang = opts.startAngle!=null ? opts.startAngle : Math.random()*360;
   const cx=rect.w/2, cy=rect.h/2;
+  const angStep = opts.angStep!=null ? opts.angStep : 12;       // độ tăng cố định sau MỖI VIÊN đạn
+  const armCount = opts.armCount!=null ? opts.armCount : 2;     // số viên bắn đối xứng mỗi nhịp
+  const speed = opts.speed!=null ? opts.speed : 0.1;
+  const fireInterval = (opts.fireInterval!=null ? opts.fireInterval : 90) * density;
   while(t < duration-300){
-    q.push({t, kind:'radial', cx, cy, ang, speed:0.095});
-    q.push({t, kind:'radial', cx, cy, ang:ang+180, speed:0.095});
-    ang += 24;
-    t += 95*density;
+    for(let i=0;i<armCount;i++){
+      q.push({t, kind:'radial', cx, cy, ang: ang + (360/armCount)*i, speed,
+        accelAfter: opts.accelAfter, accelMul: opts.accelMul});
+    }
+    ang += angStep; // liên tục cộng thêm góc cố định -> tạo quỹ đạo xoắn ốc
+    t += fireInterval;
   }
   return q;
 }
@@ -4093,6 +4148,71 @@ function genCrossQueue(rect, duration, density){
     t += 520*density;
   }
   return q;
+}
+
+/* ============== NÂNG CẤP BULLET PATTERN ==============
+   4 kỹ thuật mới: (1) bắn thẳng đơn giản — dùng cho State Machine ở pha đầu trận; (2) đạn
+   lượn sóng — cộng Math.sin() theo thời gian vào trục vuông góc với hướng bay; (3) đạn thay
+   đổi gia tốc — xuất phát chậm rồi nhân vọt vận tốc sau 1 khoảng thời gian ngắn; (4) pattern
+   COMBO ghép chung xoắn ốc + sóng truy sát, dùng riêng cho trạng thái 'COMBINED' của State
+   Machine (xem applyHpStateMachine ở phần Boss Battle). ---- */
+
+/* Đạn thẳng cơ bản: rơi thẳng đứng từ trên xuống với tốc độ không đổi, không nhắm, không gia
+   tốc — dùng làm pattern "khởi động" dễ nhất trước khi boss lộ chiêu kết hợp. */
+function genStraightQueue(rect, duration, density){
+  const q=[]; let t=300;
+  while(t < duration-400){
+    const x = 20 + Math.random()*(rect.w-40);
+    q.push({t, kind:'fall', x, speed:0.09});
+    t += 700*density;
+  }
+  return q;
+}
+
+/* Đạn lượn sóng: bắn từ rìa màn hình, mặc định NHẮM THẲNG vào vị trí linh hồn ngay lúc phóng
+   ra (giống 'aimed'/dart) nhưng trên đường bay còn CỘNG THÊM dao động hình sin theo trục
+   vuông góc với hướng bay — quỹ đạo uốn lượn khó đoán dù điểm khởi đầu là một đường thẳng. */
+function genWaveQueue(rect, duration, density, opts){
+  opts = opts || {};
+  const q=[]; let t = opts.startDelay!=null ? opts.startDelay : 500;
+  const interval = (opts.fireInterval!=null ? opts.fireInterval : 850) * density;
+  while(t < duration-500){
+    const fromTop = Math.random()<0.5;
+    const cx = fromTop ? Math.random()*rect.w : (Math.random()<0.5?-10:rect.w+10);
+    const cy = fromTop ? -10 : Math.random()*rect.h;
+    q.push({t, kind:'wave', cx, cy,
+      aimAtPlayer: opts.aimAtPlayer!==false,
+      speed: opts.speed!=null ? opts.speed : 0.1,
+      waveAmp: opts.waveAmp!=null ? opts.waveAmp : 26,
+      waveFreq: opts.waveFreq!=null ? opts.waveFreq : 0.0065,
+      accelAfter: opts.accelAfter, accelMul: opts.accelMul});
+    t += interval;
+  }
+  return q;
+}
+
+/* Đạn thay đổi gia tốc: bắn thẳng nhắm vào vị trí lúc phóng ra (giống dart) nhưng khởi đầu
+   RẤT CHẬM (speed thấp), rồi sau accelAfter mili-giây thì bất ngờ NHÂN vận tốc lên accelMul
+   lần — người chơi dễ chủ quan tưởng đạn chậm, đến khi nó vọt tốc thì có thể đã trễ nhịp né. */
+function genAccelDashQueue(rect, duration, density){
+  const q=[]; let t=350;
+  while(t < duration-500){
+    const fromTop = Math.random()<0.5;
+    const cx = fromTop ? Math.random()*rect.w : (Math.random()<0.5?-10:rect.w+10);
+    const cy = fromTop ? -10 : Math.random()*rect.h;
+    q.push({t, kind:'aimed', cx, cy, speed:0.05, accelAfter:600, accelMul:3.2});
+    t += 950*density;
+  }
+  return q;
+}
+
+/* Pattern COMBO cho State Machine: ghép chung 1 chuỗi xoắn ốc (từ tâm, cộng dồn góc liên
+   tục) VÀ 1 chuỗi sóng truy sát (nhắm thẳng người chơi) diễn ra ĐỒNG THỜI, sắp xếp lại theo
+   mốc thời gian bắn để 2 chuỗi đan xen nhau trong cùng 1 lượt né. */
+function genComboSpiralWaveQueue(rect, duration, density){
+  const spiral = genSpiralQueue(rect, duration, density, {angStep:14, fireInterval:85, speed:0.115, armCount:2});
+  const wave = genWaveQueue(rect, duration, density, {fireInterval:900, waveAmp:22, speed:0.11});
+  return spiral.concat(wave).sort((a,b)=>a.t-b.t);
 }
 
 /* ============== ĐÊM 3 — CÁC LOẠI ĐẠN MỚI CHO TRỌNG "THE CURSE ONE" ==============
@@ -4203,6 +4323,7 @@ function spawnDodgeBullet(ev, box){
     const rad = ev.ang*Math.PI/180;
     b.x = ev.cx; b.y = ev.cy; b.vx = Math.cos(rad)*ev.speed*sf; b.vy = Math.sin(rad)*ev.speed*sf; b.r=6;
     if(ev.jitter){ el.classList.add('swarm'); b.jitter = true; }
+    if(ev.accelAfter!=null){ b.accelAfter = ev.accelAfter; b.accelMul = ev.accelMul||2; }
   } else if(ev.kind==='edge'){
     el.className = 'dbullet t-edge';
     const rect = DZ.rect;
@@ -4214,12 +4335,42 @@ function spawnDodgeBullet(ev, box){
     else { sx=-12; sy=ev.offset*rect.h; vx=spd; vy=0; }
     b.x=sx; b.y=sy; b.vx=vx; b.vy=vy; b.r=6;
     if(ev.jitter){ el.classList.add('swarm'); b.jitter = true; }
+    if(ev.accelAfter!=null){ b.accelAfter = ev.accelAfter; b.accelMul = ev.accelMul||2; }
   } else if(ev.kind==='aimed'){
     // Dạ Thử — Phi Tiêu Độc: nhắm thẳng vào vị trí linh hồn NGAY LÚC PHÓNG ra khỏi tay.
     el.className = 'dbullet t-dart';
     const dx = DZ.x - ev.cx, dy = DZ.y - ev.cy;
     const dist = Math.hypot(dx,dy) || 1;
     b.x = ev.cx; b.y = ev.cy; b.vx = (dx/dist)*ev.speed*sf; b.vy = (dy/dist)*ev.speed*sf; b.r=6;
+    // NÂNG CẤP — Đạn thay đổi gia tốc: nếu pattern đặt accelAfter, đạn xuất phát với vận tốc
+    // hiện tại (thường đặt thấp ở nơi gọi), sau accelAfter (ms) sẽ NHÂN vọt lên accelMul lần
+    // (xem xử lý 1 lần trong updateDodgeBullet) — tạo yếu tố bất ngờ giữa chừng cú bay.
+    if(ev.accelAfter!=null){ b.accelAfter = ev.accelAfter; b.accelMul = ev.accelMul||2; }
+  } else if(ev.kind==='wave'){
+    // NÂNG CẤP — Đạn lượn sóng: hướng bay chính có thể nhắm thẳng vào linh hồn NGAY LÚC PHÓNG
+    // (giống 'aimed') hoặc theo góc cố định ev.ang; trên đường bay, vị trí thực tế còn được
+    // cộng thêm độ lệch Math.sin(thời gian * tần số) theo trục VUÔNG GÓC với hướng bay, khiến
+    // quỹ đạo uốn lượn khó đoán dù xuất phát là một đường thẳng nhắm chính xác.
+    el.className = 'dbullet t-wave';
+    let dirX, dirY;
+    if(ev.aimAtPlayer){
+      const dx = DZ.x - ev.cx, dy = DZ.y - ev.cy;
+      const dist = Math.hypot(dx,dy) || 1;
+      dirX = dx/dist; dirY = dy/dist;
+    } else {
+      const rad = (ev.ang||0)*Math.PI/180;
+      dirX = Math.cos(rad); dirY = Math.sin(rad);
+    }
+    b.wave = true;
+    b.originX = ev.cx; b.originY = ev.cy;
+    b.dirX = dirX; b.dirY = dirY;
+    b.perpX = -dirY; b.perpY = dirX; // vector vuông góc với hướng bay -> trục để lượn sóng
+    b.waveSpeed = (ev.speed!=null ? ev.speed : 0.1) * sf;
+    b.waveFreq = ev.waveFreq!=null ? ev.waveFreq : 0.0065;
+    b.waveAmp = ev.waveAmp!=null ? ev.waveAmp : 26;
+    b.wavePhase = Math.random()*Math.PI*2;
+    b.x = ev.cx; b.y = ev.cy; b.r = 6;
+    if(ev.accelAfter!=null){ b.accelAfter = ev.accelAfter; b.accelMul = ev.accelMul||2; }
   } else if(ev.kind==='ambush'){
     // Tàng Hình: vòng đạn bung ra QUANH vị trí linh hồn hiện tại, hội tụ ngược vào chính điểm đó.
     el.className = 'dbullet t-radial ambush';
@@ -4269,10 +4420,33 @@ function updateDodgeBullet(b, dt){
     if(b.age > b.life) b.dead = true;
     return;
   }
+  if(b.wave){
+    // NÂNG CẤP — Đạn lượn sóng: vị trí = điểm xuất phát + quãng đường đã bay theo hướng chính
+    // + độ lệch hình sin (theo thời gian) trên trục vuông góc với hướng bay.
+    if(b.accelAfter!=null && !b.accelerated && b.age >= b.accelAfter){
+      b.waveSpeed *= b.accelMul; b.accelerated = true; b.el.classList.add('accel-burst');
+      setTimeout(()=>{ if(b.el) b.el.classList.remove('accel-burst'); }, 340); // chỉ chớp sáng nhất thời, không đè vĩnh viễn lên vòng hào quang t-wave
+    }
+    const travel = b.waveSpeed*b.age;
+    const osc = Math.sin(b.age*b.waveFreq + b.wavePhase) * b.waveAmp;
+    b.x = b.originX + b.dirX*travel + b.perpX*osc;
+    b.y = b.originY + b.dirY*travel + b.perpY*osc;
+    const rectW = DZ.rect;
+    if(b.x < -40 || b.x > rectW.w+40 || b.y < -40 || b.y > rectW.h+40) b.dead = true;
+    if(b.age > b.life) b.dead = true;
+    return;
+  }
   if(b.jitter){
     // Bầy Dạ Thử: lắc nhẹ ngẫu nhiên mỗi khung hình, tạo cảm giác di chuyển hỗn loạn/khó đoán.
     b.vx += (Math.random()-0.5)*0.01;
     b.vy += (Math.random()-0.5)*0.01;
+  }
+  // NÂNG CẤP — Đạn thay đổi gia tốc: áp dụng ĐÚNG 1 LẦN khi đạn đã bay đủ accelAfter (ms) kể
+  // từ lúc xuất hiện — nhân thẳng vx/vy hiện tại lên accelMul lần, tạo cú "vọt tốc" bất ngờ
+  // giữa chừng quỹ đạo thay vì giữ tốc độ đều từ đầu tới cuối.
+  if(b.accelAfter!=null && !b.accelerated && b.age >= b.accelAfter){
+    b.vx *= b.accelMul; b.vy *= b.accelMul; b.accelerated = true; b.el.classList.add('accel-burst');
+    setTimeout(()=>{ if(b.el) b.el.classList.remove('accel-burst'); }, 340); // chỉ chớp sáng nhất thời
   }
   b.x += b.vx*dt; b.y += b.vy*dt;
   const rect = DZ.rect;
