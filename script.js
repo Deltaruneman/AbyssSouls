@@ -62,6 +62,7 @@ const TIU_IMAGE = "assets/images/TIU.png";
 const TRONG_CURSE_IMAGE = "assets/images/trong_curse.png";
 const TRONG_CURSE_MUSIC = "assets/sfx/OST/battle2";
 
+
 // SFX phát đúng lúc The TIU lao ra khỏi màn hình (jumpscare) — điền đường dẫn file âm thanh
 // vào đây, ví dụ: 'assets/sfx/jumpscare.mp3'. Để trống thì sẽ không phát SFX (chỉ có hiệu ứng hình).
 const TIU_JUMPSCARE_SFX = "assets/sfx/TIUAttack.mp3";
