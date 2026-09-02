@@ -592,6 +592,27 @@ const VN_TRONG_SEALED_ENDING_DIALOGUE = {
   ]
 };
 
+/* ---- NÂNG CẤP UNDERTALE/DELTARUNE — thoại ngắn khi dùng ACT trong trận Trọng "The Curse
+   One" (xem showUndertaleActSubmenu() / resolveRound() trong script.js). Mỗi lần chọn Chế
+   nhạo hoặc Trấn an, script sẽ pick() ngẫu nhiên 1 trong 5 dòng dưới đây, in ra battle log
+   dưới dạng lời BẠN nói thẳng vào mặt TRỌNG giữa trận. Không phải cutscene VN đầy đủ — chỉ
+   là câu thoại ngắn, không làm gián đoạn nhịp chiến đấu. ---- */
+const TRONG_TAUNT_LINES = [
+  'Yếu vậy thôi à, TRỌNG? Tao sẽ cho mày TRỌNG thương.',
+  'The Curse One? Mày chỉ là một thứ lai tạp hạ đẳng.',
+  'Tiếp tục chống cự đi, La Peace trong tao sẽ nghiền nát mày.',
+  'Sửu với Tý chắc hẳn thất vọng lắm, TRỌNG à.',
+  'Quá đổi kém cỏi, kể cả so với một con chimera',
+  'Umm có vẻ có người không thể rời khỏi đây lành lặng rồi.',
+];
+const TRONG_REASSURE_LINES = [
+  'Trọng tĩnh lại ngây đi!!',
+  'Không ai trách mày cả. Bình tĩnh lại đi, TRỌNG.',
+  'Mày không cần phải gồng mình làm quái vật đâu, TRỌNG.',
+  'TRỌNG mày vẫn còn điều cần làm mà.',
+  'Đừng NẶNG nề vậy chứ Trọng.',
+];
+
 const VN_TRONG_BAD_ENDING_DIALOGUE = {
   lines:[
     {spk:'BẠN', text:'Đòn đánh cuối cùng xuyên thẳng qua lớp giáp tà thuật. Trọng gục xuống, không còn động đậy.'},

@@ -3566,9 +3566,9 @@ function freshBattleState(opts){
     hpPhaseThreshold: opts.hpPhaseThreshold != null ? opts.hpPhaseThreshold : 0.5,
     hpPhase: 'SIMPLE',
     // ---- NÂNG CẤP UNDERTALE/DELTARUNE (chỉ dùng cho trận Trọng "The Curse One") ----
-    undertaleMode: !!opts.undertaleMode,          // bật menu FIGHT/ACT/ITEM/MERCY thay cho Tấn công/Phòng thủ/Kỹ năng
-    mercyMeter: 0, mercyMax: opts.mercyMax || 100, // tích lũy qua ACT "Trấn an", đủ mốc mới THA THỨ được
-    actTauntUsed: 0, actReassureUsed: 0,
+    undertaleMode: !!opts.undertaleMode,          // bật menu FIGHT/ACT/ITEM thay cho Tấn công/Phòng thủ/Kỹ năng
+    tauntStacks: 0, reassureStacks: 0, tauntStackMax: 3, // ACT: Chế nhạo / Trấn an, tối đa 3 stack mỗi loại
+    bossDmgMult: 1,                // tính lại mỗi lần ACT: +15%/stack Chế nhạo, -15%/stack Trấn an
     willBuffActive: false,        // "Ý Chí Của Người Bông" đã kích hoạt (buff sát thương + tự hồi máu)
     willBuffScale: 1,             // hệ số nhân sát thương của kỹ năng YOU — Ultimate nâng lên 1.5
     ultimateUsed: false,          // "Lend Me Your Power" chỉ dùng được đúng 1 lần/trận
@@ -3595,7 +3595,6 @@ function startSecretBattle(opts){
   BS = freshBattleState(opts);
   BS.onVictory = opts.onVictory || null;              // null -> dùng default (Chapter 1) trong finishBattle()
   BS.onDefeat = opts.onDefeat || null;
-  BS.onMercy = opts.onMercy || null;                   // NÂNG CẤP MERCY (undertaleMode) — null -> fallback dùng onVictory
   BS.defeatLogMsg = opts.defeatLogMsg || 'Cả party gục ngã... nghi lễ thanh tẩy thất bại.';
   BS.defeatScreenMsg = opts.defeatScreenMsg || 'Trận chiến bí mật thất bại — TIU đã áp đảo cả party trước khi Trọng kịp hoàn thành tế lễ thanh tẩy.';
   BS.victoryShatterMsg = opts.victoryShatterMsg || 'Trọng hoàn tất tế lễ thanh tẩy — hình hài TIU rạn nứt rồi vỡ tan thành từng mảnh!';
@@ -3748,10 +3747,11 @@ function showBattleMenu(key){
   menu.appendChild(hint);
 }
 
-/* ============== NÂNG CẤP UNDERTALE/DELTARUNE — MENU BOX COMBAT 4 NÚT ==============
-   FIGHT (Tấn công thường/buffed), ACT (Chế nhạo/Trấn an), ITEM (Bim Bim), MERCY (Tha thứ
-   khi mercyMeter đã đầy). Ultimate "Lend Me Your Power" hiện thêm 1 nút riêng khi đủ điều
-   kiện mở khoá (tin tưởng tối đa 2 NPC) và chưa dùng lần nào trong trận. */
+/* ============== NÂNG CẤP UNDERTALE/DELTARUNE — MENU BOX COMBAT (FIGHT/ACT/ITEM) ==============
+   FIGHT (Tấn công thường/buffed), ACT (Chế nhạo/Trấn an — thay thế hẳn nút Kỹ Năng cũ, đây
+   chính là nơi "Ý Chí Của Người Bông" được kích hoạt), ITEM (Bim Bim). Ultimate "Lend Me Your
+   Power" hiện thêm 1 nút riêng khi đủ điều kiện mở khoá (tin tưởng tối đa 2 NPC) và chưa dùng
+   lần nào trong trận. */
 function undertaleSkillLabel(){
   if(BS.willBuffActive && BS.willBuffScale>=1.5) return 'LA PEACE CỦA BÔNG HOA';
   if(BS.willBuffActive) return 'Ý CHÍ CỦA NGƯỜI BÔNG';
@@ -3765,13 +3765,6 @@ function showUndertaleMenu(key){
   head.className = 'battleMenuHead';
   head.textContent = 'LƯỢT CỦA BẠN';
   menu.appendChild(head);
-
-  if(BS.mercyMeter>0){
-    const meterWrap = document.createElement('div');
-    meterWrap.id = 'mercyMeterWrap';
-    meterWrap.innerHTML = `<span class="hud-label">LÒNG TRẮC ẨN</span><div id="mercyMeterOuter"><div id="mercyMeterFill" style="width:${Math.min(100,Math.round(BS.mercyMeter/BS.mercyMax*100))}%"></div></div>`;
-    menu.appendChild(meterWrap);
-  }
 
   const row = document.createElement('div');
   row.className = 'battleMenuRow uxRow';
@@ -3794,14 +3787,6 @@ function showUndertaleMenu(key){
   itemBtn.onclick = ()=>showUndertaleItemSubmenu(key);
   row.appendChild(itemBtn);
 
-  const mercyReady = BS.mercyMeter >= BS.mercyMax;
-  const mercyBtn = document.createElement('button');
-  mercyBtn.className = 'battleCmdBtn mcy'+(mercyReady?' ready':'');
-  mercyBtn.textContent = '☆ MERCY';
-  mercyBtn.disabled = !mercyReady;
-  mercyBtn.onclick = ()=>chooseAction(key,'mercy_spare');
-  row.appendChild(mercyBtn);
-
   menu.appendChild(row);
 
   if(trongUltimateUnlocked() && !BS.ultimateUsed){
@@ -3819,11 +3804,16 @@ function showUndertaleMenu(key){
     menu.appendChild(ultHint);
   }
 
+  const stackLine = document.createElement('div');
+  stackLine.className = 'battleMenuHint';
+  stackLine.innerHTML = `😈 Chế nhạo: <b>${BS.tauntStacks}/${BS.tauntStackMax}</b> &nbsp;|&nbsp; 🕊 Trấn an: <b>${BS.reassureStacks}/${BS.tauntStackMax}</b> &nbsp;|&nbsp; Sát thương ${BS.bossName}: <b>${Math.round((BS.bossDmgMult||1)*100)}%</b>`;
+  menu.appendChild(stackLine);
+
   const hint = document.createElement('div');
   hint.className = 'battleMenuHint';
   hint.textContent = BS.willBuffActive
     ? (undertaleSkillLabel()+' đang kích hoạt — mỗi đòn FIGHT vừa gây thêm sát thương vừa hồi máu cho bạn.')
-    : 'ACT để chế nhạo (dồn ép TRỌNG) hoặc trấn an (tích LÒNG TRẮC ẨN, mở khoá MERCY).';
+    : 'ACT để chế nhạo (Trọng tăng tấn công nhưng mất máu) hoặc trấn an (Trọng giảm tấn công) — dùng Trấn an lần đầu sẽ đánh thức kỹ năng của bạn.';
   menu.appendChild(hint);
 }
 
@@ -3833,15 +3823,17 @@ function showUndertaleActSubmenu(key){
   const row = document.createElement('div');
   row.className = 'battleMenuRow';
 
+  const tauntMaxed = BS.tauntStacks >= BS.tauntStackMax;
   const tauntBtn = document.createElement('button');
   tauntBtn.className = 'battleCmdBtn atk';
-  tauntBtn.textContent = '😈 Chế nhạo';
+  tauntBtn.textContent = '😈 Chế nhạo'+(tauntMaxed?' (Tối đa)':'');
   tauntBtn.onclick = ()=>chooseAction(key,'act_taunt');
   row.appendChild(tauntBtn);
 
+  const reassureMaxed = BS.reassureStacks >= BS.tauntStackMax;
   const calmBtn = document.createElement('button');
   calmBtn.className = 'battleCmdBtn def';
-  calmBtn.textContent = '🕊 Trấn an';
+  calmBtn.textContent = '🕊 Trấn an'+(reassureMaxed?' (Tối đa)':'');
   calmBtn.onclick = ()=>chooseAction(key,'act_reassure');
   row.appendChild(calmBtn);
 
@@ -3854,7 +3846,7 @@ function showUndertaleActSubmenu(key){
   menu.appendChild(row);
   const hint = document.createElement('div');
   hint.className = 'battleMenuHint';
-  hint.textContent = 'Chế nhạo: khiêu khích TRỌNG khiến đòn tiếp theo của hắn mạnh nhưng dễ đoán hơn. Trấn an: tích LÒNG TRẮC ẨN, tiến gần hơn tới lựa chọn MERCY.';
+  hint.textContent = 'Chế nhạo: mỗi stack (tối đa '+BS.tauntStackMax+') tăng sát thương của '+BS.bossName+' nhưng khiến hắn mất một phần HP vì mất kiểm soát. Trấn an: mỗi stack (tối đa '+BS.tauntStackMax+') giảm sát thương của '+BS.bossName+' — lần đầu dùng sẽ đánh thức "'+undertaleSkillLabel()+'" trong bạn.';
   menu.appendChild(hint);
 }
 
@@ -3886,37 +3878,9 @@ function showUndertaleItemSubmenu(key){
 }
 
 function chooseAction(key, action){
-  if(action==='mercy_spare'){
-    // MERCY chỉ khả dụng khi mercyMeter đã đầy — kết thúc trận NGAY LẬP TỨC theo hướng hoà giải,
-    // bỏ qua vòng xử lý lượt thông thường (không có pha né đạn tiếp theo).
-    document.getElementById('battleMenu').innerHTML = '<div class="battleMenuHint">Đang buông vũ khí...</div>';
-    addBattleLog('BẠN hạ vũ khí xuống, chìa tay ra với '+BS.bossName+' — không còn ý định chiến đấu nữa.','good');
-    setTimeout(()=>{ finishBattleMercy(); }, 900);
-    return;
-  }
   BS.party[key].action = action;
   BS.pickIdx++;
   promptNextAction();
-}
-
-/* Kết thúc trận Trọng "The Curse One" theo hướng MERCY (tha thứ) — một kết cục hoà giải,
-   khác cả 2 route hiện có (Kết Liễu/Phong Ấn ở mốc 20% HP). Tái dùng playBossShatterFx +
-   playWhiteFlashFx để giữ đồng bộ hiệu ứng hình ảnh với finishBattle(true), nhưng dẫn tới
-   một đoạn thoại/route kết thúc RIÊNG (mercyEnding) thay vì onVictory mặc định của trận. */
-function finishBattleMercy(){
-  BS.over = true;
-  document.getElementById('battleMenu').innerHTML='';
-  stopBattleMusic();
-  addBattleLog('Không một đòn cuối cùng nào được tung ra — TRỌNG đứng lặng, ánh mắt dần dịu lại.','sys');
-  playBossShatterFx(()=>{
-    addBattleLog('Lòng trắc ẩn của bạn chạm tới phần người còn sót lại trong hắn — một sự tha thứ, không phải một chiến thắng.','sys');
-    playWhiteFlashFx(()=>{
-      document.getElementById('battleVictoryFx').classList.remove('go');
-      document.getElementById('battleOverlay').classList.add('hidden');
-      if(BS.onMercy) BS.onMercy();
-      else if(BS.onVictory) BS.onVictory(); // fallback an toàn nếu trận không định nghĩa riêng route MERCY
-    });
-  });
 }
 
 /* ---- Xử lý lượt của party rồi tới lượt của boss ---- */
@@ -3956,16 +3920,29 @@ function resolveRound(){
     } else if(st.action==='skill'){
       applyBattleSkill(key);
     } else if(st.action==='act_taunt'){
-      BS.mercyMeter = Math.max(0, BS.mercyMeter - 15);
-      BS.actTauntUsed++;
       st.defending = false;
-      addBattleLog(def.name+' chế nhạo '+BS.bossName+' — hắn nổi giận, đòn tiếp theo sẽ mạnh hơn nhưng dễ đoán hơn hẳn!','warn');
-      BS.tauntedNextTurn = true; // đọc trong bossTurn(): tăng sát thương nhưng ép pattern đơn giản hơn
+      if(BS.tauntStacks < BS.tauntStackMax){
+        BS.tauntStacks++;
+        const line = pick(TRONG_TAUNT_LINES);
+        addBattleLog('BẠN: "'+line+'"','atk');
+        const chip = Math.round(BS.boss.maxHp*0.04);
+        BS.boss.hp = Math.max(1, BS.boss.hp - chip); // Trọng mất kiểm soát vì cơn giận -> tự hao HP, nhưng không bao giờ về 0 do lệnh này
+        addBattleLog(BS.bossName+' nổi giận vì bị chế nhạo — sức tấn công tăng lên, nhưng mất '+chip+' HP vì mất kiểm soát!','danger');
+      } else {
+        addBattleLog('BẠN tiếp tục khiêu khích, nhưng '+BS.bossName+' đã giận đến tột cùng — không thể giận hơn được nữa.','warn');
+      }
+      BS.bossDmgMult = clamp(1 + BS.tauntStacks*0.15 - BS.reassureStacks*0.15, 0.25, 2.2);
     } else if(st.action==='act_reassure'){
-      BS.mercyMeter = Math.min(BS.mercyMax, BS.mercyMeter + 34);
-      BS.actReassureUsed++;
       st.defending = true; // trấn an cũng khiến bạn chuẩn bị tinh thần, giảm nhẹ sát thương lượt boss tới
-      addBattleLog(def.name+' trấn an '+BS.bossName+' — LÒNG TRẮC ẨN tăng lên ('+Math.min(100,Math.round(BS.mercyMeter/BS.mercyMax*100))+'%).','good');
+      if(BS.reassureStacks < BS.tauntStackMax){
+        BS.reassureStacks++;
+        const line = pick(TRONG_REASSURE_LINES);
+        addBattleLog('BẠN: "'+line+'"','good');
+        addBattleLog(BS.bossName+' dịu lại đôi chút — sức tấn công của hắn giảm xuống.','good');
+      } else {
+        addBattleLog('BẠN tiếp tục trấn an, nhưng '+BS.bossName+' đã dịu hết mức có thể — không thể yên hơn được nữa.','warn');
+      }
+      BS.bossDmgMult = clamp(1 + BS.tauntStacks*0.15 - BS.reassureStacks*0.15, 0.25, 2.2);
       // Lần đầu trấn an thành công (BS.undertaleMode) -> chính bạn cũng bình tâm lại, "Ý Chí Của
       // Người Bông" thức tỉnh: buff sát thương FIGHT + tự hồi máu mỗi đòn (xem nhánh 'attack' ở trên).
       if(BS.undertaleMode && !BS.willBuffActive){
@@ -3998,10 +3975,10 @@ function resolveRound(){
 
   // Boss THẬT SỰ có thể bị hạ gục (Đêm 3 — Trọng The Curse One): kiểm tra ngưỡng phong ấn
   // TRƯỚC khi kiểm tra tử vong — nếu không, một lượt sát thương lớn có thể "nhảy cóc" qua
-  // thẳng mốc 20% mà người chơi không bao giờ thấy lựa chọn Phong Ấn/Kết Liễu.
+  // thẳng mốc 15% mà người chơi không bao giờ thấy lựa chọn Phong Ấn/Kết Liễu.
   if(BS.killable){
     if(!BS.sealChoiceShown && BS.boss.hp <= BS.boss.maxHp*BS.sealThresholdRatio){
-      BS.boss.hp = Math.round(BS.boss.maxHp*BS.sealThresholdRatio); // chốt đúng về mốc 20%, không để tụt sâu hơn trước khi hỏi
+      BS.boss.hp = Math.round(BS.boss.maxHp*BS.sealThresholdRatio); // chốt đúng về mốc 15%, không để tụt sâu hơn trước khi hỏi
       BS.sealChoiceShown = true;
       renderBattle();
       if(BS.onSealChoice){ BS.onSealChoice(); return; } // tạm dừng, chờ người chơi chọn Phong Ấn/Kết Liễu
@@ -4114,10 +4091,6 @@ function chooseTrongPatternChain(){
   if(ratio > 0.6) weightA = 0.8;
   else if(ratio > 0.2) weightA = 0.5;
   else weightA = 0.2; // dưới mốc phong ấn (nếu người chơi chọn KHÔNG phong ấn) -> Thiết Ngưu cuồng nộ áp đảo
-  // ACT "Chế nhạo" (undertaleMode) vừa dùng lượt trước -> Trọng nổi giận, ưu tiên đòn NẶNG
-  // (pool Thiết Ngưu) hơn hẳn ở lượt này, đổi lại toàn bộ chuỗi dễ đoán hơn (chainLen thấp hơn).
-  let tauntChainCap = null;
-  if(BS.tauntedNextTurn){ weightA = Math.max(0.1, weightA - 0.35); tauntChainCap = 2; BS.tauntedNextTurn = false; }
 
   const hpUrgency = 1 - ratio; // 0 (đầy máu) -> 1 (gần chết)
   let chainLen = 1;
@@ -4127,7 +4100,6 @@ function chooseTrongPatternChain(){
     else break;
   }
   chainLen = Math.min(chainLen, maxLen);
-  if(tauntChainCap!=null) chainLen = Math.min(chainLen, tauntChainCap);
 
   const chain = [];
   for(let i=0;i<chainLen;i++){
@@ -4194,6 +4166,12 @@ function applyBossChainDamage(totalDmg){
     addBattleLog('Chất độc từ Phi Tiêu ngấm vào — cộng thêm '+poisonDmg+' sát thương!','dmg');
     totalDmg += poisonDmg;
     BS.poisonStacks = 0;
+  }
+
+  // NÂNG CẤP ACT (undertaleMode): Chế nhạo/Trấn an tích luỹ thành BS.bossDmgMult, áp dụng lên
+  // TOÀN BỘ sát thương của lượt boss này (kể cả DoT độc vừa cộng ở trên).
+  if(BS.bossDmgMult && BS.bossDmgMult !== 1){
+    totalDmg = Math.round(totalDmg * BS.bossDmgMult);
   }
 
   if(totalDmg<=0){
@@ -4865,7 +4843,7 @@ function finishBattle(won){
    Undying One" (order:['YOU'] — khác trận bí mật Chapter 1/màn Quá Tải Chapter 2 vốn dùng cả
    3 người), đúng tinh thần "nhân vật chính tự đánh thức La Peace của bản thân". HP nhân vật
    được nhân hệ số vì không còn WIBU hồi máu hộ. Boss THẬT SỰ có thể bị hạ gục (killable:true),
-   và tại đúng mốc 20% HP sẽ dừng lại để hỏi Phong Ấn/Kết Liễu — xem PHẦN thiết kế boss. */
+   và tại đúng mốc 15% HP sẽ dừng lại để hỏi Phong Ấn/Kết Liễu — xem PHẦN thiết kế boss. */
 function startTrongCurseOneBattle(){
   startSecretBattle({
     order: ['YOU'],
@@ -4881,7 +4859,7 @@ function startTrongCurseOneBattle(){
     patternPoolA: BOSS_PATTERNS_TRONG_DATHU,   // Dạ Thử (Tý) — áp đảo lúc HP còn cao
     patternPoolB: BOSS_PATTERNS_TRONG_THIETNGUU, // Thiết Ngưu (Sửu) — áp đảo lúc HP thấp/sau mốc phong ấn
     chainSelector: chooseTrongPatternChain,
-    sealThresholdRatio: 0.2,
+    sealThresholdRatio: 0.15,
     onSealChoice: triggerTrongSealChoice,
     introLog: [
       {msg:'Souls of the Undying One trỗi dậy trong bạn — sức mạnh của La Peace hoà cùng ý chí sinh tồn!', cls:''},
@@ -4891,15 +4869,12 @@ function startTrongCurseOneBattle(){
     victoryShatterMsg: 'Nhát đánh cuối cùng xuyên qua lớp giáp tà thuật — TRỌNG THE CURSE ONE gục xuống, ánh sáng đen kịt vụt tắt.',
     victoryLightMsg: 'Không có luồng sáng ấm áp nào cả lần này — chỉ có một khoảng lặng nặng nề bao trùm lấy cả ba.',
     onVictory: ()=>{ playVN(VN_TRONG_BAD_ENDING_DIALOGUE.lines, ()=>{ triggerChapter2BadEnding(); }); },
-    // NÂNG CẤP MERCY: tha thứ đủ mốc LÒNG TRẮC ẨN dẫn tới đúng route hoà giải sẵn có
-    // (Phong Ấn) — không cần dồn HP xuống 20% bằng bạo lực để đạt được cùng 1 kết cục tốt đẹp.
-    onMercy: ()=>{ finishTrongSealed(); },
     defeatLogMsg: 'Souls of the Undying One vụn vỡ... sức mạnh vừa thức tỉnh đã lụi tàn ngay trong trận chiến đầu tiên.',
     defeatScreenMsg: 'TRỌNG — THE CURSE ONE đã áp đảo hoàn toàn. Có lẽ ý chí thức tỉnh của bạn vẫn chưa đủ mạnh — thử lại lần nữa.',
   });
 }
 
-/* Gọi từ resolveRound() khi HP Trọng chạm đúng mốc 20% (chỉ 1 lần/trận — sealChoiceShown).
+/* Gọi từ resolveRound() khi HP Trọng chạm đúng mốc 15% (chỉ 1 lần/trận — sealChoiceShown).
    Hiển thị VN_TRONG_CURSE_SEAL_PROMPT với lựa chọn nhúng ở dòng cuối; mỗi lựa chọn gắn
    onChoose để đánh dấu route rồi mới chèn tiếp đoạn thoại tương ứng. */
 function triggerTrongSealChoice(){
