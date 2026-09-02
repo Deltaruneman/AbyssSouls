@@ -669,6 +669,32 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
 .battleCmdBtn:disabled{opacity:.35;cursor:not-allowed;}
 .battleMenuHint{font-size:10px;color:var(--text-dim);margin-top:8px;max-width:420px;margin-left:auto;margin-right:auto;}
 
+/* ============== NÂNG CẤP UNDERTALE/DELTARUNE — MENU FIGHT/ACT/ITEM/MERCY ============== */
+.uxRow{margin-top:2px;}
+.battleCmdBtn.mcy{border-color:#3a3a2a;color:#8a8a6a;}
+.battleCmdBtn.mcy.ready{border-color:#ffe066;color:#ffe066;box-shadow:0 0 10px rgba(255,224,102,0.35);animation:mercyPulse 1.4s ease-in-out infinite;}
+.battleCmdBtn.mcy.ready:hover{box-shadow:0 0 18px rgba(255,224,102,0.65);}
+@keyframes mercyPulse{0%,100%{box-shadow:0 0 8px rgba(255,224,102,0.3);}50%{box-shadow:0 0 18px rgba(255,224,102,0.75);}}
+
+.battleCmdBtn.ultimate{border-color:#ff9ad6;color:#ffd6f2;background:linear-gradient(135deg,#2a1524,#12100e);
+  box-shadow:0 0 14px rgba(255,154,214,0.45);animation:ultimateGlow 1.8s ease-in-out infinite;}
+.battleCmdBtn.ultimate:hover{box-shadow:0 0 26px rgba(255,154,214,0.8);}
+@keyframes ultimateGlow{0%,100%{box-shadow:0 0 10px rgba(255,154,214,0.35);}50%{box-shadow:0 0 24px rgba(255,154,214,0.8);}}
+
+#mercyMeterWrap{display:flex;flex-direction:column;align-items:center;gap:3px;margin-bottom:8px;}
+#mercyMeterOuter{width:min(320px,80vw);height:8px;background:#15120f;border:1px solid var(--line);border-radius:4px;overflow:hidden;}
+#mercyMeterFill{height:100%;background:linear-gradient(90deg,#8a7a2a,#ffe066);transition:width .35s ease;}
+
+/* Đạn nảy dội (Jevil/Spamton style) — lõi tím-hồng, viền sáng để nổi bật giữa quỹ đạo hỗn loạn */
+.dbullet.t-bounce{width:11px;height:11px;margin:-5.5px 0 0 -5.5px;background:radial-gradient(circle,#fff,#ff5ad6 60%,#8a1f6e 100%);box-shadow:0 0 9px #ff5ad6;}
+
+/* Gaster Blaster style — cột laser khoá vị trí người chơi, tông màu trắng-hồng lạnh để phân
+   biệt rõ với laser cam/đỏ mặc định (t-laser-h/v.wide đã có sẵn), cảnh báo dài & rõ hơn. */
+.dbullet.t-blaster.telegraph{background:repeating-linear-gradient(90deg,rgba(255,255,255,0.95) 0 6px,transparent 6px 14px);filter:drop-shadow(0 0 4px #ffd6f2);}
+.dbullet.t-laser-v.t-blaster.telegraph{background:repeating-linear-gradient(180deg,rgba(255,255,255,0.95) 0 6px,transparent 6px 14px);}
+.dbullet.t-blaster.firing{background:linear-gradient(180deg,transparent,#fff 20%,#ff5ad6 50%,#fff 80%,transparent)!important;box-shadow:0 0 14px #ff5ad6;}
+.dbullet.t-laser-v.t-blaster.firing{background:linear-gradient(90deg,transparent,#fff 20%,#ff5ad6 50%,#fff 80%,transparent)!important;}
+
 /* màn hình lóe sáng trắng dần đều (thanh tẩy thành công) — không còn hiệu ứng cầu vồng */
 #battleVictoryFx{position:fixed;inset:0;z-index:98;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;}
 #battleVictoryFx.go{animation:victoryFadeIn 2s ease-in forwards;}
