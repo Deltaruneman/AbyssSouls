@@ -54,14 +54,11 @@
     window.triggerVhsGlitch = function () {
       if (!appEl) return;
       document.body.classList.remove("vhs-glitch-active");
-      appEl.classList.remove("vhs-glitch");
       // ép reflow để restart animation nếu đang chạy dở
       void appEl.offsetWidth;
-      appEl.classList.add("vhs-glitch");
       document.body.classList.add("vhs-glitch-active");
       clearTimeout(glitchTimer);
       glitchTimer = setTimeout(function () {
-        appEl.classList.remove("vhs-glitch");
         document.body.classList.remove("vhs-glitch-active");
       }, 520);
     };

@@ -774,35 +774,21 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
   93%{opacity:0.34;}
 }
 
-/* ---------- 2b. VHS glitch on room transition: chromatic aberration split + rolling scan bars ---------- */
-#app.vhs-glitch{animation:vhsChromaSplit .5s steps(1,end) both;}
-@keyframes vhsChromaSplit{
-  0%{filter:none;}
-  8%{filter:drop-shadow(-4px 0 rgba(255,20,60,0.8)) drop-shadow(4px 0 rgba(30,210,255,0.8));}
-  16%{filter:none;}
-  24%{filter:drop-shadow(5px 0 rgba(255,20,60,0.75)) drop-shadow(-5px 0 rgba(30,210,255,0.75));}
-  30%{filter:none;}
-  46%{filter:none;}
-  52%{filter:drop-shadow(-3px 0 rgba(255,20,60,0.7)) drop-shadow(3px 0 rgba(30,210,255,0.7));}
-  58%{filter:none;}
-  74%{filter:drop-shadow(4px 0 rgba(255,20,60,0.6)) drop-shadow(-4px 0 rgba(30,210,255,0.6));}
-  80%{filter:none;}
-  100%{filter:none;}
-}
+/* ---------- 2b. VHS glitch on room transition: rolling scan bars + jitter (no chromatic aberration) ---------- */
 #glitchBars{position:fixed;inset:0;z-index:66;pointer-events:none;opacity:0;mix-blend-mode:overlay;}
 body.vhs-glitch-active #glitchBars{animation:glitchBarsRun .5s steps(1,end) both;}
 @keyframes glitchBarsRun{
   0%{opacity:0;}
   6%{opacity:.9;background:repeating-linear-gradient(0deg,rgba(255,255,255,0.9) 0 2px,transparent 2px 5px);transform:translateY(0);}
   12%{opacity:0;}
-  24%{opacity:.7;background:repeating-linear-gradient(0deg,rgba(30,210,255,0.55) 0 3px,transparent 3px 9px);transform:translateY(-6px);}
+  24%{opacity:.7;background:repeating-linear-gradient(0deg,rgba(217,210,196,0.55) 0 3px,transparent 3px 9px);transform:translateY(-6px);}
   30%{opacity:0;}
-  52%{opacity:.8;background:repeating-linear-gradient(0deg,rgba(255,20,60,0.5) 0 2px,transparent 2px 7px);transform:translateY(4px);}
+  52%{opacity:.8;background:repeating-linear-gradient(0deg,rgba(255,255,255,0.6) 0 2px,transparent 2px 7px);transform:translateY(4px);}
   58%{opacity:0;}
   74%{opacity:.6;background:repeating-linear-gradient(0deg,rgba(255,255,255,0.7) 0 2px,transparent 2px 10px);transform:translateY(-3px);}
   80%,100%{opacity:0;}
 }
-body.vhs-glitch-active #app{animation-name:vhsChromaSplit,vhsJitter;animation-duration:.5s,.5s;animation-timing-function:steps(1,end),steps(1,end);}
+body.vhs-glitch-active #app{animation:vhsJitter .5s steps(1,end) both;}
 @keyframes vhsJitter{
   0%,100%{transform:translate(0,0);}
   8%{transform:translate(-3px,0);}
