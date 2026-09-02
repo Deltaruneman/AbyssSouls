@@ -682,3 +682,148 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
   70%{opacity:.95;transform:scale(1.15);}
   100%{opacity:1;transform:scale(1.3);}
 }
+
+/* =========================================================================
+   HORROR POLISH PATCH — responsive HUD, cyberpunk hover, neon legibility,
+   broken-bulb flicker, VHS chromatic-glitch on room change, critical FX
+   ========================================================================= */
+
+/* ---------- 1a. Responsive: collapse mini-map + log into toggle buttons on narrow screens ---------- */
+.panelToggleBtn{display:none;}
+@media (max-width:900px){
+  #miniMapWrap{right:10px;bottom:64px;width:min(78vw,260px);
+    transform:translateY(calc(100% + 14px));opacity:0;pointer-events:none;
+    transition:transform .28s ease,opacity .22s ease;}
+  #miniMapWrap.panel-open{transform:translateY(0);opacity:1;pointer-events:auto;}
+  #logPane{right:10px;bottom:64px;width:min(78vw,260px);max-height:44vh;
+    transform:translateY(calc(100% + 14px));opacity:0;pointer-events:none;
+    transition:transform .28s ease,opacity .22s ease;}
+  #logPane.panel-open{transform:translateY(0);opacity:1;pointer-events:auto;}
+
+  .panelToggleBtn{display:flex;align-items:center;justify-content:center;gap:5px;
+    position:fixed;right:10px;bottom:10px;z-index:56;width:44px;height:44px;
+    background:linear-gradient(180deg,#1c1f24,#101214);border:1px solid var(--line);
+    color:var(--text-dim);font-size:17px;cursor:pointer;border-radius:50%;
+    box-shadow:0 3px 10px rgba(0,0,0,0.6);transition:border-color .15s,color .15s,transform .15s;}
+  .panelToggleBtn:active{transform:scale(0.92);}
+  .panelToggleBtn.active{border-color:var(--scan);color:var(--scan);box-shadow:0 0 12px rgba(61,220,132,0.5);}
+  #logToggleBtn{right:62px;}
+  #logToggleBtn.active{border-color:var(--amber);color:var(--amber);box-shadow:0 0 12px rgba(226,162,59,0.5);}
+
+  #miniMapWrap,#logPane{width:min(78vw,260px);}
+}
+@media (max-width:520px){
+  #hud{gap:10px;padding:8px 10px;}
+  .hud-block{min-width:64px;}
+  #nightBadge{margin-left:0;order:99;flex-basis:100%;text-align:center;}
+}
+
+/* ---------- 1b. Cyberpunk / terminal hover: scan-sweep + text flicker ---------- */
+.btn,#resolveBtn,.bigbtn,.battleCmdBtn{position:relative;overflow:hidden;}
+.btn::before,#resolveBtn::before,.bigbtn::before,.battleCmdBtn::before{
+  content:'';position:absolute;top:0;left:-140%;width:60%;height:100%;
+  background:linear-gradient(100deg,transparent,rgba(61,220,132,0.0) 30%,rgba(61,220,132,0.35) 50%,rgba(61,220,132,0.0) 70%,transparent);
+  transform:skewX(-18deg);pointer-events:none;transition:left .5s ease;}
+.btn:hover::before,.bigbtn:hover::before,.battleCmdBtn:hover:not(:disabled)::before{left:140%;}
+#resolveBtn::before{background:linear-gradient(100deg,transparent,rgba(255,255,255,0.0) 30%,rgba(255,255,255,0.55) 50%,rgba(255,255,255,0.0) 70%,transparent);}
+#resolveBtn:hover::before{left:140%;}
+.btn:hover,#resolveBtn:hover{animation:termFlicker .18s steps(2) 1;}
+@keyframes termFlicker{
+  0%{opacity:1;}35%{opacity:.55;}55%{opacity:1;}80%{opacity:.7;}100%{opacity:1;}
+}
+.bigbtn:hover{animation:termFlicker .22s steps(2) 1;}
+
+/* ---------- 1c. Neon-legible titles: static glow layered so #crt scanlines never wash them out ---------- */
+#roomTitle,#bossName,#clockVal,#nightBadge,#chapterIntroTitle,#winTitle,
+#gameOverScreen h1,#chapterEndTitle,#chapter2ComingSoonTitle,#titleScreen h1{
+  text-shadow:
+    0 0 2px rgba(0,0,0,0.95),
+    0 2px 3px rgba(0,0,0,0.9),
+    0 0 12px currentColor;
+}
+#roomTitle{text-shadow:0 0 2px #000,0 2px 4px rgba(0,0,0,0.9),0 0 14px rgba(255,255,255,0.55);}
+
+/* ---------- 2a. Broken-bulb neon flicker: jagged, unpredictable, occasionally cuts to near-black ---------- */
+@keyframes neonFlicker{
+  0%,100%{opacity:0.34;}
+  3%{opacity:0.06;}
+  4%{opacity:0.4;}
+  5%{opacity:0.09;}
+  6%{opacity:0.36;}
+  27%{opacity:0.34;}
+  28%{opacity:0.02;}
+  29%{opacity:0.3;}
+  29.5%{opacity:0.01;}
+  31%{opacity:0.38;}
+  47%{opacity:0.34;}
+  47.3%{opacity:0.5;}
+  47.6%{opacity:0.03;}
+  48%{opacity:0.42;}
+  48.4%{opacity:0.05;}
+  49%{opacity:0.34;}
+  72%{opacity:0.34;}
+  72.2%{opacity:0.08;}
+  73%{opacity:0.34;}
+  73.2%{opacity:0.02;}
+  74%{opacity:0.44;}
+  75%{opacity:0.34;}
+  91%{opacity:0.34;}
+  91.4%{opacity:0.55;}
+  92%{opacity:0.0;}
+  92.6%{opacity:0.4;}
+  93%{opacity:0.34;}
+}
+
+/* ---------- 2b. VHS glitch on room transition: chromatic aberration split + rolling scan bars ---------- */
+#app.vhs-glitch{animation:vhsChromaSplit .5s steps(1,end) both;}
+@keyframes vhsChromaSplit{
+  0%{filter:none;}
+  8%{filter:drop-shadow(-4px 0 rgba(255,20,60,0.8)) drop-shadow(4px 0 rgba(30,210,255,0.8));}
+  16%{filter:none;}
+  24%{filter:drop-shadow(5px 0 rgba(255,20,60,0.75)) drop-shadow(-5px 0 rgba(30,210,255,0.75));}
+  30%{filter:none;}
+  46%{filter:none;}
+  52%{filter:drop-shadow(-3px 0 rgba(255,20,60,0.7)) drop-shadow(3px 0 rgba(30,210,255,0.7));}
+  58%{filter:none;}
+  74%{filter:drop-shadow(4px 0 rgba(255,20,60,0.6)) drop-shadow(-4px 0 rgba(30,210,255,0.6));}
+  80%{filter:none;}
+  100%{filter:none;}
+}
+#glitchBars{position:fixed;inset:0;z-index:66;pointer-events:none;opacity:0;mix-blend-mode:overlay;}
+body.vhs-glitch-active #glitchBars{animation:glitchBarsRun .5s steps(1,end) both;}
+@keyframes glitchBarsRun{
+  0%{opacity:0;}
+  6%{opacity:.9;background:repeating-linear-gradient(0deg,rgba(255,255,255,0.9) 0 2px,transparent 2px 5px);transform:translateY(0);}
+  12%{opacity:0;}
+  24%{opacity:.7;background:repeating-linear-gradient(0deg,rgba(30,210,255,0.55) 0 3px,transparent 3px 9px);transform:translateY(-6px);}
+  30%{opacity:0;}
+  52%{opacity:.8;background:repeating-linear-gradient(0deg,rgba(255,20,60,0.5) 0 2px,transparent 2px 7px);transform:translateY(4px);}
+  58%{opacity:0;}
+  74%{opacity:.6;background:repeating-linear-gradient(0deg,rgba(255,255,255,0.7) 0 2px,transparent 2px 10px);transform:translateY(-3px);}
+  80%,100%{opacity:0;}
+}
+body.vhs-glitch-active #app{animation-name:vhsChromaSplit,vhsJitter;animation-duration:.5s,.5s;animation-timing-function:steps(1,end),steps(1,end);}
+@keyframes vhsJitter{
+  0%,100%{transform:translate(0,0);}
+  8%{transform:translate(-3px,0);}
+  16%{transform:translate(0,0);}
+  24%{transform:translate(3px,0);}
+  52%{transform:translate(-2px,0);}
+  58%{transform:translate(0,0);}
+  74%{transform:translate(2px,0);}
+}
+
+/* ---------- 2c. Critical HP (1 HP left) polish: heartbeat vignette + intermittent blur/noise waver ----------
+   body.hp-critical is toggled automatically (see horror-polish.js) whenever #vignette gets/loses .critical */
+body.hp-critical #main,body.hp-critical #hud{animation:criticalWaver 1.15s ease-in-out infinite;}
+@keyframes criticalWaver{
+  0%,100%{filter:none;}
+  7%{filter:blur(0px);}
+  8%{filter:blur(1.6px) contrast(1.08) saturate(1.15);}
+  10%{filter:blur(0.4px);}
+  16%{filter:none;}
+  26%{filter:blur(1.1px) contrast(1.05);}
+  30%{filter:none;}
+}
+body.hp-critical #filmGrain{opacity:0.11;animation-duration:0.32s;}
+body.hp-critical #neonFlicker{opacity:0.55;}
