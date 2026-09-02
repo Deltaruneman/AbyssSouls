@@ -3507,6 +3507,23 @@ const BOSS_PATTERNS_TRONG_THIETNGUU = [
   {name:'HÚC THẲNG', desc:'Trọng lùi lại rồi lao thẳng qua trận địa như một cơn lốc sắt thép.', dmg:[12,18], bulletType:'charge', dodgeDuration:4400},
   {name:'KHIÊN ĐẤT', desc:'Trọng dựng một lớp khiên đất dày, tạm ngừng tấn công để gồng mình phòng thủ.', dmg:[0,0], bulletType:'shield', dodgeDuration:3200, shieldSelf:true},
 ];
+/* ============== NÂNG CẤP UNDERTALE/DELTARUNE — 3 PATTERN MỚI CHO BOX COMBAT ==============
+   Dùng riêng cho trận Trọng "The Curse One" ở chế độ undertaleMode (xem freshBattleState /
+   startTrongCurseOneBattle). 3 pattern đúng tinh thần thiết kế được yêu cầu:
+   1) Tuyến Tính — đạn bay ngang/dọc tốc độ khác nhau (bulletType 'uxlinear').
+   2) Gaster Blaster style — cột tia laser xuất hiện sau 1 giây cảnh báo TẠI vị trí người chơi
+      đang đứng lúc phóng ra (bulletType 'uxblaster').
+   3) Jevil/Spamton style — đạn nảy dội liên tục vào các cạnh khung né (bulletType 'uxbounce'). */
+const BOSS_PATTERNS_TRONG_UNDERTALE = [
+  {name:'MƯA THOI DỆT ĐỊNH MỆNH', desc:'Từng tia đạn bay thẳng ngang và dọc khung né, mỗi đợt lại đổi tốc độ — không đợt nào giống đợt nào.', dmg:[4,8], bulletType:'uxlinear', dodgeDuration:4600},
+  {name:'NÒNG SÚNG PHÁN XÉT', desc:'Một cỗ nòng súng vô hình khoá thẳng vào đúng vị trí bạn đang đứng, cảnh báo đúng 1 giây rồi xả hết đạn thành cột tia xuyên suốt khung né.', dmg:[9,15], bulletType:'uxblaster', dodgeDuration:5200},
+  {name:'ĐÙA CỢT HỖN MANG', desc:'Từng viên đạn nảy bật điên loạn giữa các cạnh khung né, quỹ đạo không thể đoán trước — càng lâu càng dày đặc.', dmg:[5,9], bulletType:'uxbounce', dodgeDuration:5000},
+];
+// Dạ Thử (Tý — nhanh nhẹn/xảo quyệt) hấp thụ thêm Tuyến Tính + Hỗn Mang; Thiết Ngưu (Sửu —
+// sức mạnh tuyệt đối) hấp thụ Nòng Súng Phán Xét (đòn nặng, cảnh báo dài, đúng chất "cực nặng").
+BOSS_PATTERNS_TRONG_DATHU.push(BOSS_PATTERNS_TRONG_UNDERTALE[0], BOSS_PATTERNS_TRONG_UNDERTALE[2]);
+BOSS_PATTERNS_TRONG_THIETNGUU.push(BOSS_PATTERNS_TRONG_UNDERTALE[1]);
+
 const BOSS_PATTERNS_TRONG = [...BOSS_PATTERNS_TRONG_DATHU, ...BOSS_PATTERNS_TRONG_THIETNGUU];
 
 let BS = null;          // trạng thái trận đấu hiện tại
@@ -3548,7 +3565,23 @@ function freshBattleState(opts){
     hpStateMachineEnabled: opts.hpStateMachineEnabled !== false,
     hpPhaseThreshold: opts.hpPhaseThreshold != null ? opts.hpPhaseThreshold : 0.5,
     hpPhase: 'SIMPLE',
+    // ---- NÂNG CẤP UNDERTALE/DELTARUNE (chỉ dùng cho trận Trọng "The Curse One") ----
+    undertaleMode: !!opts.undertaleMode,          // bật menu FIGHT/ACT/ITEM/MERCY thay cho Tấn công/Phòng thủ/Kỹ năng
+    mercyMeter: 0, mercyMax: opts.mercyMax || 100, // tích lũy qua ACT "Trấn an", đủ mốc mới THA THỨ được
+    actTauntUsed: 0, actReassureUsed: 0,
+    willBuffActive: false,        // "Ý Chí Của Người Bông" đã kích hoạt (buff sát thương + tự hồi máu)
+    willBuffScale: 1,             // hệ số nhân sát thương của kỹ năng YOU — Ultimate nâng lên 1.5
+    ultimateUsed: false,          // "Lend Me Your Power" chỉ dùng được đúng 1 lần/trận
   };
+}
+/* Ultimate "Lend Me Your Power" chỉ mở khoá khi độ tin tưởng của CẢ 2 NPC (Wibu Việt Nhật &
+   Chàng Lính Ngu Lắm) đã đạt tối đa (campaignNpcTalks.E/.B đều >=3, giống điều kiện mở khoá
+   trận bí mật Chapter 1 ở dòng ~625). Trả về false an toàn nếu chưa từng gặp campaignNpcTalks. */
+function trongUltimateUnlocked(){
+  try{
+    return !!(campaignNpcTalks && campaignNpcTalks.E && campaignNpcTalks.B
+      && campaignNpcTalks.E.size>=3 && campaignNpcTalks.B.size>=3);
+  }catch(e){ return false; }
 }
 
 /* opts (tất cả optional, mặc định = đúng hành vi trận đánh bí mật Chapter 1 như cũ):
@@ -3562,6 +3595,7 @@ function startSecretBattle(opts){
   BS = freshBattleState(opts);
   BS.onVictory = opts.onVictory || null;              // null -> dùng default (Chapter 1) trong finishBattle()
   BS.onDefeat = opts.onDefeat || null;
+  BS.onMercy = opts.onMercy || null;                   // NÂNG CẤP MERCY (undertaleMode) — null -> fallback dùng onVictory
   BS.defeatLogMsg = opts.defeatLogMsg || 'Cả party gục ngã... nghi lễ thanh tẩy thất bại.';
   BS.defeatScreenMsg = opts.defeatScreenMsg || 'Trận chiến bí mật thất bại — TIU đã áp đảo cả party trước khi Trọng kịp hoàn thành tế lễ thanh tẩy.';
   BS.victoryShatterMsg = opts.victoryShatterMsg || 'Trọng hoàn tất tế lễ thanh tẩy — hình hài TIU rạn nứt rồi vỡ tan thành từng mảnh!';
@@ -3681,6 +3715,7 @@ function promptNextAction(){
 }
 
 function showBattleMenu(key){
+  if(BS.undertaleMode){ showUndertaleMenu(key); return; }
   const def = PARTY_DEF[key], st = BS.party[key];
   const menu = document.getElementById('battleMenu');
   menu.innerHTML = `<div class="battleMenuHead">LƯỢT CỦA ${def.name}</div>`;
@@ -3713,10 +3748,175 @@ function showBattleMenu(key){
   menu.appendChild(hint);
 }
 
+/* ============== NÂNG CẤP UNDERTALE/DELTARUNE — MENU BOX COMBAT 4 NÚT ==============
+   FIGHT (Tấn công thường/buffed), ACT (Chế nhạo/Trấn an), ITEM (Bim Bim), MERCY (Tha thứ
+   khi mercyMeter đã đầy). Ultimate "Lend Me Your Power" hiện thêm 1 nút riêng khi đủ điều
+   kiện mở khoá (tin tưởng tối đa 2 NPC) và chưa dùng lần nào trong trận. */
+function undertaleSkillLabel(){
+  if(BS.willBuffActive && BS.willBuffScale>=1.5) return 'LA PEACE CỦA BÔNG HOA';
+  if(BS.willBuffActive) return 'Ý CHÍ CỦA NGƯỜI BÔNG';
+  return 'VÌ TAO LÀ NGƯỜI BÔNG';
+}
+function showUndertaleMenu(key){
+  const st = BS.party[key];
+  const menu = document.getElementById('battleMenu');
+  menu.innerHTML = '';
+  const head = document.createElement('div');
+  head.className = 'battleMenuHead';
+  head.textContent = 'LƯỢT CỦA BẠN';
+  menu.appendChild(head);
+
+  if(BS.mercyMeter>0){
+    const meterWrap = document.createElement('div');
+    meterWrap.id = 'mercyMeterWrap';
+    meterWrap.innerHTML = `<span class="hud-label">LÒNG TRẮC ẨN</span><div id="mercyMeterOuter"><div id="mercyMeterFill" style="width:${Math.min(100,Math.round(BS.mercyMeter/BS.mercyMax*100))}%"></div></div>`;
+    menu.appendChild(meterWrap);
+  }
+
+  const row = document.createElement('div');
+  row.className = 'battleMenuRow uxRow';
+
+  const fightBtn = document.createElement('button');
+  fightBtn.className = 'battleCmdBtn atk';
+  fightBtn.textContent = '⚔ FIGHT';
+  fightBtn.onclick = ()=>chooseAction(key,'attack');
+  row.appendChild(fightBtn);
+
+  const actBtn = document.createElement('button');
+  actBtn.className = 'battleCmdBtn skl';
+  actBtn.textContent = '✦ ACT';
+  actBtn.onclick = ()=>showUndertaleActSubmenu(key);
+  row.appendChild(actBtn);
+
+  const itemBtn = document.createElement('button');
+  itemBtn.className = 'battleCmdBtn def';
+  itemBtn.textContent = '🍟 ITEM';
+  itemBtn.onclick = ()=>showUndertaleItemSubmenu(key);
+  row.appendChild(itemBtn);
+
+  const mercyReady = BS.mercyMeter >= BS.mercyMax;
+  const mercyBtn = document.createElement('button');
+  mercyBtn.className = 'battleCmdBtn mcy'+(mercyReady?' ready':'');
+  mercyBtn.textContent = '☆ MERCY';
+  mercyBtn.disabled = !mercyReady;
+  mercyBtn.onclick = ()=>chooseAction(key,'mercy_spare');
+  row.appendChild(mercyBtn);
+
+  menu.appendChild(row);
+
+  if(trongUltimateUnlocked() && !BS.ultimateUsed){
+    const ultRow = document.createElement('div');
+    ultRow.className = 'battleMenuRow';
+    const ultBtn = document.createElement('button');
+    ultBtn.className = 'battleCmdBtn ultimate';
+    ultBtn.textContent = '✧ LEND ME YOUR POWER ✧';
+    ultBtn.onclick = ()=>chooseAction(key,'ultimate');
+    ultRow.appendChild(ultBtn);
+    menu.appendChild(ultRow);
+    const ultHint = document.createElement('div');
+    ultHint.className = 'battleMenuHint';
+    ultHint.textContent = 'Wibu Việt Nhật & Chàng Lính Ngu Lắm dồn hết niềm tin cho bạn — nâng cấp '+undertaleSkillLabel()+' thành LA PEACE CỦA BÔNG HOA, tăng 50% sức mạnh cho phần còn lại của trận. Chỉ dùng được 1 lần.';
+    menu.appendChild(ultHint);
+  }
+
+  const hint = document.createElement('div');
+  hint.className = 'battleMenuHint';
+  hint.textContent = BS.willBuffActive
+    ? (undertaleSkillLabel()+' đang kích hoạt — mỗi đòn FIGHT vừa gây thêm sát thương vừa hồi máu cho bạn.')
+    : 'ACT để chế nhạo (dồn ép TRỌNG) hoặc trấn an (tích LÒNG TRẮC ẨN, mở khoá MERCY).';
+  menu.appendChild(hint);
+}
+
+function showUndertaleActSubmenu(key){
+  const menu = document.getElementById('battleMenu');
+  menu.innerHTML = '<div class="battleMenuHead">ACT — CHỌN HÀNH ĐỘNG</div>';
+  const row = document.createElement('div');
+  row.className = 'battleMenuRow';
+
+  const tauntBtn = document.createElement('button');
+  tauntBtn.className = 'battleCmdBtn atk';
+  tauntBtn.textContent = '😈 Chế nhạo';
+  tauntBtn.onclick = ()=>chooseAction(key,'act_taunt');
+  row.appendChild(tauntBtn);
+
+  const calmBtn = document.createElement('button');
+  calmBtn.className = 'battleCmdBtn def';
+  calmBtn.textContent = '🕊 Trấn an';
+  calmBtn.onclick = ()=>chooseAction(key,'act_reassure');
+  row.appendChild(calmBtn);
+
+  const backBtn = document.createElement('button');
+  backBtn.className = 'battleCmdBtn';
+  backBtn.textContent = '↩ Quay lại';
+  backBtn.onclick = ()=>showUndertaleMenu(key);
+  row.appendChild(backBtn);
+
+  menu.appendChild(row);
+  const hint = document.createElement('div');
+  hint.className = 'battleMenuHint';
+  hint.textContent = 'Chế nhạo: khiêu khích TRỌNG khiến đòn tiếp theo của hắn mạnh nhưng dễ đoán hơn. Trấn an: tích LÒNG TRẮC ẨN, tiến gần hơn tới lựa chọn MERCY.';
+  menu.appendChild(hint);
+}
+
+function showUndertaleItemSubmenu(key){
+  const menu = document.getElementById('battleMenu');
+  menu.innerHTML = '<div class="battleMenuHead">ITEM — TÚI ĐỒ</div>';
+  const row = document.createElement('div');
+  row.className = 'battleMenuRow';
+
+  const bimCount = (S && S.inventory && S.inventory.bimbim) || 0;
+  const bimBtn = document.createElement('button');
+  bimBtn.className = 'battleCmdBtn def';
+  bimBtn.textContent = '🍟 Bim Bim ('+bimCount+')';
+  bimBtn.disabled = bimCount<=0;
+  bimBtn.onclick = ()=>chooseAction(key,'item_bimbim');
+  row.appendChild(bimBtn);
+
+  const backBtn = document.createElement('button');
+  backBtn.className = 'battleCmdBtn';
+  backBtn.textContent = '↩ Quay lại';
+  backBtn.onclick = ()=>showUndertaleMenu(key);
+  row.appendChild(backBtn);
+
+  menu.appendChild(row);
+  const hint = document.createElement('div');
+  hint.className = 'battleMenuHint';
+  hint.textContent = 'Ăn Bim Bim ngay tại trận — hồi máu cho bạn (tiêu 1 suất Bim Bim trong túi đồ ngoài đời thực).';
+  menu.appendChild(hint);
+}
+
 function chooseAction(key, action){
+  if(action==='mercy_spare'){
+    // MERCY chỉ khả dụng khi mercyMeter đã đầy — kết thúc trận NGAY LẬP TỨC theo hướng hoà giải,
+    // bỏ qua vòng xử lý lượt thông thường (không có pha né đạn tiếp theo).
+    document.getElementById('battleMenu').innerHTML = '<div class="battleMenuHint">Đang buông vũ khí...</div>';
+    addBattleLog('BẠN hạ vũ khí xuống, chìa tay ra với '+BS.bossName+' — không còn ý định chiến đấu nữa.','good');
+    setTimeout(()=>{ finishBattleMercy(); }, 900);
+    return;
+  }
   BS.party[key].action = action;
   BS.pickIdx++;
   promptNextAction();
+}
+
+/* Kết thúc trận Trọng "The Curse One" theo hướng MERCY (tha thứ) — một kết cục hoà giải,
+   khác cả 2 route hiện có (Kết Liễu/Phong Ấn ở mốc 20% HP). Tái dùng playBossShatterFx +
+   playWhiteFlashFx để giữ đồng bộ hiệu ứng hình ảnh với finishBattle(true), nhưng dẫn tới
+   một đoạn thoại/route kết thúc RIÊNG (mercyEnding) thay vì onVictory mặc định của trận. */
+function finishBattleMercy(){
+  BS.over = true;
+  document.getElementById('battleMenu').innerHTML='';
+  stopBattleMusic();
+  addBattleLog('Không một đòn cuối cùng nào được tung ra — TRỌNG đứng lặng, ánh mắt dần dịu lại.','sys');
+  playBossShatterFx(()=>{
+    addBattleLog('Lòng trắc ẩn của bạn chạm tới phần người còn sót lại trong hắn — một sự tha thứ, không phải một chiến thắng.','sys');
+    playWhiteFlashFx(()=>{
+      document.getElementById('battleVictoryFx').classList.remove('go');
+      document.getElementById('battleOverlay').classList.add('hidden');
+      if(BS.onMercy) BS.onMercy();
+      else if(BS.onVictory) BS.onVictory(); // fallback an toàn nếu trận không định nghĩa riêng route MERCY
+    });
+  });
 }
 
 /* ---- Xử lý lượt của party rồi tới lượt của boss ---- */
@@ -3735,6 +3935,7 @@ function resolveRound(){
     if(st.action==='attack'){
       atkCount++;
       let dmg = Math.round(rand(12,20));
+      if(BS.willBuffActive) dmg = Math.round(dmg * (BS.willBuffScale||1)); // Ý Chí Của Người Bông / La Peace Của Bông Hoa
       if(BS.boss.shielded) dmg = Math.round(dmg*0.5); // Khiên Đất của Thiết Ngưu — giảm nửa sát thương lượt này
       if(BS.killable){
         BS.boss.hp = Math.max(0, BS.boss.hp - dmg);
@@ -3744,11 +3945,52 @@ function resolveRound(){
         BS.boss.hp = Math.max(Math.round(BS.boss.maxHp*0.015), BS.boss.hp - dmg);
         addBattleLog(def.name+' tấn công '+BS.bossName+', gây '+dmg+' sát thương (không đủ để hạ gục).','atk');
       }
+      if(BS.willBuffActive){
+        const heal = Math.round(dmg*0.25);
+        st.hp = Math.min(st.maxHp, st.hp+heal);
+        addBattleLog(def.name+' hấp thụ ngược lại '+heal+' HP từ luồng năng lượng vừa gây ra.','skill');
+      }
     } else if(st.action==='defend'){
       st.defending = true;
       addBattleLog(def.name+' thủ thế, chuẩn bị chịu đòn.','def');
     } else if(st.action==='skill'){
       applyBattleSkill(key);
+    } else if(st.action==='act_taunt'){
+      BS.mercyMeter = Math.max(0, BS.mercyMeter - 15);
+      BS.actTauntUsed++;
+      st.defending = false;
+      addBattleLog(def.name+' chế nhạo '+BS.bossName+' — hắn nổi giận, đòn tiếp theo sẽ mạnh hơn nhưng dễ đoán hơn hẳn!','warn');
+      BS.tauntedNextTurn = true; // đọc trong bossTurn(): tăng sát thương nhưng ép pattern đơn giản hơn
+    } else if(st.action==='act_reassure'){
+      BS.mercyMeter = Math.min(BS.mercyMax, BS.mercyMeter + 34);
+      BS.actReassureUsed++;
+      st.defending = true; // trấn an cũng khiến bạn chuẩn bị tinh thần, giảm nhẹ sát thương lượt boss tới
+      addBattleLog(def.name+' trấn an '+BS.bossName+' — LÒNG TRẮC ẨN tăng lên ('+Math.min(100,Math.round(BS.mercyMeter/BS.mercyMax*100))+'%).','good');
+      // Lần đầu trấn an thành công (BS.undertaleMode) -> chính bạn cũng bình tâm lại, "Ý Chí Của
+      // Người Bông" thức tỉnh: buff sát thương FIGHT + tự hồi máu mỗi đòn (xem nhánh 'attack' ở trên).
+      if(BS.undertaleMode && !BS.willBuffActive){
+        BS.willBuffActive = true;
+        BS.willBuffScale = Math.max(BS.willBuffScale||1, 1.25);
+        const heal = Math.round(st.maxHp*0.12);
+        st.hp = Math.min(st.maxHp, st.hp+heal);
+        addBattleLog('Chính khoảnh khắc trấn an ấy khiến '+def.name+' cũng bình tâm lại — '+undertaleSkillLabel()+' thức tỉnh trong bạn, hồi thêm '+heal+' HP!','skill');
+      }
+    } else if(st.action==='item_bimbim'){
+      if(S && S.inventory && S.inventory.bimbim>0){
+        S.inventory.bimbim--;
+        const heal = Math.round(st.maxHp*0.18) + 1; // "hồi 1 HP" quy đổi theo thang máu trận đấu (S.hp gốc chỉ có thang 0-3)
+        st.hp = Math.min(st.maxHp, st.hp+heal);
+        addBattleLog(def.name+' ăn Bim Bim ngay giữa trận, hồi '+heal+' HP!','good');
+      } else {
+        addBattleLog(def.name+' lục túi nhưng không còn Bim Bim nào...', '');
+      }
+    } else if(st.action==='ultimate'){
+      BS.ultimateUsed = true;
+      BS.willBuffActive = true;
+      BS.willBuffScale = 1.5;
+      addBattleLog('✧ "LEND ME YOUR POWER" ✧ — Wibu Việt Nhật và Chàng Lính Ngu Lắm gửi trọn niềm tin qua sợi dây La Peace!','skill');
+      addBattleLog(def.name+' cảm nhận ý chí gộp lại thành một — '+undertaleSkillLabel()+' bùng lên, sức mạnh tăng vọt 50%!','skill');
+      st.hp = Math.min(st.maxHp, st.hp + Math.round(st.maxHp*0.2));
     }
   });
 
@@ -3788,10 +4030,26 @@ function resolveRound(){
 function applyBattleSkill(key){
   const st = BS.party[key], def = PARTY_DEF[key];
   if(key==='YOU'){
-    BS.boss.stunned = true;
     st.cd = def.skillCd;
-    if(BS.souls) addBattleLog('Ánh sáng La Peace bùng lên từ tay BẠN — '+BS.bossName+' khựng lại, choáng váng!','skill');
-    else addBattleLog('BẠN hét lên "Vì tao là người bông!!" — '+BS.bossName+' khựng lại, choáng váng!','skill');
+    if(BS.undertaleMode){
+      // NÂNG CẤP: kỹ năng YOU giờ vừa gây choáng, vừa TỰ KÍCH HOẠT buff "Ý Chí Của Người Bông"
+      // (đổi tên hiển thị, tăng sát thương FIGHT + tự hồi máu mỗi đòn — xem resolveRound()).
+      BS.boss.stunned = true;
+      if(!BS.willBuffActive){
+        BS.willBuffActive = true;
+        BS.willBuffScale = Math.max(BS.willBuffScale||1, 1.25);
+        addBattleLog('BẠN hét lên "Vì tao là người bông!!" — '+undertaleSkillLabel()+' thức tỉnh! '+BS.bossName+' khựng lại, choáng váng!','skill');
+      } else {
+        addBattleLog(undertaleSkillLabel()+' bùng lên lần nữa — '+BS.bossName+' khựng lại, choáng váng!','skill');
+      }
+      const heal = Math.round(st.maxHp*0.12);
+      st.hp = Math.min(st.maxHp, st.hp+heal);
+      addBattleLog('BẠN hồi '+heal+' HP từ chính luồng ý chí vừa giải phóng.','good');
+    } else {
+      BS.boss.stunned = true;
+      if(BS.souls) addBattleLog('Ánh sáng La Peace bùng lên từ tay BẠN — '+BS.bossName+' khựng lại, choáng váng!','skill');
+      else addBattleLog('BẠN hét lên "Vì tao là người bông!!" — '+BS.bossName+' khựng lại, choáng váng!','skill');
+    }
   } else if(key==='WIBU'){
     BS.order.forEach(k=>{ const p=BS.party[k]; if(p.hp>0) p.hp = Math.min(p.maxHp, p.hp+50); });
     st.cd = def.skillCd;
@@ -3856,6 +4114,10 @@ function chooseTrongPatternChain(){
   if(ratio > 0.6) weightA = 0.8;
   else if(ratio > 0.2) weightA = 0.5;
   else weightA = 0.2; // dưới mốc phong ấn (nếu người chơi chọn KHÔNG phong ấn) -> Thiết Ngưu cuồng nộ áp đảo
+  // ACT "Chế nhạo" (undertaleMode) vừa dùng lượt trước -> Trọng nổi giận, ưu tiên đòn NẶNG
+  // (pool Thiết Ngưu) hơn hẳn ở lượt này, đổi lại toàn bộ chuỗi dễ đoán hơn (chainLen thấp hơn).
+  let tauntChainCap = null;
+  if(BS.tauntedNextTurn){ weightA = Math.max(0.1, weightA - 0.35); tauntChainCap = 2; BS.tauntedNextTurn = false; }
 
   const hpUrgency = 1 - ratio; // 0 (đầy máu) -> 1 (gần chết)
   let chainLen = 1;
@@ -3865,6 +4127,7 @@ function chooseTrongPatternChain(){
     else break;
   }
   chainLen = Math.min(chainLen, maxLen);
+  if(tauntChainCap!=null) chainLen = Math.min(chainLen, tauntChainCap);
 
   const chain = [];
   for(let i=0;i<chainLen;i++){
@@ -4079,6 +4342,7 @@ function buildDodgeSpawnQueue(pattern, rect, turn, densityBoost){
     dart: genDartQueue, pillar: genPillarQueue, swarm: genSwarmQueue,
     ambush: genAmbushQueue, quake: genQuakeQueue, charge: genChargeQueue, shield: genShieldQueue,
     straight: genStraightQueue, wave: genWaveQueue, acceldash: genAccelDashQueue, combo: genComboSpiralWaveQueue,
+    uxlinear: genUxLinearQueue, uxblaster: genUxBlasterQueue, uxbounce: genUxBounceQueue,
   };
   const fn = gens[pattern.bulletType] || genRainQueue;
   return fn(rect, (pattern.dodgeDuration||4600), density);
@@ -4312,6 +4576,65 @@ function genShieldQueue(rect, duration, density){
   return q;
 }
 
+/* ============== NÂNG CẤP UNDERTALE/DELTARUNE — 3 GENERATOR ĐẠN MỚI ============== */
+
+/* 1) TUYẾN TÍNH — tái dùng cơ chế 'edge' sẵn có (đạn bay thẳng từ 1 cạnh khung né sang phía
+   đối diện) nhưng CHỈ dùng 2 trục cố định (edge 0/2 = trên/dưới -> bay DỌC, edge 1/3 =
+   trái/phải -> bay NGANG), mỗi đợt tự đổi tốc độ ngẫu nhiên trong 1 khoảng khá rộng để không
+   đợt nào giống đợt nào, đúng như yêu cầu "tia đạn ngang dọc, tốc độ khác nhau". */
+function genUxLinearQueue(rect, duration, density){
+  const q=[]; let t=280; let waveIdx=0;
+  while(t < duration-450){
+    const vertical = waveIdx%2===0; // xen kẽ từng đợt: 1 đợt dọc, 1 đợt ngang
+    const n = 3 + Math.floor(Math.random()*3);
+    for(let i=0;i<n;i++){
+      const edge = vertical ? (Math.random()<0.5?0:2) : (Math.random()<0.5?1:3);
+      const offset = (i+0.5)/n + (Math.random()*0.12-0.06);
+      const speed = 0.09 + Math.random()*0.14; // tốc độ khác nhau mỗi viên
+      q.push({t: t + i*70, kind:'edge', edge, offset: clamp(offset,0.04,0.96), speed});
+    }
+    t += 560*density;
+    waveIdx++;
+  }
+  return q;
+}
+
+/* 2) GASTER BLASTER STYLE — 1 cặp tia laser (ngang + dọc) KHOÁ vào đúng vị trí linh hồn TẠI
+   THỜI ĐIỂM PHÓNG RA (không phải lúc lên lịch trước), cảnh báo đúng ~1 giây rồi bắn thật —
+   tạo cảm giác "cỗ súng phán xét" nhắm bạn rồi mới nhả đạn, giống Gaster Blaster/Karma. Cờ
+   lockToPlayer=true được đọc trong spawnDodgeBullet() để lấy DZ.x/DZ.y NGAY LÚC SPAWN. */
+function genUxBlasterQueue(rect, duration, density){
+  const q=[]; let t=350;
+  while(t < duration-1400){
+    q.push({t, kind:'laser', horiz:true,  lockToPlayer:true, telegraph:1000, wide:true});
+    q.push({t: t+120, kind:'laser', horiz:false, lockToPlayer:true, telegraph:1000, wide:true});
+    t += 2100*density;
+  }
+  return q;
+}
+
+/* 3) HỖN LOẠN DỘI TƯỜNG (Jevil/Spamton style) — đạn xuất phát từ mép ngẫu nhiên với hướng bay
+   ngẫu nhiên, KHÔNG biến mất khi chạm cạnh khung né mà NẢY DỘI lại (phản xạ vận tốc) — xem cờ
+   'bounce' được xử lý riêng trong updateDodgeBullet(). Càng về cuối pattern càng dồn dập. */
+function genUxBounceQueue(rect, duration, density){
+  const q=[]; let t=260;
+  while(t < duration-700){
+    const n = 2 + Math.floor(Math.random()*2);
+    for(let i=0;i<n;i++){
+      const fromEdge = Math.floor(Math.random()*4);
+      let x,y;
+      if(fromEdge===0){ x=Math.random()*rect.w; y=8; }
+      else if(fromEdge===1){ x=rect.w-8; y=Math.random()*rect.h; }
+      else if(fromEdge===2){ x=Math.random()*rect.w; y=rect.h-8; }
+      else { x=8; y=Math.random()*rect.h; }
+      const ang = Math.random()*360;
+      q.push({t, kind:'bounce', x, y, ang, speed:0.1+Math.random()*0.06});
+    }
+    t += 480*density;
+  }
+  return q;
+}
+
 function spawnDodgeBullet(ev, box){
   const el = document.createElement('div');
   const b = {el, dead:false, age:0, life:6500, r:6};
@@ -4393,11 +4716,20 @@ function spawnDodgeBullet(ev, box){
     // đòn Tấn công lượt trước cũng kéo dài thời gian cảnh báo (telegraph) của tia quét,
     // cho người chơi nhiều thời gian phản ứng hơn.
     const telegraph = (ev.telegraph||500) / sf;
-    b.laser = true; b.horiz = ev.horiz; b.pos = ev.pos; b.wide = !!ev.wide;
+    // NÂNG CẤP Gaster Blaster (uxblaster): lockToPlayer -> chốt vị trí NGAY LÚC PHÓNG (thời
+    // điểm spawnDodgeBullet được gọi), không dùng ev.pos đã định sẵn từ lúc lên lịch trước.
+    const pos = ev.lockToPlayer ? (ev.horiz ? DZ.y : DZ.x) : ev.pos;
+    b.laser = true; b.horiz = ev.horiz; b.pos = pos; b.wide = !!ev.wide;
     b.age = -telegraph; b.life = telegraph + 320;
-    el.className = 'dbullet '+(ev.horiz?'t-laser-h':'t-laser-v')+(ev.wide?' wide':'')+' telegraph';
-    if(ev.horiz){ el.style.top = ev.pos+'px'; el.style.left='0'; }
-    else { el.style.left = ev.pos+'px'; el.style.top='0'; }
+    el.className = 'dbullet '+(ev.horiz?'t-laser-h':'t-laser-v')+(ev.wide?' wide':'')+' telegraph'+(ev.lockToPlayer?' t-blaster':'');
+    if(ev.horiz){ el.style.top = pos+'px'; el.style.left='0'; }
+    else { el.style.left = pos+'px'; el.style.top='0'; }
+  } else if(ev.kind==='bounce'){
+    // NÂNG CẤP Jevil/Spamton — đạn nảy dội (bounce) vào các cạnh khung né thay vì biến mất.
+    el.className = 'dbullet t-bounce';
+    const rad = ev.ang*Math.PI/180;
+    b.x = ev.x; b.y = ev.y; b.vx = Math.cos(rad)*ev.speed*sf; b.vy = Math.sin(rad)*ev.speed*sf; b.r=6;
+    b.bounce = true; b.life = 9000; b.bounces = 0;
   }
   box.appendChild(el);
   DZ.bullets.push(b);
@@ -4448,6 +4780,19 @@ function updateDodgeBullet(b, dt){
   if(b.accelAfter!=null && !b.accelerated && b.age >= b.accelAfter){
     b.vx *= b.accelMul; b.vy *= b.accelMul; b.accelerated = true; b.el.classList.add('accel-burst');
     setTimeout(()=>{ if(b.el) b.el.classList.remove('accel-burst'); }, 340); // chỉ chớp sáng nhất thời
+  }
+  if(b.bounce){
+    // NÂNG CẤP Jevil/Spamton — thay vì bay ra ngoài rồi biến mất, đạn PHẢN XẠ vận tốc khi
+    // chạm cạnh khung né (đổi dấu vx/vy tương ứng), tạo quỹ đạo hỗn loạn không thể đoán trước
+    // càng lâu càng khó lường. Giới hạn số lần nảy để tránh đạn tồn tại vô hạn (dead sau ~14 lần).
+    b.x += b.vx*dt; b.y += b.vy*dt;
+    const rect = DZ.rect, r = b.r;
+    if(b.x < r){ b.x = r; b.vx = Math.abs(b.vx); b.bounces++; }
+    else if(b.x > rect.w-r){ b.x = rect.w-r; b.vx = -Math.abs(b.vx); b.bounces++; }
+    if(b.y < r){ b.y = r; b.vy = Math.abs(b.vy); b.bounces++; }
+    else if(b.y > rect.h-r){ b.y = rect.h-r; b.vy = -Math.abs(b.vy); b.bounces++; }
+    if(b.age > b.life || b.bounces>14) b.dead = true;
+    return;
   }
   b.x += b.vx*dt; b.y += b.vy*dt;
   const rect = DZ.rect;
@@ -4527,6 +4872,7 @@ function startTrongCurseOneBattle(){
     partyHpMultiplier: 1.8,
     souls: true,
     killable: true,
+    undertaleMode: true,
     bossMaxHp: 700,
     bossName: 'TRỌNG — THE CURSE ONE',
     bossImage: (typeof TRONG_CURSE_IMAGE !== 'undefined') ? TRONG_CURSE_IMAGE : null,
@@ -4545,6 +4891,9 @@ function startTrongCurseOneBattle(){
     victoryShatterMsg: 'Nhát đánh cuối cùng xuyên qua lớp giáp tà thuật — TRỌNG THE CURSE ONE gục xuống, ánh sáng đen kịt vụt tắt.',
     victoryLightMsg: 'Không có luồng sáng ấm áp nào cả lần này — chỉ có một khoảng lặng nặng nề bao trùm lấy cả ba.',
     onVictory: ()=>{ playVN(VN_TRONG_BAD_ENDING_DIALOGUE.lines, ()=>{ triggerChapter2BadEnding(); }); },
+    // NÂNG CẤP MERCY: tha thứ đủ mốc LÒNG TRẮC ẨN dẫn tới đúng route hoà giải sẵn có
+    // (Phong Ấn) — không cần dồn HP xuống 20% bằng bạo lực để đạt được cùng 1 kết cục tốt đẹp.
+    onMercy: ()=>{ finishTrongSealed(); },
     defeatLogMsg: 'Souls of the Undying One vụn vỡ... sức mạnh vừa thức tỉnh đã lụi tàn ngay trong trận chiến đầu tiên.',
     defeatScreenMsg: 'TRỌNG — THE CURSE ONE đã áp đảo hoàn toàn. Có lẽ ý chí thức tỉnh của bạn vẫn chưa đủ mạnh — thử lại lần nữa.',
   });
