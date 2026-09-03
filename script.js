@@ -3568,6 +3568,7 @@ function freshBattleState(opts){
     // ---- NÂNG CẤP UNDERTALE/DELTARUNE (chỉ dùng cho trận Trọng "The Curse One") ----
     undertaleMode: !!opts.undertaleMode,          // bật menu FIGHT/ACT/ITEM thay cho Tấn công/Phòng thủ/Kỹ năng
     tauntStacks: 0, reassureStacks: 0, tauntStackMax: 3, // ACT: Chế nhạo / Trấn an, tối đa 3 stack mỗi loại
+    tauntUltCd: 0, reassureUltCd: 0,   // hồi chiêu của Sát Chiêu Hoàn Hảo / Ta Sẽ Không Bỏ Ai Ở Lại (mở khoá khi stack tương ứng đạt tối đa)
     bossDmgMult: 1,                // tính lại mỗi lần ACT: +15%/stack Chế nhạo, -15%/stack Trấn an
     willBuffActive: false,        // "Ý Chí Của Người Bông" đã kích hoạt (buff sát thương + tự hồi máu)
     willBuffScale: 1,             // hệ số nhân sát thương của kỹ năng YOU — Ultimate nâng lên 1.5
@@ -3824,16 +3825,24 @@ function showUndertaleActSubmenu(key){
   row.className = 'battleMenuRow';
 
   const tauntMaxed = BS.tauntStacks >= BS.tauntStackMax;
+  const tauntOnCd = tauntMaxed && BS.tauntUltCd>0;
   const tauntBtn = document.createElement('button');
   tauntBtn.className = 'battleCmdBtn atk';
-  tauntBtn.textContent = '😈 Chế nhạo'+(tauntMaxed?' (Tối đa)':'');
+  tauntBtn.textContent = tauntMaxed
+    ? ('💀 Sát Chiêu Hoàn Hảo'+(tauntOnCd?' ('+BS.tauntUltCd+')':''))
+    : '😈 Chế nhạo';
+  tauntBtn.disabled = tauntOnCd;
   tauntBtn.onclick = ()=>chooseAction(key,'act_taunt');
   row.appendChild(tauntBtn);
 
   const reassureMaxed = BS.reassureStacks >= BS.tauntStackMax;
+  const reassureOnCd = reassureMaxed && BS.reassureUltCd>0;
   const calmBtn = document.createElement('button');
   calmBtn.className = 'battleCmdBtn def';
-  calmBtn.textContent = '🕊 Trấn an'+(reassureMaxed?' (Tối đa)':'');
+  calmBtn.textContent = reassureMaxed
+    ? ('🕊 Ta Sẽ Không Bỏ Ai Ở Lại'+(reassureOnCd?' ('+BS.reassureUltCd+')':''))
+    : '🕊 Trấn an';
+  calmBtn.disabled = reassureOnCd;
   calmBtn.onclick = ()=>chooseAction(key,'act_reassure');
   row.appendChild(calmBtn);
 
@@ -3846,7 +3855,9 @@ function showUndertaleActSubmenu(key){
   menu.appendChild(row);
   const hint = document.createElement('div');
   hint.className = 'battleMenuHint';
-  hint.textContent = 'Chế nhạo: mỗi stack (tối đa '+BS.tauntStackMax+') tăng sát thương của '+BS.bossName+' nhưng khiến hắn mất một phần HP vì mất kiểm soát. Trấn an: mỗi stack (tối đa '+BS.tauntStackMax+') giảm sát thương của '+BS.bossName+' — lần đầu dùng sẽ đánh thức "'+undertaleSkillLabel()+'" trong bạn.';
+  hint.textContent = tauntMaxed || reassureMaxed
+    ? 'Đủ 3/3 stack, Chế nhạo/Trấn an đã biến thành chiêu thức riêng — mỗi lần dùng xong sẽ mất 3 lượt để hồi lại.'
+    : 'Chế nhạo: mỗi stack (tối đa '+BS.tauntStackMax+') tăng sát thương của '+BS.bossName+' nhưng khiến hắn mất một phần HP vì mất kiểm soát. Trấn an: mỗi stack (tối đa '+BS.tauntStackMax+') giảm sát thương của '+BS.bossName+' — lần đầu dùng sẽ đánh thức "'+undertaleSkillLabel()+'" trong bạn.';
   menu.appendChild(hint);
 }
 
@@ -3889,10 +3900,23 @@ function resolveRound(){
 
   // hồi giảm cooldown kỹ năng từ lượt trước
   BS.order.forEach(k=>{ if(BS.party[k].cd>0) BS.party[k].cd--; });
+  if(BS.tauntUltCd>0) BS.tauntUltCd--;
+  if(BS.reassureUltCd>0) BS.reassureUltCd--;
   BS.order.forEach(k=>{ BS.party[k].defending=false; BS.party[k].taunting=false; });
   BS.boss.stunned = false;
 
   let atkCount = 0;
+
+  // NÂNG CẤP ACT: Chế nhạo/Trấn an giờ phát hội thoại qua playVN() (bất đồng bộ — chờ người
+  // chơi bấm TIẾP TỤC) nên được tách hẳn ra khỏi vòng forEach đồng bộ bên dưới. Vì trận Trọng
+  // luôn chỉ có đúng 1 thành viên ('YOU'), xử lý riêng rồi return sớm là đủ và an toàn.
+  const actorKey = BS.order.find(k=> BS.party[k].hp>0 && (BS.party[k].action==='act_taunt' || BS.party[k].action==='act_reassure'));
+  if(actorKey){
+    if(BS.party[actorKey].action==='act_taunt') resolveActTaunt(actorKey, atkCount);
+    else resolveActReassure(actorKey, atkCount);
+    return;
+  }
+
   BS.order.forEach(key=>{
     const st = BS.party[key], def = PARTY_DEF[key];
     if(st.hp<=0 || !st.action) return;
@@ -3919,39 +3943,6 @@ function resolveRound(){
       addBattleLog(def.name+' thủ thế, chuẩn bị chịu đòn.','def');
     } else if(st.action==='skill'){
       applyBattleSkill(key);
-    } else if(st.action==='act_taunt'){
-      st.defending = false;
-      if(BS.tauntStacks < BS.tauntStackMax){
-        BS.tauntStacks++;
-        const line = pick(TRONG_TAUNT_LINES);
-        addBattleLog('BẠN: "'+line+'"','atk');
-        const chip = Math.round(BS.boss.maxHp*0.04);
-        BS.boss.hp = Math.max(1, BS.boss.hp - chip); // Trọng mất kiểm soát vì cơn giận -> tự hao HP, nhưng không bao giờ về 0 do lệnh này
-        addBattleLog(BS.bossName+' nổi giận vì bị chế nhạo — sức tấn công tăng lên, nhưng mất '+chip+' HP vì mất kiểm soát!','danger');
-      } else {
-        addBattleLog('BẠN tiếp tục khiêu khích, nhưng '+BS.bossName+' đã giận đến tột cùng — không thể giận hơn được nữa.','warn');
-      }
-      BS.bossDmgMult = clamp(1 + BS.tauntStacks*0.15 - BS.reassureStacks*0.15, 0.25, 2.2);
-    } else if(st.action==='act_reassure'){
-      st.defending = true; // trấn an cũng khiến bạn chuẩn bị tinh thần, giảm nhẹ sát thương lượt boss tới
-      if(BS.reassureStacks < BS.tauntStackMax){
-        BS.reassureStacks++;
-        const line = pick(TRONG_REASSURE_LINES);
-        addBattleLog('BẠN: "'+line+'"','good');
-        addBattleLog(BS.bossName+' dịu lại đôi chút — sức tấn công của hắn giảm xuống.','good');
-      } else {
-        addBattleLog('BẠN tiếp tục trấn an, nhưng '+BS.bossName+' đã dịu hết mức có thể — không thể yên hơn được nữa.','warn');
-      }
-      BS.bossDmgMult = clamp(1 + BS.tauntStacks*0.15 - BS.reassureStacks*0.15, 0.25, 2.2);
-      // Lần đầu trấn an thành công (BS.undertaleMode) -> chính bạn cũng bình tâm lại, "Ý Chí Của
-      // Người Bông" thức tỉnh: buff sát thương FIGHT + tự hồi máu mỗi đòn (xem nhánh 'attack' ở trên).
-      if(BS.undertaleMode && !BS.willBuffActive){
-        BS.willBuffActive = true;
-        BS.willBuffScale = Math.max(BS.willBuffScale||1, 1.25);
-        const heal = Math.round(st.maxHp*0.12);
-        st.hp = Math.min(st.maxHp, st.hp+heal);
-        addBattleLog('Chính khoảnh khắc trấn an ấy khiến '+def.name+' cũng bình tâm lại — '+undertaleSkillLabel()+' thức tỉnh trong bạn, hồi thêm '+heal+' HP!','skill');
-      }
     } else if(st.action==='item_bimbim'){
       if(S && S.inventory && S.inventory.bimbim>0){
         S.inventory.bimbim--;
@@ -3971,6 +3962,106 @@ function resolveRound(){
     }
   });
 
+  finishResolveRound(atkCount);
+}
+
+/* ============== NÂNG CẤP UNDERTALE/DELTARUNE — ACT: CHẾ NHẠO ==============
+   Dưới 3/3 stack: phát 1 câu BẠN + 1 câu TRỌNG đáp trả qua playVN() (y hệt hội thoại thường
+   trong game), rồi mới tăng stack + tăng bossDmgMult + chip HP TRỌNG. Đủ 3/3 stack: biến
+   thành SÁT CHIÊU HOÀN HẢO — đòn kết liễu sát thương lớn, hồi chiêu 3 lượt. */
+function resolveActTaunt(key, atkCount){
+  const st = BS.party[key], def = PARTY_DEF[key];
+  st.defending = false;
+
+  if(BS.tauntStacks >= BS.tauntStackMax){
+    if(BS.tauntUltCd > 0){
+      addBattleLog('BẠN muốn tung SÁT CHIÊU HOÀN HẢO, nhưng chiêu vẫn còn hồi ('+BS.tauntUltCd+' lượt nữa).','warn');
+      finishResolveRound(atkCount);
+      return;
+    }
+    playVN([
+      {spk:'BẠN', text:'"'+TRONG_TAUNT_ULTIMATE_LINE+'"'},
+      {spk:'TRỌNG', text:TRONG_TAUNT_ULTIMATE_REPLY},
+    ], ()=>{
+      const dmg = Math.round(BS.boss.maxHp*0.16) + Math.round(rand(10,18));
+      if(BS.killable) BS.boss.hp = Math.max(0, BS.boss.hp - dmg);
+      else BS.boss.hp = Math.max(Math.round(BS.boss.maxHp*0.015), BS.boss.hp - dmg);
+      BS.tauntUltCd = 3;
+      addBattleLog('✦ SÁT CHIÊU HOÀN HẢO ✦ — '+def.name+' tung đòn kết liễu, gây '+dmg+' sát thương lên '+BS.bossName+'! (Hồi chiêu: 3 lượt)','skill');
+      finishResolveRound(atkCount);
+    });
+    return;
+  }
+
+  const line = pick(TRONG_TAUNT_LINES);
+  const reply = pick(TRONG_TAUNT_REPLY_LINES);
+  playVN([
+    {spk:'BẠN', text:'"'+line+'"'},
+    {spk:'TRỌNG', text:reply},
+  ], ()=>{
+    BS.tauntStacks++;
+    const chip = Math.round(BS.boss.maxHp*0.04);
+    BS.boss.hp = Math.max(1, BS.boss.hp - chip); // Trọng mất kiểm soát vì cơn giận -> tự hao HP, nhưng không bao giờ về 0 do lệnh này
+    BS.bossDmgMult = clamp(1 + BS.tauntStacks*0.15 - BS.reassureStacks*0.15, 0.25, 2.2);
+    addBattleLog(BS.bossName+' nổi giận vì bị chế nhạo — sức tấn công tăng lên, nhưng mất '+chip+' HP vì mất kiểm soát! (Chế nhạo '+BS.tauntStacks+'/'+BS.tauntStackMax+')','danger');
+    finishResolveRound(atkCount);
+  });
+}
+
+/* ============== NÂNG CẤP UNDERTALE/DELTARUNE — ACT: TRẤN AN ==============
+   Dưới 3/3 stack: phát 1 câu BẠN + 1 câu TRỌNG đáp trả qua playVN(), rồi tăng stack + giảm
+   bossDmgMult (lần đầu dùng cũng đánh thức "Ý Chí Của Người Bông"). Đủ 3/3 stack: biến thành
+   "TA SẼ KHÔNG BỎ AI Ở LẠI" — tăng HP tối đa của bản thân, hồi chiêu 3 lượt. */
+function resolveActReassure(key, atkCount){
+  const st = BS.party[key], def = PARTY_DEF[key];
+  st.defending = true; // trấn an cũng khiến bạn chuẩn bị tinh thần, giảm nhẹ sát thương lượt boss tới
+
+  if(BS.reassureStacks >= BS.tauntStackMax){
+    if(BS.reassureUltCd > 0){
+      addBattleLog('BẠN muốn nói "Ta sẽ không bỏ ai ở lại", nhưng cần thêm '+BS.reassureUltCd+' lượt nữa mới đủ bình tâm để lặp lại.','warn');
+      finishResolveRound(atkCount);
+      return;
+    }
+    playVN([
+      {spk:'BẠN', text:'"'+TRONG_REASSURE_ULTIMATE_LINE+'"'},
+      {spk:'TRỌNG', text:TRONG_REASSURE_ULTIMATE_REPLY},
+    ], ()=>{
+      const gain = Math.round(st.maxHp*0.2);
+      st.maxHp += gain;
+      st.hp = Math.min(st.maxHp, st.hp + gain);
+      BS.reassureUltCd = 3;
+      addBattleLog('✦ "TA SẼ KHÔNG BỎ AI Ở LẠI" ✦ — '+def.name+' vững tin hẳn lên, HP tối đa tăng thêm '+gain+'! (Hồi chiêu: 3 lượt)','good');
+      finishResolveRound(atkCount);
+    });
+    return;
+  }
+
+  const line = pick(TRONG_REASSURE_LINES);
+  const reply = pick(TRONG_REASSURE_REPLY_LINES);
+  playVN([
+    {spk:'BẠN', text:'"'+line+'"'},
+    {spk:'TRỌNG', text:reply},
+  ], ()=>{
+    BS.reassureStacks++;
+    BS.bossDmgMult = clamp(1 + BS.tauntStacks*0.15 - BS.reassureStacks*0.15, 0.25, 2.2);
+    addBattleLog(BS.bossName+' dịu lại đôi chút — sức tấn công của hắn giảm xuống. (Trấn an '+BS.reassureStacks+'/'+BS.tauntStackMax+')','good');
+    // Lần đầu trấn an thành công (BS.undertaleMode) -> chính bạn cũng bình tâm lại, "Ý Chí Của
+    // Người Bông" thức tỉnh: buff sát thương FIGHT + tự hồi máu mỗi đòn (xem nhánh 'attack').
+    if(BS.undertaleMode && !BS.willBuffActive){
+      BS.willBuffActive = true;
+      BS.willBuffScale = Math.max(BS.willBuffScale||1, 1.25);
+      const heal = Math.round(st.maxHp*0.12);
+      st.hp = Math.min(st.maxHp, st.hp+heal);
+      addBattleLog('Chính khoảnh khắc trấn an ấy khiến '+def.name+' cũng bình tâm lại — '+undertaleSkillLabel()+' thức tỉnh trong bạn, hồi thêm '+heal+' HP!','skill');
+    }
+    finishResolveRound(atkCount);
+  });
+}
+
+/* ---- Phần đuôi chung của resolveRound(): kiểm tra ngưỡng phong ấn/tử vong, tính hiệu ứng
+   né đạn lượt tới rồi chuyển sang lượt boss. Tách riêng để cả nhánh đồng bộ (attack/defend/
+   skill/item/ultimate) lẫn 2 nhánh ACT bất đồng bộ (chờ playVN) đều gọi chung được. ---- */
+function finishResolveRound(atkCount){
   renderBattle();
 
   // Boss THẬT SỰ có thể bị hạ gục (Đêm 3 — Trọng The Curse One): kiểm tra ngưỡng phong ấn

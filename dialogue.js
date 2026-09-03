@@ -592,11 +592,11 @@ const VN_TRONG_SEALED_ENDING_DIALOGUE = {
   ]
 };
 
-/* ---- NÂNG CẤP UNDERTALE/DELTARUNE — thoại ngắn khi dùng ACT trong trận Trọng "The Curse
-   One" (xem showUndertaleActSubmenu() / resolveRound() trong script.js). Mỗi lần chọn Chế
-   nhạo hoặc Trấn an, script sẽ pick() ngẫu nhiên 1 trong 5 dòng dưới đây, in ra battle log
-   dưới dạng lời BẠN nói thẳng vào mặt TRỌNG giữa trận. Không phải cutscene VN đầy đủ — chỉ
-   là câu thoại ngắn, không làm gián đoạn nhịp chiến đấu. ---- */
+/* ---- NÂNG CẤP UNDERTALE/DELTARUNE — thoại ACT trong trận Trọng "The Curse One" (xem
+   resolveActTaunt() / resolveActReassure() trong script.js). Mỗi lần chọn Chế nhạo hoặc
+   Trấn an, script pick() ngẫu nhiên 1 câu của BẠN + 1 câu TRỌNG phản ứng lại, rồi phát qua
+   playVN() y hệt các đoạn hội thoại thông thường trong game (hộp thoại có tên người nói,
+   bấm TIẾP TỤC để qua câu kế) — không còn chỉ in thẳng vào battle log nữa. ---- */
 const TRONG_TAUNT_LINES = [
   'Yếu vậy thôi à, TRỌNG? Tao sẽ cho mày TRỌNG thương.',
   'The Curse One? Mày chỉ là một thứ lai tạp hạ đẳng.',
@@ -605,6 +605,15 @@ const TRONG_TAUNT_LINES = [
   'Quá đổi kém cỏi, kể cả so với một con chimera',
   'Umm có vẻ có người không thể rời khỏi đây lành lặng rồi.',
 ];
+// Phản ứng của TRỌNG khi bị Chế nhạo — càng lúc càng mất kiểm soát, giận dữ.
+const TRONG_TAUNT_REPLY_LINES = [
+  '"...Câm miệng. Mày không hiểu tao đã phải đánh đổi những gì đâu."',
+  '"TRỌNG THƯƠNG? Mày còn chưa thấy được một phần sức mạnh thật sự của tao!"',
+  '"Lai tạp hay không, tao vẫn sẽ là thứ cuối cùng mày nhìn thấy đêm nay."',
+  '"...Đừng nhắc tới Sửu với Tý. ĐỪNG. NHẮC. TỚI. BỌN. HỌ."',
+  '"Chimera? Mày sắp biết thế nào là thật sự tuyệt vọng rồi đó."',
+  '"...Được thôi. Nếu mày muốn thấy tao mất kiểm soát đến mức nào."',
+];
 const TRONG_REASSURE_LINES = [
   'Trọng tĩnh lại ngây đi!!',
   'Không ai trách mày cả. Bình tĩnh lại đi, TRỌNG.',
@@ -612,6 +621,24 @@ const TRONG_REASSURE_LINES = [
   'TRỌNG mày vẫn còn điều cần làm mà.',
   'Đừng NẶNG nề vậy chứ Trọng.',
 ];
+// Phản ứng của TRỌNG khi được Trấn an — dần dịu lại, vẫn còn giằng co với chính mình.
+const TRONG_REASSURE_REPLY_LINES = [
+  '"...Tao không biết mình còn có thể tĩnh lại được không nữa."',
+  '"Trách? Không... chỉ là tao không còn lựa chọn nào khác."',
+  '"Quái vật hay không, ít nhất... nó vẫn đang bảo vệ được điều gì đó."',
+  '"...Điều tao cần làm. Phải rồi. Tao suýt quên mất."',
+  '"...Được. Chỉ một chút thôi. Tao sẽ cố."',
+];
+
+/* Câu thoại RIÊNG khi Chế nhạo đạt tối đa (3/3) và biến thành SÁT CHIÊU HOÀN HẢO — chiêu kết
+   liễu gây sát thương lớn, hồi 3 lượt sau mỗi lần dùng (xem resolveActTaunt()). */
+const TRONG_TAUNT_ULTIMATE_LINE = 'Đủ rồi TRỌNG — đây là đòn cuối cùng dành cho mày!';
+const TRONG_TAUNT_ULTIMATE_REPLY = '"...Vậy thì tới đi. Cho tao thấy hết những gì mày có!"';
+
+/* Câu thoại RIÊNG khi Trấn an đạt tối đa (3/3) và biến thành "TA SẼ KHÔNG BỎ AI Ở LẠI" —
+   tăng HP tối đa của bản thân, cũng hồi 3 lượt sau mỗi lần dùng (xem resolveActReassure()). */
+const TRONG_REASSURE_ULTIMATE_LINE = 'Ta sẽ không bỏ ai ở lại — kể cả mày, TRỌNG.';
+const TRONG_REASSURE_ULTIMATE_REPLY = '"...Sao mày có thể nói câu đó, với thứ đang đứng trước mặt mày lúc này?"';
 
 const VN_TRONG_BAD_ENDING_DIALOGUE = {
   lines:[
