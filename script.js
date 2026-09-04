@@ -61,6 +61,12 @@ const TIU_IMAGE = "assets/images/TIU.png";
    BATTLE_MUSIC dùng cho các trận khác. Đường dẫn placeholder — thay bằng asset thật khi có. */
 const TRONG_CURSE_IMAGE = "assets/images/trong_curse.png";
 const TRONG_CURSE_MUSIC = "assets/sfx/OST/battle2.mp3";
+/* Chapter 2, Đêm 3 — Trọng "The Curse One" đuổi bắt nhân vật chính, tái dùng đúng engine
+   né tránh của Đêm 1/2 (di chuyển giữa các tòa, cầu dao, HP 3 điểm) nhưng toàn bộ jumpscare +
+   nhạc cảnh báo được đổi sang Trọng thay vì The TIU — xem isTrongChaseNight()/jumpscare() và
+   updateProximityAudio() bên dưới. Đường dẫn placeholder — thay bằng asset thật khi có. */
+const TRONG_CHASE_JUMPSCARE_SFX = "assets/sfx/TrongAttack.mp3";
+const TRONG_CHASE_PROXIMITY_MUSIC = "assets/sfx/OST/TrongNear.mp3";
 
 
 // SFX phát đúng lúc The TIU lao ra khỏi màn hình (jumpscare) — điền đường dẫn file âm thanh
@@ -100,6 +106,12 @@ const NIGHT_CFG = [
   {name:"ĐÊM 2", eventEvery:[42,68], monsterMoveEvery:[16,26], meterMoveSpeedFactor:1.25, meterGainFail:17, meterGainIgnore:11, meterDecay:0.05, startMeter:14},
   {name:"ĐÊM 3", eventEvery:[30,52], monsterMoveEvery:[11,19], meterMoveSpeedFactor:1.55, meterGainFail:20, meterGainIgnore:13, meterDecay:0.04, startMeter:20},
 ];
+
+/* ---- Chapter 2, Đêm 3: TRỌNG "The Curse One" thay thế The TIU làm kẻ đuổi bắt. Dùng để đổi
+   toàn bộ hình ảnh/nhạc/text jumpscare + nhãn HUD sang Trọng mà không phải nhân đôi engine né
+   tránh. Xem PHẦN "ĐÊM 3 — TRỌNG ĐUỔI BẮT" bên dưới (jumpscare(), updateProximityAudio()...). ---- */
+function isTrongChaseNight(){ return !!(S && S.chapter===2 && S.night===3 && !S.epilogue); }
+function chaseMonsterLabel(){ return isTrongChaseNight() ? 'TRỌNG' : 'THE TIU'; }
 
 const GAME_MINUTES_TOTAL = 7.5*60; // 00:00 -> 07:30 — MẶC ĐỊNH cho Chapter 1 (không đổi)
 const REAL_MS_PER_GAME_MIN = (15*60*1000) / GAME_MINUTES_TOTAL; // 1 màn ~ 15 phút thực tế (Chapter 1)
@@ -758,12 +770,16 @@ function refreshHud(){
   }
   document.getElementById('meterFill').style.width = Math.min(100,S.meter)+'%';
   document.getElementById('vignette').classList.toggle('critical', S.hp===1);
+  const meterLabelEl = document.getElementById('meterLabel');
+  if(meterLabelEl) meterLabelEl.textContent = 'MỨC ĐỘ HOẠT ĐỘNG — '+chaseMonsterLabel();
 
   const stFill = document.getElementById('staminaFill');
   stFill.style.width = Math.max(0,S.stamina)+'%';
   stFill.classList.toggle('low', S.stamina<30);
 
   const tiuEl = document.getElementById('tiuLastSeen');
+  const tiuLabelEl = document.getElementById('tiuLastSeenLabel');
+  if(tiuLabelEl) tiuLabelEl.textContent = chaseMonsterLabel()+' LẦN CUỐI THẤY TẠI';
   if(S.epilogue){
     tiuEl.textContent = '—';
     tiuEl.style.color = 'var(--text-dim)';
@@ -1140,14 +1156,14 @@ function canUseCamera(){ return !!S && S.inventory.camera>0 && S.cameraMovesLeft
 function useCameraItem(){
   if(!canUseCamera()) return;
   S.inventory.camera--; S.cameraMovesLeft = 3;
-  addLog('Bạn bật Camera Sinh viên — theo dõi trực tiếp The TIU trong 3 lượt di chuyển tới.','');
+  addLog('Bạn bật Camera Sinh viên — theo dõi trực tiếp '+chaseMonsterLabel()+' trong 3 lượt di chuyển tới.','');
   markActionDirty(); refreshHud(); refreshMap();
 }
 function canUseBreakerItem(){ return !!S && S.inventory.breaker>0 && S.gameMinutes>=S.breakerUntil; }
 function useBreakerItem(){
   if(!canUseBreakerItem()) return;
   S.inventory.breaker--; S.breakerUntil = S.gameMinutes + 60;
-  addLog('RẦM! Bạn sập cầu dao — toàn khuôn viên mất điện. The TIU bị vô hiệu hóa 60 phút, nhưng bạn phải di chuyển mù.','warn');
+  addLog('RẦM! Bạn sập cầu dao — toàn khuôn viên mất điện. '+chaseMonsterLabel()+' bị vô hiệu hóa 60 phút, nhưng bạn phải di chuyển mù.','warn');
   markActionDirty(); refreshHud();
 }
 
@@ -1159,9 +1175,9 @@ function useUVLight(){
     const far = ROOM_KEYS.filter(r=>r!==S.playerRoom && !isRoomSafe(r) && roomDistance(S.playerRoom,r)>=2);
     S.monsterRoom = far.length ? pick(far) : S.monsterRoom;
     S.invulnUntil = S.gameMinutes + 12;
-    addLog('💡 Bạn chiếu thẳng đèn UV vào The TIU — nó bị choáng và lùi ra xa!', '');
+    addLog('💡 Bạn chiếu thẳng đèn UV vào '+chaseMonsterLabel()+' — nó bị choáng và lùi ra xa!', '');
   } else {
-    addLog('The TIU hiện không ở gần đây — đèn UV chưa phát huy tác dụng lúc này.', '');
+    addLog(''+chaseMonsterLabel()+' hiện không ở gần đây — đèn UV chưa phát huy tác dụng lúc này.', '');
   }
   markActionDirty();
   refreshHud(); refreshActionPane();
@@ -1171,7 +1187,7 @@ function useNoiseTrap(){
   if(!S || S.inventory.noisetrap<=0) return;
   S.inventory.noisetrap--;
   S.noiseTrap = {room:S.playerRoom, until:S.gameMinutes+70};
-  addLog('📢 Bạn đặt Bẫy gây nhiễu tại '+ROOM_DEF[S.playerRoom].name+' — The TIU có thể sẽ bị thu hút tới đó thay vì bạn.', '');
+  addLog('📢 Bạn đặt Bẫy gây nhiễu tại '+ROOM_DEF[S.playerRoom].name+' — '+chaseMonsterLabel()+' có thể sẽ bị thu hút tới đó thay vì bạn.', '');
   markActionDirty();
   refreshHud(); refreshActionPane();
 }
@@ -1307,14 +1323,14 @@ function checkPhaseTransition(){
 function triggerGridIncident(){
   S.gridDown = true;
   S.gridIncidentActive = true;
-  addLog('⚡ BIẾN CỐ: Toàn trường mất điện đột ngột! Hãy đến TÒA C (Phòng Kỹ Thuật) để khởi động lại cầu dao tổng trước khi The TIU lợi dụng bóng tối!', 'danger');
+  addLog('⚡ BIẾN CỐ: Toàn trường mất điện đột ngột! Hãy đến TÒA C (Phòng Kỹ Thuật) để khởi động lại cầu dao tổng trước khi '+chaseMonsterLabel()+' lợi dụng bóng tối!', 'danger');
   S.activeEvents['C'] = {deadline: S.gameMinutes+99999, start:S.gameMinutes, mandatory:true, gridEvent:true};
   markActionDirty();
 }
 
 function startFrenzy(){
   S.frenzyStarted = true;
-  addLog('🌒 The TIU bước vào trạng thái CUỒNG NỘ — di chuyển nhanh hơn hẳn! Một số cửa nối giữa các tòa vừa bị khóa.', 'danger');
+  addLog('🌒 '+chaseMonsterLabel()+' bước vào trạng thái CUỒNG NỘ — di chuyển nhanh hơn hẳn! Một số cửa nối giữa các tòa vừa bị khóa.', 'danger');
   lockRandomDoors();
   markActionDirty();
 }
@@ -1365,7 +1381,7 @@ function attemptUnlockDoor(dest){
   const footer = document.getElementById('mgFooter');
   footer.innerHTML = '';
   const timerEl = document.getElementById('mgTimer');
-  body.innerHTML = `<p style="font-size:12px;color:var(--text-dim);">Ổ khóa đã bị The TIU phá hỏng cơ chế — bấm liên tục GIỰT KHÓA để bật nó ra trước khi hết giờ!</p>
+  body.innerHTML = `<p style="font-size:12px;color:var(--text-dim);">Ổ khóa đã bị ${chaseMonsterLabel()} phá hỏng cơ chế — bấm liên tục GIỰT KHÓA để bật nó ra trước khi hết giờ!</p>
     <div style="text-align:center;margin:16px 0;"><div style="height:14px;border:2px solid var(--line);border-radius:6px;overflow:hidden;max-width:260px;margin:0 auto;"><div id="lockProgressFill" style="height:100%;width:0%;background:var(--scan);transition:width .12s;"></div></div></div>`;
   const fillEl = body.querySelector('#lockProgressFill');
   const btn = document.createElement('button');
@@ -1389,7 +1405,7 @@ function attemptUnlockDoor(dest){
     if(done) return; done=true;
     cleanup();
     S.meter = Math.min(100, S.meter+8);
-    addLog('Bạn không kịp gỡ khóa — tiếng động thu hút The TIU đến gần hơn!', 'warn');
+    addLog('Bạn không kịp gỡ khóa — tiếng động thu hút '+chaseMonsterLabel()+' đến gần hơn!', 'warn');
     if(S.gameMinutes>=S.breakerUntil && Math.random()<0.5){
       const path = bfsPath(S.monsterRoom, S.playerRoom, !S.enraged);
       if(path && path.length>1){ S.monsterRoom = path[1]; }
@@ -1602,7 +1618,7 @@ function movePlayer(dest){
     const path = bfsPath(S.monsterRoom, dest, !S.enraged);
     if(path && path.length>1 && S.gameMinutes>=S.breakerUntil){
       S.monsterRoom = path[1];
-      addLog('Tiếng bước chân ồn ào của bạn vọng khắp hành lang... The TIU đã nghe thấy!','tiu');
+      addLog('Tiếng bước chân ồn ào của bạn vọng khắp hành lang... '+chaseMonsterLabel()+' đã nghe thấy!','tiu');
     }
   }
 
@@ -2103,8 +2119,10 @@ function npcTaskCompletionRatio(k, stage1Task){
    Lùa Địch (luring) -> Sập Bẫy (lockdown) -> Quá Tải Cầu Dao (overload) -> Trận đánh cuối.
    TIU ở trạng thái Cuồng Nộ (S.enraged) NGAY TỪ ĐẦU đêm (ép buộc trong freshState/advanceWorld
    ở trên) — không có khu an toàn nào bảo vệ được người chơi/NPC trong suốt Đêm 2.
-   ⚠ Route Secret (do dự trước đòn kết liễu -> Trọng The Curse One) CHƯA implement — theo yêu
-   cầu, hiện luôn đi thẳng vào route Normal khi hoàn tất Giai đoạn Quá Tải. */
+   Khi hoàn tất Giai đoạn Quá Tải, người chơi được CHỌN giữa route Normal (kết liễu ngay — TIU
+   thanh tẩy, kết thúc câu chuyện ở Đêm 2) và route Secret (do dự -> Trọng tự nuốt lấy TIU,
+   biến thành "The Curse One", mở khóa Đêm 3: Trọng đuổi bắt nhân vật chính, xem
+   triggerNight2Climax() / triggerLaPeaceAwakening()). */
 
 const NIGHT2_PHASE_NAMES = { luring:'LÙA ĐỊCH VÀO TRẬN ĐỊA', lockdown:'SẬP BẪY MA TRẬN', overload:'QUÁ TẢI CẦU DAO', resolved:'HOÀN TẤT' };
 
@@ -2351,6 +2369,22 @@ function trapBreakFailState(){
 /* ---- Trận đánh cuối cùng (tái dùng hệ thống battleOverlay của Chapter 1) ---- */
 function triggerNight2Climax(){
   addLog('☀ 07:30 — Dòng điện quá tải đã tích đủ năng lượng La Peace. Đối đầu cuối cùng bắt đầu!', 'danger');
+  // Cho người chơi TỰ CHỌN giữa route Normal (kết liễu ngay — kết thúc câu chuyện ở Đêm 2) và
+  // route Secret (do dự -> Trọng tự nuốt lấy TIU, biến thành "The Curse One", mở khóa Đêm 3).
+  const promptLines = VN_CH2_CLIMAX_CHOICE.lines.slice();
+  const lastIdx = promptLines.length-1;
+  promptLines[lastIdx] = Object.assign({}, promptLines[lastIdx], {
+    choices: promptLines[lastIdx].choices.map((c,i)=>Object.assign({}, c, {
+      insert: i===1 ? VN_CH2_SECRET_HESITATION_DIALOGUE.lines.concat(VN_CH2_SECRET_TRANSFORM_DIALOGUE.lines) : [],
+      onChoose: ()=>{ S.night2ClimaxRoute = (i===0) ? 'normal' : 'secret'; },
+    })),
+  });
+  playVN(promptLines, ()=>{
+    if(S.night2ClimaxRoute==='secret') triggerChapter2SecretPathToNight3();
+    else runNight2ClimaxBattleNormal();
+  });
+}
+function runNight2ClimaxBattleNormal(){
   startSecretBattle({
     introLog: [
       {msg:'Ma trận La Peace bùng cháy dữ dội trong dòng điện quá tải — TIU gầm rú, bị xích chặt nhưng chưa gục ngã!', cls:''},
@@ -2364,6 +2398,39 @@ function triggerNight2Climax(){
     defeatScreenMsg: 'Trận chiến cuối thất bại — TIU đã áp đảo cả party trước khi dòng điện kịp phóng ra dưới ánh bình minh.',
   });
 }
+
+/* Route Secret: Trọng tự nuốt lấy TIU và trở thành "The Curse One" — đêm 2 khép lại ở đây,
+   nhưng câu chuyện tiếp tục sang Đêm 3 (thay vì kết thúc game như route Normal). */
+function triggerChapter2SecretPathToNight3(){
+  if(!S) return;
+  S.running = false;
+  S.endingRoute = 'secret_pending';
+  document.getElementById('winTitle').textContent = '✦ ĐÊM 2 KẾT THÚC — CÁI GIÁ PHẢI TRẢ ✦';
+  document.getElementById('winSub').textContent = 'TIU đã im lặng mãi mãi. Nhưng Trọng đã tự mình đánh đổi để làm được điều đó — người bạn từng dẫn đường cho cả ba người, giờ có thể sẽ là điều nguy hiểm nhất chờ đợi ở phía trước.';
+  const nextBtn = document.getElementById('nextNightBtn');
+  nextBtn.textContent = 'BẮT ĐẦU ĐÊM 3';
+  nextBtn.onclick = ()=>{
+    document.getElementById('winScreen').classList.add('hidden');
+    campaignCarry = { inventory: Object.assign({}, S.inventory), components: Object.assign({}, S.components), setupGauge: S.setupGauge };
+    beginNight(3, false, 2);
+  };
+  document.getElementById('menuFromWin').onclick = showTitle;
+  document.getElementById('winScreen').classList.remove('hidden');
+}
+
+/* Chapter 2, Đêm 3 — chạy khi người chơi bị TRỌNG tóm đủ 3 lần (xem jumpscare()). Thay vì Game
+   Over, đây là lúc La Peace bên trong nhân vật chính thức tỉnh, dẫn thẳng vào trận đánh cuối
+   cùng với TRỌNG — THE CURSE ONE (tái dùng đúng engine boss/bullet-hell đã có). */
+function triggerLaPeaceAwakening(){
+  if(!S) return;
+  S.running = false; // trận đánh boss quản lý vòng lặp/nhạc riêng của nó, không cần tick thế giới nữa
+  addLog('✦ La Peace bên trong bạn đã thức tỉnh — bạn không còn là con mồi nữa.', 'good');
+  playVN(VN_CH3_LAPEACE_AWAKENING.lines, ()=>{
+    startTrongCurseOneBattle();
+  });
+}
+
+
 
 function triggerChapter2NormalEnding(){
   if(!S) return;
@@ -2494,13 +2561,13 @@ function advanceWorld(minutesPassed, opts={}){
   if(!S.enraged && S.meter>=100){
     S.enraged = true;
     S.enrageUntil = S.gameMinutes + ENRAGE_DURATION_MIN;
-    addLog('🩸 HUYẾT NGUYỆT! The TIU đã mất kiểm soát — mọi khu an toàn không còn tác dụng!','danger');
+    addLog('🩸 HUYẾT NGUYỆT! '+chaseMonsterLabel()+' đã mất kiểm soát — mọi khu an toàn không còn tác dụng!','danger');
     markActionDirty();
   }
   if(S.enraged && S.gameMinutes >= S.enrageUntil && !(isHardMode() && S.night===2)){
     S.enraged = false;
     S.meter = 50;
-    addLog('Huyết Nguyệt đã hạ nhiệt... The TIU tạm thời bình thường trở lại.','tiu');
+    addLog('Huyết Nguyệt đã hạ nhiệt... '+chaseMonsterLabel()+' tạm thời bình thường trở lại.','tiu');
     markActionDirty();
   }
 
@@ -2525,7 +2592,7 @@ function advanceWorld(minutesPassed, opts={}){
     if(!ev0.mandatory && S.gameMinutes >= ev0.deadline){
       delete S.activeEvents[room];
       S.meter = Math.min(100, S.meter + NIGHT_CFG[S.night].meterGainIgnore);
-      addLog('Sự cố tại '+ROOM_DEF[room].name+' đã bị bỏ lỡ! The TIU trở nên bất ổn hơn.','warn');
+      addLog('Sự cố tại '+ROOM_DEF[room].name+' đã bị bỏ lỡ! '+chaseMonsterLabel()+' trở nên bất ổn hơn.','warn');
       markActionDirty();
     }
   }
@@ -2586,7 +2653,7 @@ function spawnEvent(){
   }
   if(!room) return;
   S.activeEvents[room] = {deadline: S.gameMinutes + rand(70,110), start: S.gameMinutes};
-  addLog('⚠ The TIU gây ra sự cố tại '+ROOM_DEF[room].name+': '+eventLabel(ROOM_DEF[room].event)+'!','warn');
+  addLog('⚠ '+chaseMonsterLabel()+' gây ra sự cố tại '+ROOM_DEF[room].name+': '+eventLabel(ROOM_DEF[room].event)+'!','warn');
 }
 
 /* Đường đi ngắn nhất trên đồ thị phòng (BFS). avoidSafe=true nghĩa là TIU sẽ không
@@ -2683,8 +2750,26 @@ function computeProximityPan(){
 /* Gọi mỗi khung hình khi ván đang chạy: The TIU cách người chơi 0-1 tòa -> nhạc to nhất,
    càng xa (tới PROXIMITY_FAR_DISTANCE tòa) thì nhạc càng nhỏ dần rồi tắt hẳn.
    Đồng thời pan nhạc sang trái/phải theo hướng The TIU đang ở so với người chơi. */
+let proximityTrackKind = 'tiu'; // 'tiu' | 'trong' — theo dõi track nào đang được nạp vào proximityAudioEl
+/* Đảm bảo proximityAudioEl luôn phát đúng nhạc cảnh báo cho kẻ đuổi bắt hiện tại — TIU ở hầu
+   hết các đêm, riêng Chapter 2 Đêm 3 đổi sang nhạc riêng của TRỌNG (xem TRONG_CHASE_PROXIMITY_MUSIC
+   ở đầu file). Gọi mỗi khung hình từ updateProximityAudio() để tự chuyển track khi cần. */
+function syncProximityAudioTrack(){
+  if(!proximityAudioEl) return;
+  const wantKind = isTrongChaseNight() ? 'trong' : 'tiu';
+  if(wantKind === proximityTrackKind) return;
+  const wantSrc = wantKind==='trong' ? TRONG_CHASE_PROXIMITY_MUSIC : TIU_PROXIMITY_MUSIC;
+  if(!wantSrc) return;
+  const wasPlaying = !proximityAudioEl.paused;
+  proximityAudioEl.pause();
+  proximityAudioEl.src = wantSrc;
+  proximityAudioEl.currentTime = 0;
+  proximityTrackKind = wantKind;
+  if(wasPlaying) proximityAudioEl.play().catch(()=>{});
+}
 function updateProximityAudio(){
   if(!proximityAudioEl || !TIU_PROXIMITY_MUSIC) return;
+  syncProximityAudioTrack();
   let target = 0;
   let targetPan = 0;
   if(S && S.running && !S.paused && !S.epilogue && S.gameMinutes>=S.breakerUntil){
@@ -2725,7 +2810,7 @@ function moveMonster(){
         S.monsterRoom = path[1];
         S.lastSeenRoom = from;
         S.lastSeenAt = S.gameMinutes;
-        addLog('The TIU bị tiếng ồn từ Bẫy gây nhiễu thu hút và lao về phía '+ROOM_DEF[S.noiseTrap.room].name+'...', 'tiu');
+        addLog(chaseMonsterLabel()+' bị tiếng ồn từ Bẫy gây nhiễu thu hút và lao về phía '+ROOM_DEF[S.noiseTrap.room].name+'...', 'tiu');
         return;
       }
     }
@@ -2752,7 +2837,7 @@ function moveMonster(){
   S.monsterRoom = next;
   S.lastSeenRoom = from;
   S.lastSeenAt = S.gameMinutes;
-  addLog('The TIU vừa rời khỏi '+ROOM_DEF[from].name+'...','tiu');
+  addLog(chaseMonsterLabel()+' vừa rời khỏi '+ROOM_DEF[from].name+'...','tiu');
 }
 
 function checkEncounter(){
@@ -2772,6 +2857,7 @@ function jumpscare(){
   const caughtRoom = S.playerRoom;
   const hpLeft = S.hp;
   const dead = hpLeft<=0;
+  const trongChase = isTrongChaseNight(); // Chapter 2, Đêm 3: TRỌNG đuổi bắt thay vì The TIU
   // relocate monster away
   const others = ROOM_KEYS.filter(r=>r!==S.playerRoom && !isRoomSafe(r));
   S.monsterRoom = pick(others.length?others:ROOM_KEYS.filter(r=>r!==S.playerRoom));
@@ -2784,9 +2870,9 @@ function jumpscare(){
     document.getElementById('app').classList.remove('shake'); void document.getElementById('app').offsetWidth;
     document.getElementById('app').classList.add('shake');
   }
-  addLog('JUMPSCARE! The TIU đã tóm được bạn tại '+ROOM_DEF[caughtRoom].name+'!','danger');
+  addLog('JUMPSCARE! '+chaseMonsterLabel()+' đã tóm được bạn tại '+ROOM_DEF[caughtRoom].name+'!','danger');
 
-  // fullscreen jumpscare display: ảnh TIU phóng to dần rồi lao thẳng ra khỏi màn hình (kèm SFX),
+  // fullscreen jumpscare display: ảnh phóng to dần rồi lao thẳng ra khỏi màn hình (kèm SFX),
   // sau đó bảng thông báo trồi lên với 2 lựa chọn "TIẾP TỤC" / "BỎ CUỘC" — người chơi phải bấm
   // một trong hai nút thì pha jumpscare mới kết thúc (không tự động đóng nữa).
   const js = document.getElementById('jumpscareOverlay');
@@ -2798,33 +2884,45 @@ function jumpscare(){
   const jsGiveUpBtn = document.getElementById('jsGiveUpBtn');
   const sfx = document.getElementById('jumpscareSfxAudio');
 
-  jsMonster.style.backgroundImage = TIU_IMAGE ? `url('${TIU_IMAGE}')` : '';
-  jsMonster.classList.toggle('no-img', !TIU_IMAGE);
+  const jsImage = trongChase ? TRONG_CURSE_IMAGE : TIU_IMAGE;
+  jsMonster.style.backgroundImage = jsImage ? `url('${jsImage}')` : '';
+  jsMonster.classList.toggle('no-img', !jsImage);
   jsPanel.classList.remove('show');
 
-  jsPanelText.innerHTML = dead
-    ? 'THE TIU ĐÃ TÓM ĐƯỢC BẠN LẦN CUỐI...<span class="jsPanelSub">Bạn gục ngã tại '+ROOM_DEF[caughtRoom].name+'.</span>'
-    : 'THE TIU ĐÃ TÓM ĐƯỢC BẠN!<span class="jsPanelSub">Còn lại '+hpLeft+' HP — vừa xảy ra tại '+ROOM_DEF[caughtRoom].name+'</span>';
+  // Lần bắt thứ 3 (HP về 0) trong Đêm 3 Chapter 2 KHÔNG dẫn tới Game Over như bình thường —
+  // đây là khoảnh khắc La Peace bên trong nhân vật chính thức tỉnh (xem triggerLaPeaceAwakening()).
+  const awakening = dead && trongChase;
 
-  // Khi đã hết HP thì không thể "chơi tiếp" — chỉ còn một nút dẫn tới màn hình kết quả.
-  jsContinueBtn.textContent = dead ? 'XEM KẾT QUẢ' : 'TIẾP TỤC';
+  if(awakening){
+    jsPanelText.innerHTML = 'LẦN THỨ BA...<span class="jsPanelSub">Một luồng năng lượng ấm áp bùng lên trong lồng ngực bạn tại '+ROOM_DEF[caughtRoom].name+'.</span>';
+    jsContinueBtn.textContent = 'THỨC TỈNH LA PEACE ▶';
+  } else {
+    jsPanelText.innerHTML = dead
+      ? chaseMonsterLabel()+' ĐÃ TÓM ĐƯỢC BẠN LẦN CUỐI...<span class="jsPanelSub">Bạn gục ngã tại '+ROOM_DEF[caughtRoom].name+'.</span>'
+      : chaseMonsterLabel()+' ĐÃ TÓM ĐƯỢC BẠN!<span class="jsPanelSub">Còn lại '+hpLeft+' HP — vừa xảy ra tại '+ROOM_DEF[caughtRoom].name+'</span>';
+    jsContinueBtn.textContent = dead ? 'XEM KẾT QUẢ' : 'TIẾP TỤC';
+  }
+
+  // Khi đã hết HP thì không thể "chơi tiếp" — chỉ còn một nút dẫn tới màn hình kết quả (hoặc,
+  // riêng route thức tỉnh La Peace, dẫn thẳng vào trận đánh cuối).
   jsGiveUpBtn.classList.toggle('hidden', dead);
 
   js.classList.remove('hidden');
   js.classList.remove('active','lunge'); void js.offsetWidth;
-  js.classList.add('active','lunge'); // TIU phóng to rồi lao ra khỏi màn hình (0.9s) + màn hình rung lắc, chạy song song
+  js.classList.add('active','lunge'); // TIU/Trọng phóng to rồi lao ra khỏi màn hình (0.9s) + màn hình rung lắc, chạy song song
 
-  // SFX phát đúng lúc TIU lao ra khỏi màn hình (điền đường dẫn vào TIU_JUMPSCARE_SFX ở đầu file)
-  if(TIU_JUMPSCARE_SFX){
+  // SFX phát đúng lúc kẻ đuổi bắt lao ra khỏi màn hình (điền đường dẫn ở đầu file)
+  const jsSfx = trongChase ? TRONG_CHASE_JUMPSCARE_SFX : TIU_JUMPSCARE_SFX;
+  if(jsSfx){
     try{
-      sfx.src = TIU_JUMPSCARE_SFX;
+      sfx.src = jsSfx;
       sfx.volume = (window.UIT_SOUND_MUTED?0:1) * (SETTINGS.masterVolume/100);
       sfx.currentTime = 0;
       sfx.play().catch(()=>{});
     }catch(e){}
   }
 
-  // Bảng thông báo + nút lựa chọn trồi lên ngay sau khi TIU đã lao ra khỏi màn hình
+  // Bảng thông báo + nút lựa chọn trồi lên ngay sau khi kẻ đuổi bắt đã lao ra khỏi màn hình
   setTimeout(()=>{ jsPanel.classList.add('show'); }, 900);
 
   function closeJumpscare(){
@@ -2837,7 +2935,9 @@ function jumpscare(){
 
   jsContinueBtn.onclick = ()=>{
     closeJumpscare();
-    if(dead){
+    if(awakening){
+      triggerLaPeaceAwakening();
+    } else if(dead){
       gameOver();
     } else {
       S.paused = false;
@@ -2994,7 +3094,7 @@ function startMinigame(room){
       }
     } else {
       S.meter = Math.min(100, S.meter + NIGHT_CFG[S.night].meterGainFail);
-      addLog('Bạn thất bại ở sự cố tại '+ROOM_DEF[room].name+'! The TIU trở nên bất ổn hơn.','warn');
+      addLog('Bạn thất bại ở sự cố tại '+ROOM_DEF[room].name+'! '+chaseMonsterLabel()+' trở nên bất ổn hơn.','warn');
       // Giải sai sự cố: TIU bị thu hút và có tỷ lệ nhảy cóc đến vị trí kề cận phòng đó ngay lập tức
       if(S.gameMinutes>=S.breakerUntil && Math.random()<0.6){
         const adj = ROOM_DEF[room].connects.filter(r=>!isRoomSafe(r));
@@ -3002,7 +3102,7 @@ function startMinigame(room){
         S.monsterRoom = target;
         S.lastSeenRoom = room;
         S.lastSeenAt = S.gameMinutes;
-        addLog('The TIU bị thu hút bởi sự hỗn loạn và nhảy cóc đến gần '+ROOM_DEF[room].name+'!','tiu');
+        addLog(''+chaseMonsterLabel()+' bị thu hút bởi sự hỗn loạn và nhảy cóc đến gần '+ROOM_DEF[room].name+'!','tiu');
       }
       if(isGridEvent){
         // Sự cố bắt buộc: phải thử lại, không được coi là đã bỏ lỡ
@@ -3380,14 +3480,17 @@ function showEndScreen(){
   if(S.chapter===2){
     if(S.standalone){
       document.getElementById('winTitle').textContent='ĐÃ ĐẾN 7:30 SÁNG';
-      document.getElementById('winSub').textContent='CHAPTER 2 — '+NIGHT_CFG[S.night].name+' hoàn thành với '+S.hp+' HP còn lại.';
+      document.getElementById('winSub').textContent='CHAPTER 2 — '+NIGHT_CFG[S.night].name+' hoàn thành với '+S.hp+' HP còn lại.'
+        + (S.night===3 ? ' TRỌNG tạm thời mất dấu bạn — nhưng La Peace bên trong bạn vẫn chưa có dịp thức tỉnh thật sự.' : '');
       document.getElementById('nextNightBtn').textContent='CHƠI LẠI ĐÊM NÀY';
       document.getElementById('nextNightBtn').onclick=()=>{ document.getElementById('winScreen').classList.add('hidden'); beginNight(S.night,true,2); };
     } else if(S.night>=3){
-      document.getElementById('winTitle').textContent='HẾT PHẦN CHƠI THỬ CHAPTER 2';
-      document.getElementById('winSub').textContent='Đây là toàn bộ nội dung Chapter 2 hiện đang xây dựng — cầu dao, thu gom & chế tạo bạn vừa trải nghiệm sẽ được lồng vào câu chuyện chi tiết hơn ở bản cập nhật sau.';
-      document.getElementById('nextNightBtn').textContent='VỀ MÀN HÌNH CHÍNH';
-      document.getElementById('nextNightBtn').onclick=()=>{ document.getElementById('winScreen').classList.add('hidden'); showTitle(); };
+      // Sống sót tới 7:30 sáng mà chưa bị TRỌNG tóm đủ 3 lần: La Peace chưa có dịp thức tỉnh
+      // giữa đêm — buộc phải đối diện ngay khi trời sắp sáng, để câu chuyện luôn đi tới trận
+      // đánh cuối cùng dù người chơi né tránh giỏi tới đâu (xem triggerLaPeaceAwakening()).
+      document.getElementById('winScreen').classList.add('hidden');
+      triggerLaPeaceAwakening();
+      return;
     } else {
       const setupPct = isHardMode() ? S.setupGauge : null;
       document.getElementById('winTitle').textContent='ĐÃ ĐẾN 7:30 SÁNG';
@@ -5303,13 +5406,17 @@ function beginNight(n, standalone, chapter){
   updateBlackoutUI();
   refreshBagBadge();
   persistSave();
-  // VN_INTRO hiện chỉ có nội dung cho Chapter 1 — Chapter 2 sẽ có hội thoại mở đầu riêng sau.
+  // VN_INTRO hiện chỉ có nội dung cho Chapter 1. Chapter 2 có hội thoại mở đầu riêng cho Đêm 1/2
+  // (buổi học phép, xem startTrongTrainingSequence) và Đêm 3 (VN_CH2_NIGHT3_INTRO — TRỌNG "The
+  // Curse One" đuổi bắt nhân vật chính, xem isTrongChaseNight()).
   if(chapter===1){
     playVN(VN_INTRO[n], ()=>{});
   } else if(chapter===2 && (n===1 || n===2) && !trongTrainedForNight[n]){
     // Buổi học phép 16:30-20:45 với Trọng — CHỈ diễn ra lần đầu tiên đêm đó được bắt đầu trong
     // phiên chơi hiện tại (không replay khi retry sau khi chết giữa đêm). Xem PHẦN 7 design doc.
     startTrongTrainingSequence(n);
+  } else if(chapter===2 && n===3){
+    playVN(VN_CH2_NIGHT3_INTRO, ()=>{});
   }
 }
 function hideAllOverlays(){
@@ -5353,11 +5460,10 @@ const CHAPTER_INTRO = {
   },
   2:{
     title:'CHAPTER 2',
-    subtitle:'BẢN DỰNG THỬ',
-    html:`<p>Chapter 2 hiện đang dùng lại đúng bản đồ và cách chơi của Chapter 1 làm phần mở đầu — nội dung câu chuyện, phòng ốc riêng sẽ được bổ sung sau.
-    Điểm khác biệt lớn nhất: đây là nơi các tính năng <b>độ khó cao</b> được kích hoạt.</p>
-    <p>Đêm sẽ có thêm <b>biến cố trung tâm</b> — mất điện toàn trường, buộc bạn phải chạy đến <b>Tòa C</b> khởi động lại cầu dao tổng trước khi The TIU lợi dụng bóng tối. Về cuối đêm, một số cửa nối giữa các tòa còn bị <b>khóa ngẫu nhiên</b>.
-    Bạn cũng có thể nhặt <b>linh kiện</b> (pin cũ, dây điện, băng keo, ống thép) rải trong các góc tối rồi ghé <b>Bàn chế tạo</b> ở Căn tin để tự chế Camera, Bộ Sập Cầu Dao, Đèn UV hay Bẫy gây nhiễu — những vật phẩm này chỉ có ở Chapter 2.</p>`
+    subtitle:'???',
+    html:`<p>Chapter 2 dùng lại đúng bản đồ của Chapter 1 nhưng ở <b>độ khó cao</b>: đêm sẽ có thêm <b>biến cố trung tâm</b> — mất điện toàn trường, buộc bạn phải chạy đến <b>Tòa C</b> khởi động lại cầu dao tổng trước khi The TIU lợi dụng bóng tối. Về cuối đêm, một số cửa nối giữa các tòa còn bị <b>khóa ngẫu nhiên</b>.
+    Bạn cũng có thể nhặt <b>linh kiện</b> (pin cũ, dây điện, băng keo, ống thép) rải trong các góc tối rồi ghé <b>Bàn chế tạo</b> ở Căn tin để tự chế Camera, Bộ Sập Cầu Dao, Đèn UV hay Bẫy gây nhiễu — những vật phẩm này chỉ có ở Chapter 2.</p>
+    <p><b style="color:var(--blood-bright)">Đêm 3</b> đổi hẳn không khí: nếu Trọng phải tự mình hy sinh để dập tắt TIU ở Đêm 2, cậu ấy sẽ trở thành <b>TRỌNG — THE CURSE ONE</b> — kẻ đuổi bắt mới của Đêm 3. Bị tóm đủ 3 lần, La Peace ngủ quên trong chính bạn sẽ thức tỉnh, dẫn thẳng vào trận đối đầu cuối cùng.</p>`
   }
 };
 
@@ -5407,14 +5513,20 @@ const NIGHT_DESCR = {
   2:"Nhịp độ tăng — sự cố dày hơn, The TIU di chuyển nhanh hơn.",
   3:"Đêm cuối — sự cố dồn dập, The TIU gần như không nghỉ."
 };
+const NIGHT_DESCR_CH2 = {
+  1: NIGHT_DESCR[1],
+  2: NIGHT_DESCR[2],
+  3: "Không còn Wibu, không còn Chàng Lính — chỉ có TRỌNG, THE CURSE ONE, và La Peace ngủ quên bên trong bạn."
+};
 function buildNightSelect(chapter){
   chapter = chapter || 1;
   const wrap = document.getElementById('nightCardWrap');
   wrap.innerHTML='';
+  const descMap = chapter===2 ? NIGHT_DESCR_CH2 : NIGHT_DESCR;
   [1,2,3].forEach(n=>{
     const card=document.createElement('div');
     card.className='nightCard';
-    card.innerHTML = `<b>${NIGHT_CFG[n].name}</b><span>${NIGHT_DESCR[n]}</span>`;
+    card.innerHTML = `<b>${NIGHT_CFG[n].name}</b><span>${descMap[n]}</span>`;
     card.onclick=()=>{ hideAllOverlays(); beginNight(n, true, chapter); };
     wrap.appendChild(card);
   });

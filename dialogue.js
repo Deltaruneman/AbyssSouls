@@ -503,6 +503,67 @@ const VN_CH2_SECRET_TRANSFORM_DIALOGUE = {
 };
 
 /* ==============================================================
+   CHAPTER 2 — ĐÊM 2: LỰA CHỌN Ở KHOẢNH KHẮC KẾT LIỄU
+   Hiện ra ngay khi dòng điện quá tải tích đủ 100% (trước khi vào trận đánh cuối), cho người
+   chơi TỰ CHỌN giữa route Normal (ra lệnh kết liễu ngay — TIU bị thanh tẩy, kết thúc câu
+   chuyện ở Đêm 2) và route Secret (do dự — dẫn tới VN_CH2_SECRET_HESITATION_DIALOGUE rồi
+   VN_CH2_SECRET_TRANSFORM_DIALOGUE, mở khóa Đêm 3: Trọng "The Curse One" đuổi bắt nhân vật
+   chính). Xem triggerNight2Climax() trong script.js.
+   ============================================================== */
+const VN_CH2_CLIMAX_CHOICE = {
+  lines:[
+    {spk:'TRỌNG', text:'"Dòng điện đã tích đủ. Chỉ cần ra lệnh, mọi chuyện sẽ kết thúc ngay bây giờ."'},
+    {spk:'BẠN', text:'Ngón tay tôi dừng lại ngay phía trên công tắc kích hoạt. TIU — hay đúng hơn là cái thứ từng là Sửu — đang run rẩy trong xích điện, gần như kiệt sức.'},
+    {spk:'BẠN', text:'Chỉ cần một cái gật đầu.', choices:[
+      {label:'⚡ RA LỆNH — kết liễu ngay, không do dự', insert:[]},
+      {label:'✦ DO DỰ — khựng lại, nhìn nó lần cuối', insert:[]},
+    ]},
+  ]
+};
+
+/* ==============================================================
+   CHAPTER 2 — ĐÊM 3: MỞ ĐẦU
+   Chạy ngay khi beginNight(3, ..., 2) bắt đầu — chỉ xảy ra sau route Secret của Đêm 2 (hoặc
+   khi chơi lẻ qua "CHỌN MÀN"). Không còn Wibu Việt Nhật hay Chàng Lính Ngu Lắm đi cùng — nhân
+   vật chính phải tự mình lẩn trốn TRỌNG — THE CURSE ONE.
+   ============================================================== */
+const VN_CH2_NIGHT3_INTRO = [
+  {spk:'BẠN', text:'21:00. Trận Địa hôm qua vẫn còn ngổn ngang. Wibu Việt Nhật với Chàng Lính Ngu Lắm đã trốn về ký túc xá — tôi bảo họ đi, chuyện này để một mình tôi lo.'},
+  {spk:'BẠN', text:'Ba mảnh La Peace vẫn còn nằm trong túi tôi. Trọng nói đúng — chỉ có tôi là người duy nhất từng chạm vào cả ba mảnh cùng lúc.'},
+  {spk:'BẠN', text:'Không biết phần La Peace ngủ quên trong người mình có thật hay không. Nhưng tối nay, có lẽ tôi sẽ phải tìm ra câu trả lời.'},
+  {spk:'BẠN', text:'Khuôn viên trường im lặng đến rợn người — không giống bất kỳ đêm nào trước đó.'},
+  {spk:'???', text:'"...còn đây à..."'},
+  {spk:'BẠN', text:'!!! Tiếng gì vậy — đó là giọng Trọng. Nhưng trầm hơn, vang hơn, không còn chút gì con người.'}
+];
+
+/* ==============================================================
+   CHAPTER 2 — ĐÊM 3: LA PEACE THỨC TỈNH
+   Chạy khi người chơi bị TRỌNG tóm được đủ 3 lần (HP về 0) trong lúc lẩn trốn — thay vì Game
+   Over, đây là khoảnh khắc nhân vật chính tự cảm nhận và thức tỉnh La Peace bên trong bản thân,
+   chính thức trở thành một pháp sư thật sự, trước khi bước thẳng vào trận đánh cuối cùng với
+   TRỌNG — THE CURSE ONE (xem startTrongCurseOneBattle() trong script.js).
+   ============================================================== */
+const VN_CH3_LAPEACE_AWAKENING = {
+  lines:[
+    {spk:'BẠN', text:'Lần thứ ba. Lưng tôi va vào tường, hơi thở đứt quãng — không còn chạy nổi nữa.'},
+    {spk:'TRỌNG', text:'"...vẫn cứ chạy. Chạy đi đâu được nữa."'},
+    {spk:'BẠN', text:'Ba mảnh La Peace trong túi áo bỗng nóng rực lên, như thể chúng đang phản ứng lại với chính nỗi sợ của tôi.'},
+    {spk:'BẠN', text:'"La Peace... là sức mạnh linh hồn của con người. Ai cũng có nó." — lời Trọng nói đêm đầu tiên, tôi chưa từng thật sự tin.'},
+    {spk:'BẠN', text:'"Nhưng chỉ những ai CẢM NHẬN và SỬ DỤNG được nó, mới thật sự trở thành pháp sư."'},
+    {spk:'BẠN', text:'Tôi không muốn chạy nữa. Tôi siết chặt ba mảnh sáng trong tay — không phải để trốn, mà để ĐỐI DIỆN.'},
+    {spk:'BẠN', text:'Một luồng ánh sáng ấm áp bùng lên từ lồng ngực tôi, không đen kịt như thứ đã nuốt lấy Trọng, mà trong trẻo, ổn định, như một nhịp tim thứ hai.'},
+    {spk:'TRỌNG', text:'"...cái gì..."'},
+    {spk:'BẠN', text:'Lần đầu tiên sau ba đêm, tôi không còn là con mồi nữa.'},
+    {spk:'BẠN', text:'Không biết là vì điều gì nhưng tôi cảm nhận được La Peace của chính tôi đang hút lấy năng lượng từ các La Peace khác.'},
+    {spk:'BẠN', text:'Souls of the Undying One trỗi dậy trong tôi — sức mạnh của La Peace hoà cùng ý chí sinh tồn còn sót lại sau ba lần bị dồn vào đường cùng.'},
+    {spk:'BẠN', text:'"Trọng. Tao sẽ không chạy nữa. Tao sẽ đối diện với mày — như một pháp sư thật sự."'},
+    {spk:'TRỌNG', text:'"...vậy thì... cho tao thấy đi."'},
+  ]
+};
+
+
+
+/* ==============================================================
    ĐÊM 3 — TRẬN CHIẾN VỚI TRỌNG "THE CURSE ONE"
    Xem startTrongCurseOneBattle() trong script.js. Khi HP của Trọng chạm mốc 20%, trận đấu tạm
    dừng và VN_TRONG_CURSE_SEAL_PROMPT hiện ra với 2 lựa chọn:
