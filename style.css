@@ -667,8 +667,9 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
   background:rgba(3,2,4,0.55);backdrop-filter:blur(1px);}
 #dodgeArena.hidden{display:none;}
 #dodgeHint{font-family:var(--font-mono);font-size:11px;letter-spacing:1px;color:#fff;text-shadow:0 0 8px rgba(0,0,0,0.8);}
-#dodgeBox{position:relative;width:min(380px,86vw);height:260px;background:#0a070c;border:2px solid #fff;border-radius:6px;
+#dodgeBox{position:relative;width:min(680px,95vw);height:min(480px,60vh);background:#0a070c;border:2px solid #fff;border-radius:6px;
   box-shadow:0 0 24px rgba(255,255,255,0.25), inset 0 0 30px rgba(0,0,0,0.8);overflow:hidden;}
+@media (max-width:640px){#dodgeBox{width:96vw;height:min(420px,52vh);}}
 #soulCircle{position:absolute;left:0;top:0;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;
   background:radial-gradient(circle at 35% 30%, #fff, var(--blood-bright) 60%, #7a0f1c 100%);
   box-shadow:0 0 10px var(--blood-bright), 0 0 4px #fff;z-index:5;transition:box-shadow .15s;}
@@ -776,6 +777,20 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
 
 /* Đạn nảy dội (Jevil/Spamton style) — lõi tím-hồng, viền sáng để nổi bật giữa quỹ đạo hỗn loạn */
 .dbullet.t-bounce{width:11px;height:11px;margin:-5.5px 0 0 -5.5px;background:radial-gradient(circle,#fff,#ff5ad6 60%,#8a1f6e 100%);box-shadow:0 0 9px #ff5ad6;}
+
+/* ============== NÂNG CẤP — 4 PATTERN LẤY CẢM HỨNG TỪ UNDERTALE/DELTARUNE ==============
+   t-bone (Sans — bức tường xương ngang có khe hở phải luồn qua), t-fire (Asgore — bức tường
+   lửa dọc quét từ trên xuống có khe hở), t-orbit (The Knight — lưỡi kiếm xoay tít quanh tâm
+   rồi văng dần ra ngoài), và judgement tái dùng cơ chế 'laser' sẵn có (Hammer of Justice —
+   mưa giáo dồn dập kiểu Undyne) nên không cần class CSS riêng. */
+.dbullet.t-bone{width:26px;height:100%;margin:0 0 0 -13px;border-radius:3px;
+  box-shadow:0 0 12px rgba(245,230,200,0.55), inset 0 0 6px rgba(0,0,0,0.4);}
+.dbullet.t-fire{width:100%;height:26px;margin:-13px 0 0 0;border-radius:3px;
+  box-shadow:0 0 14px rgba(255,140,40,0.6), inset 0 0 6px rgba(0,0,0,0.4);}
+.dbullet.t-orbit{width:13px;height:13px;margin:-6.5px 0 0 -6.5px;border-radius:3px;
+  background:radial-gradient(circle,#fff,#b6f7ff 45%,#2fa9c9 100%);box-shadow:0 0 10px #6fe0ff;
+  animation:orbitSpin 0.4s linear infinite;}
+@keyframes orbitSpin{0%{filter:hue-rotate(0deg);}100%{filter:hue-rotate(45deg);}}
 
 /* Gaster Blaster style — cột laser khoá vị trí người chơi, tông màu trắng-hồng lạnh để phân
    biệt rõ với laser cam/đỏ mặc định (t-laser-h/v.wide đã có sẵn), cảnh báo dài & rõ hơn. */

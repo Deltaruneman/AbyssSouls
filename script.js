@@ -3472,6 +3472,11 @@ const BOSS_PATTERNS = [
   {name:'GỌNG KÌM BỐN PHÍA', desc:'Đạn ập vào liên tục từ cả bốn phía, siết chặt không gian né tránh.', dmg:[6,10], bulletType:'cross', dodgeDuration:5000},
   {name:'SÓNG TRUY SÁT', desc:'Từng luồng đạn lượn sóng bay ra từ rìa màn hình, nhắm thẳng vào vị trí của bạn lúc phóng ra.', dmg:[5,9], bulletType:'wave', dodgeDuration:4800},
   {name:'VỌT TỐC BẤT NGỜ', desc:'Đạn xuất phát chậm rãi rồi đột ngột tăng tốc gấp nhiều lần giữa chừng — chớ chủ quan!', dmg:[6,11], bulletType:'acceldash', dodgeDuration:4600},
+  // ---- 4 pattern mới lấy cảm hứng trực tiếp từ các trận boss kinh điển Undertale/Deltarune ----
+  {name:'BỨC TƯỜNG XƯƠNG TRẮNG', desc:'Từng bức tường xương lần lượt ập vào từ hai bên, chỉ chừa lại một khe hở hẹp — phải tìm đúng khe mà luồn qua, style Sans.', dmg:[6,10], bulletType:'bonewall', dodgeDuration:5200},
+  {name:'TRIỀU LỬA PHÁN XÉT', desc:'Những bức tường lửa quét thẳng từ trên xuống, chỉ chừa một khe hẹp để né — style ngọn lửa của Asgore.', dmg:[7,12], bulletType:'firewall', dodgeDuration:5000},
+  {name:'LƯỠI KIẾM XOAY TÍT', desc:'Từng chùm lưỡi kiếm xoay tít quanh tâm rồi văng dần ra ngoài thành vòng xoáy mở rộng — style The Knight.', dmg:[6,10], bulletType:'orbit', dodgeDuration:5000},
+  {name:'BÚA CÔNG LÝ GIÁNG XUỐNG', desc:'Hàng loạt giáo phán xét dựng lên dồn dập khắp trận địa theo từng cụm liên tiếp, không kịp thở — style Hammer of Justice.', dmg:[7,11], bulletType:'judgement', dodgeDuration:5000},
 ];
 
 /* ---- Pattern KẾT HỢP dành riêng cho State Machine theo % HP (xem applyHpStateMachine bên
@@ -3518,11 +3523,17 @@ const BOSS_PATTERNS_TRONG_UNDERTALE = [
   {name:'MƯA THOI DỆT ĐỊNH MỆNH', desc:'Từng tia đạn bay thẳng ngang và dọc khung né, mỗi đợt lại đổi tốc độ — không đợt nào giống đợt nào.', dmg:[4,8], bulletType:'uxlinear', dodgeDuration:4600},
   {name:'NÒNG SÚNG PHÁN XÉT', desc:'Một cỗ nòng súng vô hình khoá thẳng vào đúng vị trí bạn đang đứng, cảnh báo đúng 1 giây rồi xả hết đạn thành cột tia xuyên suốt khung né.', dmg:[9,15], bulletType:'uxblaster', dodgeDuration:5200},
   {name:'ĐÙA CỢT HỖN MANG', desc:'Từng viên đạn nảy bật điên loạn giữa các cạnh khung né, quỹ đạo không thể đoán trước — càng lâu càng dày đặc.', dmg:[5,9], bulletType:'uxbounce', dodgeDuration:5000},
+  // ---- Bổ sung thêm 4 pattern kinh điển Undertale/Deltarune cho trận Trọng ----
+  {name:'BỨC TƯỜNG XƯƠNG TRẮNG', desc:'Từng bức tường xương lần lượt ập vào từ hai bên, chỉ chừa lại một khe hở hẹp — style Sans.', dmg:[5,9], bulletType:'bonewall', dodgeDuration:5000},
+  {name:'TRIỀU LỬA PHÁN XÉT', desc:'Những bức tường lửa quét thẳng từ trên xuống, chỉ chừa một khe hẹp để né — style Asgore.', dmg:[7,11], bulletType:'firewall', dodgeDuration:4800},
+  {name:'LƯỠI KIẾM XOAY TÍT', desc:'Từng chùm lưỡi kiếm xoay tít quanh tâm rồi văng dần ra ngoài — style The Knight.', dmg:[6,9], bulletType:'orbit', dodgeDuration:4800},
+  {name:'BÚA CÔNG LÝ GIÁNG XUỐNG', desc:'Hàng loạt giáo phán xét dựng lên dồn dập liên tiếp khắp trận địa — style Hammer of Justice.', dmg:[6,10], bulletType:'judgement', dodgeDuration:4800},
 ];
-// Dạ Thử (Tý — nhanh nhẹn/xảo quyệt) hấp thụ thêm Tuyến Tính + Hỗn Mang; Thiết Ngưu (Sửu —
-// sức mạnh tuyệt đối) hấp thụ Nòng Súng Phán Xét (đòn nặng, cảnh báo dài, đúng chất "cực nặng").
-BOSS_PATTERNS_TRONG_DATHU.push(BOSS_PATTERNS_TRONG_UNDERTALE[0], BOSS_PATTERNS_TRONG_UNDERTALE[2]);
-BOSS_PATTERNS_TRONG_THIETNGUU.push(BOSS_PATTERNS_TRONG_UNDERTALE[1]);
+// Dạ Thử (Tý — nhanh nhẹn/xảo quyệt) hấp thụ thêm Tuyến Tính + Hỗn Mang + Xương Trắng + Xoay Tít
+// (dồn dập, khó đoán); Thiết Ngưu (Sửu — sức mạnh tuyệt đối) hấp thụ Nòng Súng Phán Xét + Triều
+// Lửa + Búa Công Lý (đòn nặng, mang chất "cực nặng, dồn ép không gian").
+BOSS_PATTERNS_TRONG_DATHU.push(BOSS_PATTERNS_TRONG_UNDERTALE[0], BOSS_PATTERNS_TRONG_UNDERTALE[2], BOSS_PATTERNS_TRONG_UNDERTALE[3], BOSS_PATTERNS_TRONG_UNDERTALE[5]);
+BOSS_PATTERNS_TRONG_THIETNGUU.push(BOSS_PATTERNS_TRONG_UNDERTALE[1], BOSS_PATTERNS_TRONG_UNDERTALE[4], BOSS_PATTERNS_TRONG_UNDERTALE[6]);
 
 const BOSS_PATTERNS_TRONG = [...BOSS_PATTERNS_TRONG_DATHU, ...BOSS_PATTERNS_TRONG_THIETNGUU];
 
@@ -4300,8 +4311,8 @@ function runDodgePhase(pattern, cb){
   arena.classList.remove('hidden');
   document.getElementById('dodgeHitNum').textContent = '0';
 
-  const rect = {w: box.clientWidth || 340, h: box.clientHeight || 260};
-  const soulR = 7;
+  const rect = {w: box.clientWidth || 620, h: box.clientHeight || 440};
+  const soulR = 8;
   // Đòn "Tấn công" của party ở lượt trước làm TIU chậm lại: đạn bay chậm hơn (speedFactor)
   // và thưa hơn (densityBoost giãn khoảng cách giữa các đợt) — càng nhiều Tấn công, càng dễ né.
   const soften = BS ? (BS.dodgeSoften||0) : 0;
@@ -4344,7 +4355,8 @@ function runDodgePhase(pattern, cb){
     const elapsed = now - DZ.start;
 
     // di chuyển linh hồn theo phím giữ (WASD / mũi tên), giới hạn trong khung
-    const speed = 0.24; // px/ms
+    // (khung né đã được phóng to hơn bản gốc nên tăng tốc độ theo tỉ lệ để giữ cảm giác né tương tự)
+    const speed = 0.34; // px/ms
     let mx=0,my=0;
     if(DZ.keys.up) my -= 1;
     if(DZ.keys.down) my += 1;
@@ -4412,6 +4424,7 @@ function buildDodgeSpawnQueue(pattern, rect, turn, densityBoost){
     ambush: genAmbushQueue, quake: genQuakeQueue, charge: genChargeQueue, shield: genShieldQueue,
     straight: genStraightQueue, wave: genWaveQueue, acceldash: genAccelDashQueue, combo: genComboSpiralWaveQueue,
     uxlinear: genUxLinearQueue, uxblaster: genUxBlasterQueue, uxbounce: genUxBounceQueue,
+    bonewall: genBoneWallQueue, firewall: genFireWallQueue, orbit: genOrbitQueue, judgement: genJudgementQueue,
   };
   const fn = gens[pattern.bulletType] || genRainQueue;
   return fn(rect, (pattern.dodgeDuration||4600), density);
@@ -4704,6 +4717,97 @@ function genUxBounceQueue(rect, duration, density){
   return q;
 }
 
+/* ============== 4 PATTERN LẤY CẢM HỨNG TRỰC TIẾP TỪ UNDERTALE/DELTARUNE ==============
+   Bổ sung theo yêu cầu — mượn tinh thần thiết kế (không sao chép asset/hình ảnh gốc) từ 4
+   trận boss kinh điển: Sans, Asgore, The Knight (Deltarune), và bản nhạc/độ dồn dập kiểu
+   "Hammer of Justice" (Undyne). Cả 4 đều mới hoàn toàn về CƠ CHẾ so với các pattern cũ, để
+   giảm cảm giác lặp lại mà người chơi phản ánh. */
+
+/* 1) SANS — BỨC TƯỜNG XƯƠNG: một "bức tường xương" (thanh dọc cao hết khung né) trượt ngang
+   từ trái hoặc phải, chỉ chừa đúng 1 khe hở (gapY/gapH) — người chơi phải ĐOÁN TRƯỚC khe hở
+   nằm ở đâu và di chuyển tới đó trước khi tường ập tới, đúng tinh thần "bức tường xương có khe
+   phải luồn qua" nổi tiếng của Sans. Khe hở đổi vị trí ngẫu nhiên mỗi đợt, tường bên trái/phải
+   xen kẽ nhau, càng về sau càng dày (2 tường cùng lúc từ 2 phía, buộc phải né đúng khe của CẢ
+   HAI cùng lúc). */
+function genBoneWallQueue(rect, duration, density){
+  const q=[]; let t=350; let wave=0;
+  while(t < duration-600){
+    const dual = wave>=3; // càng về sau, 2 bức tường cùng lúc từ 2 phía cho khó hơn
+    const gapH = Math.max(64, 96 - wave*4);
+    if(dual){
+      const gapY1 = 24 + Math.random()*(rect.h-gapH-48);
+      const gapY2 = 24 + Math.random()*(rect.h-gapH-48);
+      q.push({t, kind:'bonewall', fromLeft:true,  gapY:gapY1+gapH/2, gapH, speed:0.14+Math.random()*0.05});
+      q.push({t, kind:'bonewall', fromLeft:false, gapY:gapY2+gapH/2, gapH, speed:0.14+Math.random()*0.05});
+    } else {
+      const fromLeft = wave%2===0;
+      const gapY = 24 + Math.random()*(rect.h-gapH-48) + gapH/2;
+      q.push({t, kind:'bonewall', fromLeft, gapY, gapH, speed:0.15+Math.random()*0.05});
+    }
+    t += 780*density;
+    wave++;
+  }
+  return q;
+}
+
+/* 2) ASGORE — TRIỀU LỬA PHÁN XÉT: tương tự bức tường xương nhưng XOAY TRỤC 90° — một "bức
+   tường lửa" ngang (cao hết bề rộng khung né) quét từ trên xuống, chỉ chừa 1 khe hở theo trục
+   X — gợi nhớ những đợt lửa quét ngang sân đấu của Asgore. Tốc độ quét nhanh dần theo từng đợt. */
+function genFireWallQueue(rect, duration, density){
+  const q=[]; let t=400; let wave=0;
+  while(t < duration-700){
+    const gapW = Math.max(70, 110 - wave*5);
+    const gapX = 24 + Math.random()*(rect.w-gapW-48) + gapW/2;
+    q.push({t, kind:'firewall', gapX, gapW, speed:(0.13+wave*0.01)+Math.random()*0.03});
+    t += 900*density;
+    wave++;
+  }
+  return q;
+}
+
+/* 3) THE KNIGHT (Deltarune) — LƯỠI KIẾM XOAY TÍT: từng chùm lưỡi kiếm bắn ra rồi XOAY QUANH
+   TÂM khung né (thay vì bay thẳng ra như 'spiral' cũ) trong khi bán kính quỹ đạo tăng dần —
+   tạo cảm giác một vòng xoáy lưỡi kiếm mở rộng dần ra khắp trận địa, đúng chất "cơn lốc kiếm"
+   của The Knight. Tốc độ xoay tăng dần theo thời gian trong cùng 1 pattern để dồn ép người chơi. */
+function genOrbitQueue(rect, duration, density){
+  const q=[]; let t=300;
+  const cx=rect.w/2, cy=rect.h/2;
+  const armCount = 3;
+  let baseAngle = Math.random()*360;
+  let wave=0;
+  while(t < duration-500){
+    const spinDir = wave%2===0 ? 1 : -1; // đổi chiều xoay theo từng đợt cho khó đoán hơn
+    for(let i=0;i<armCount;i++){
+      q.push({t, kind:'orbit', cx, cy, angle: baseAngle+(360/armCount)*i,
+        radius: 18, angularSpeed: (0.0026 + Math.min(0.0018, wave*0.00012))*spinDir,
+        radiusGrowth: 0.05, life: 2600});
+    }
+    baseAngle += 33;
+    t += 300*density;
+    wave++;
+  }
+  return q;
+}
+
+/* 4) "HAMMER OF JUSTICE" (nhịp độ kiểu Undyne) — BÚA CÔNG LÝ: tái dùng cơ chế 'laser' dọc sẵn
+   có nhưng bắn thành CỤM 4-6 mũi giáo liên tiếp cực nhanh (telegraph rút ngắn còn ~1/3 so với
+   pattern thường) ở nhiều vị trí X ngẫu nhiên cùng lúc — tạo cảm giác dồn dập, gấp gáp không
+   kịp thở đúng tinh thần các đợt giáo phán xét dồn dập của Undyne. */
+function genJudgementQueue(rect, duration, density){
+  const q=[]; let t=380;
+  while(t < duration-550){
+    const n = 4 + Math.floor(Math.random()*3);
+    const positions = [];
+    for(let i=0;i<n;i++) positions.push(20+Math.random()*(rect.w-40));
+    positions.sort((a,b)=>a-b);
+    positions.forEach((pos,i)=>{
+      q.push({t: t+i*70, kind:'laser', horiz:false, pos, telegraph:360});
+    });
+    t += 820*density;
+  }
+  return q;
+}
+
 function spawnDodgeBullet(ev, box){
   const el = document.createElement('div');
   const b = {el, dead:false, age:0, life:6500, r:6};
@@ -4799,6 +4903,35 @@ function spawnDodgeBullet(ev, box){
     const rad = ev.ang*Math.PI/180;
     b.x = ev.x; b.y = ev.y; b.vx = Math.cos(rad)*ev.speed*sf; b.vy = Math.sin(rad)*ev.speed*sf; b.r=6;
     b.bounce = true; b.life = 9000; b.bounces = 0;
+  } else if(ev.kind==='bonewall'){
+    // Sans — Bức Tường Xương: thanh dọc cao hết khung né trượt ngang từ trái/phải, chỉ chừa
+    // đúng 1 khe hở (gapY±gapH/2) render bằng gradient nền có đoạn trong suốt.
+    el.className = 'dbullet t-bone';
+    const rect = DZ.rect;
+    const gapTop = ev.gapY - ev.gapH/2, gapBot = ev.gapY + ev.gapH/2;
+    el.style.background = `linear-gradient(to bottom, #f5e6c8 0px, #f5e6c8 ${Math.max(0,gapTop)}px, transparent ${Math.max(0,gapTop)}px, transparent ${Math.min(rect.h,gapBot)}px, #f5e6c8 ${Math.min(rect.h,gapBot)}px, #f5e6c8 ${rect.h}px)`;
+    b.x = ev.fromLeft ? -16 : rect.w+16; b.y = 0;
+    b.vx = (ev.fromLeft ? 1 : -1) * ev.speed * sf; b.vy = 0; b.r = 13;
+    b.bonewall = true; b.gapTop = gapTop; b.gapBot = gapBot;
+  } else if(ev.kind==='firewall'){
+    // Asgore — Triều Lửa Phán Xét: thanh ngang rộng hết khung né quét từ trên xuống, chỉ chừa
+    // đúng 1 khe hở theo trục X (gapX±gapW/2).
+    el.className = 'dbullet t-fire';
+    const rect = DZ.rect;
+    const gapL = ev.gapX - ev.gapW/2, gapR = ev.gapX + ev.gapW/2;
+    el.style.background = `linear-gradient(to right, #ffb347 0px, #ffb347 ${Math.max(0,gapL)}px, transparent ${Math.max(0,gapL)}px, transparent ${Math.min(rect.w,gapR)}px, #ffb347 ${Math.min(rect.w,gapR)}px, #ffb347 ${rect.w}px)`;
+    b.x = 0; b.y = -18;
+    b.vx = 0; b.vy = ev.speed * sf; b.r = 13;
+    b.firewall = true; b.gapLeft = gapL; b.gapRight = gapR;
+  } else if(ev.kind==='orbit'){
+    // The Knight — Lưỡi Kiếm Xoay Tít: đạn xoay quanh tâm với bán kính tăng dần theo thời gian
+    // thay vì bay thẳng ra — quỹ đạo cong thành vòng xoáy mở rộng dần.
+    el.className = 'dbullet t-orbit';
+    const rad = ev.angle*Math.PI/180;
+    b.orbit = true; b.cx = ev.cx; b.cy = ev.cy; b.angle = rad;
+    b.angularSpeed = ev.angularSpeed * sf; b.radius = ev.radius; b.radiusGrowth = ev.radiusGrowth*sf;
+    b.x = ev.cx + Math.cos(rad)*ev.radius; b.y = ev.cy + Math.sin(rad)*ev.radius; b.r = 6;
+    b.life = ev.life || 2600;
   }
   box.appendChild(el);
   DZ.bullets.push(b);
@@ -4835,6 +4968,18 @@ function updateDodgeBullet(b, dt){
     b.y = b.originY + b.dirY*travel + b.perpY*osc;
     const rectW = DZ.rect;
     if(b.x < -40 || b.x > rectW.w+40 || b.y < -40 || b.y > rectW.h+40) b.dead = true;
+    if(b.age > b.life) b.dead = true;
+    return;
+  }
+  if(b.orbit){
+    // The Knight — Lưỡi Kiếm Xoay Tít: góc quay liên tục cộng dồn + bán kính tăng dần theo
+    // thời gian -> quỹ đạo vẽ ra một vòng xoáy mở rộng dần quanh tâm khung né.
+    b.angle += b.angularSpeed*dt;
+    b.radius += b.radiusGrowth*dt;
+    b.x = b.cx + Math.cos(b.angle)*b.radius;
+    b.y = b.cy + Math.sin(b.angle)*b.radius;
+    const rect = DZ.rect;
+    if(b.x < -40 || b.x > rect.w+40 || b.y < -40 || b.y > rect.h+40) b.dead = true;
     if(b.age > b.life) b.dead = true;
     return;
   }
@@ -4879,6 +5024,18 @@ function dodgeHitTest(b, dz){
     if(b.el.classList.contains('telegraph')) return false; // chỉ đang cảnh báo địa chấn, chưa "nổ" thật
     const distFromSafe = Math.hypot(dz.x-b.safeX, dz.y-b.safeY);
     return distFromSafe > (b.safeR - dz.soulR*0.4); // ra ngoài vùng an toàn = trúng đòn địa chấn
+  }
+  if(b.bonewall){
+    // Sans — chỉ tính trúng đòn nếu đang ở trong bề dày tường VÀ không nằm trong khe hở (gapTop/gapBot).
+    const halfW = 13 + dz.soulR*0.5;
+    if(Math.abs(dz.x - b.x) > halfW) return false;
+    return !(dz.y > b.gapTop + 3 && dz.y < b.gapBot - 3);
+  }
+  if(b.firewall){
+    // Asgore — tương tự bonewall nhưng theo trục ngang (khe hở nằm trên trục X).
+    const halfH = 13 + dz.soulR*0.5;
+    if(Math.abs(dz.y - b.y) > halfH) return false;
+    return !(dz.x > b.gapLeft + 3 && dz.x < b.gapRight - 3);
   }
   return Math.hypot(dz.x-b.x, dz.y-b.y) < (b.r + dz.soulR - 1);
 }
