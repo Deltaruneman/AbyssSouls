@@ -1371,6 +1371,10 @@ function lockRandomDoors(){
   locked.forEach(k=>{ S.lockedDoors[k] = true; });
 }
 
+/* Minigame "Giựt khóa" — nâng cấp từ bấm liên tục (mỏi tay, ít kỹ năng) sang dạng TIMING:
+   1 kim quét qua lại trên thanh ngang, người chơi phải bấm đúng lúc kim nằm trong vùng xanh.
+   Cần trúng đủ `needed` lần trước khi hết giờ; vùng xanh đổi vị trí + kim tăng tốc theo đêm
+   để giữ độ khó leo thang giống các minigame khác trong game. */
 function attemptUnlockDoor(dest){
   if(!S || !S.running || S.paused) return;
   const modal = document.getElementById('mgModal');
@@ -1381,16 +1385,54 @@ function attemptUnlockDoor(dest){
   const footer = document.getElementById('mgFooter');
   footer.innerHTML = '';
   const timerEl = document.getElementById('mgTimer');
-  body.innerHTML = `<p style="font-size:12px;color:var(--text-dim);">Ổ khóa đã bị ${chaseMonsterLabel()} phá hỏng cơ chế — bấm liên tục GIỰT KHÓA để bật nó ra trước khi hết giờ!</p>
-    <div style="text-align:center;margin:16px 0;"><div style="height:14px;border:2px solid var(--line);border-radius:6px;overflow:hidden;max-width:260px;margin:0 auto;"><div id="lockProgressFill" style="height:100%;width:0%;background:var(--scan);transition:width .12s;"></div></div></div>`;
-  const fillEl = body.querySelector('#lockProgressFill');
+  const needed = 3;
+  body.innerHTML = `<p style="font-size:12px;color:var(--text-dim);">Ổ khóa đã bị ${chaseMonsterLabel()} phá hỏng cơ chế — bấm <b>GIỰT KHÓA</b> đúng lúc kim quét vào vùng xanh để bật chốt ra trước khi hết giờ!</p>
+    <div id="lockTimingTrack">
+      <div id="lockZone"></div>
+      <div id="lockNeedle"></div>
+    </div>
+    <div style="text-align:center;font-size:11px;color:var(--text-dim);margin-top:6px;">Đã bật: <span id="lockHitCount">0</span>/${needed}</div>`;
+  const trackEl = body.querySelector('#lockTimingTrack');
+  const zoneEl = body.querySelector('#lockZone');
+  const needleEl = body.querySelector('#lockNeedle');
+  const hitCountEl = body.querySelector('#lockHitCount');
   const btn = document.createElement('button');
   btn.className='btn primary'; btn.textContent='GIỰT KHÓA';
-  const needed = 3;
-  let progress = 0, timeLeft = 8, timerHandle = null, done=false;
+
+  let progress = 0, timeLeft = 10, timerHandle = null, rafHandle = null, done=false;
+  // Tốc độ + độ rộng vùng xanh scale theo đêm để giữ độ khó nhất quán với các minigame khác.
+  const speed = 1.15 + (S.night-1)*0.22;      // vòng quét / giây
+  let zoneWidthPct = Math.max(14, 22 - (S.night-1)*3);
+  let zoneStartPct = Math.random()*(100-zoneWidthPct);
+  let startTs = null;
+
+  function placeZone(){
+    zoneStartPct = Math.random()*(100-zoneWidthPct);
+    zoneEl.style.left = zoneStartPct+'%';
+    zoneEl.style.width = zoneWidthPct+'%';
+  }
+  placeZone();
+
+  function needlePct(ts){
+    const t = (ts - startTs)/1000;
+    // Sóng tam giác (đi-về đều tốc độ) thay vì sin để việc "đoán nhịp" công bằng hơn.
+    const cyclePos = (t*speed) % 2;
+    return (cyclePos<=1 ? cyclePos : 2-cyclePos) * 100;
+  }
+
+  function frame(ts){
+    if(done) return;
+    if(!startTs) startTs = ts;
+    const pct = needlePct(ts);
+    needleEl.style.left = pct+'%';
+    rafHandle = requestAnimationFrame(frame);
+  }
+  rafHandle = requestAnimationFrame(frame);
+
   startMinigamePressureFx(document.getElementById('mgBox'));
   function cleanup(){
     clearInterval(timerHandle);
+    cancelAnimationFrame(rafHandle);
     stopMinigamePressureFx();
     modal.classList.add('hidden');
   }
@@ -1415,9 +1457,22 @@ function attemptUnlockDoor(dest){
   }
   btn.onclick=()=>{
     if(done) return;
-    progress++;
-    fillEl.style.width = Math.min(100, progress/needed*100)+'%';
-    if(progress>=needed) succeed();
+    const pct = parseFloat(needleEl.style.left)||0;
+    const inZone = pct >= zoneStartPct && pct <= zoneStartPct+zoneWidthPct;
+    if(inZone){
+      progress++;
+      hitCountEl.textContent = progress;
+      trackEl.classList.remove('lockMiss'); trackEl.classList.add('lockHit');
+      setTimeout(()=>trackEl.classList.remove('lockHit'), 150);
+      if(progress>=needed) succeed();
+      else { zoneWidthPct = Math.max(10, zoneWidthPct-2); placeZone(); }
+    } else {
+      trackEl.classList.remove('lockHit'); trackEl.classList.add('lockMiss');
+      setTimeout(()=>trackEl.classList.remove('lockMiss'), 150);
+      timeLeft = Math.max(0, timeLeft-1); // bấm trật bị trừ bớt thời gian, tạo cái giá cho việc đoán ẩu
+      timerEl.textContent = 'Thời gian còn lại: '+timeLeft+'s';
+      if(timeLeft<=0) fail();
+    }
   };
   footer.appendChild(btn);
   timerEl.textContent = 'Thời gian còn lại: '+timeLeft+'s';
@@ -1763,7 +1818,9 @@ function tickNPC(k, dtMin){
   }
 
   if(npc.status==='working'){
-    npc.taskProgress += dtMin;
+    // Đặc quyền Wibu Việt Nhật (E): thao tác kỹ thuật nhanh hơn 20% -> tích lũy tiến độ nhanh hơn.
+    const workRate = (k==='E') ? dtMin*1.2 : dtMin;
+    npc.taskProgress += workRate;
     if(npc.taskProgress >= TASK_DURATION_MIN[npc.task]){
       completeNPCTask(k);
     }
@@ -1793,6 +1850,9 @@ function updateNPCStress(k, dtMin){
   else if(dist === 1) ratePerMin = 2.2;
   else if(dist === 2) ratePerMin = 0.6;
   else                ratePerMin = -0.5;
+
+  // Đặc quyền Chàng Lính (B): kháng Stress tốt hơn khi gặp TIU -> giảm 25% tốc độ tăng stress.
+  if(k==='B' && ratePerMin>0) ratePerMin *= 0.75;
 
   npc.stress = clamp(npc.stress + ratePerMin*dtMin, 0, 100);
 
@@ -1873,6 +1933,13 @@ function buildRadioGroup(){
     head.className = 'radioNpcHead';
     head.innerHTML = `<b>${npc.name}</b> <span class="radioNpcRoom">— ${ROOM_DEF[npc.room].name}</span>`;
     card.appendChild(head);
+
+    const passiveLine = document.createElement('div');
+    passiveLine.className = 'radioNpcPassive';
+    passiveLine.textContent = k==='E'
+      ? '⚙ Đặc quyền: thao tác kỹ thuật nhanh hơn 20%'
+      : '🛡 Đặc quyền: kháng Stress tốt hơn khi gần TIU';
+    card.appendChild(passiveLine);
 
     const statusLine = document.createElement('div');
     statusLine.className = 'radioNpcStatus';
