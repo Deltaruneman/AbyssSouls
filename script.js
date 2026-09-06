@@ -157,6 +157,24 @@ const ENRAGE_DURATION_MIN = 100;   // Huyết Nguyệt kéo dài bao lâu (phút
 
 /* ---- Tiếng ồn khi có buff tốc độ ---- */
 const NOISE_ATTRACT_CHANCE = 0.35;
+/* Di chuyển BÌNH THƯỜNG (không buff, không rón rén) khi MỨC ĐỘ HOẠT ĐỘNG đã cao vẫn có
+   một xác suất nhỏ gây chú ý — càng căng thẳng, bước chân bình thường càng dễ bị nghe thấy.
+   Chỉ tính từ ngưỡng NOISE_NORMAL_METER_FLOOR trở lên (dưới ngưỡng này coi như an toàn tuyệt đối). */
+const NOISE_NORMAL_METER_FLOOR = 55;
+const NOISE_NORMAL_MAX_CHANCE = 0.22; // xác suất tối đa (khi meter chạm 100) khi di chuyển bình thường
+
+/* ---- Rón rén (Sneak Mode): chậm hơn & tốn thể lực hơn, đổi lại gần như không gây tiếng
+   động và khiến The TIU khó "cảm nhận" đúng vị trí của bạn hơn trong lượt di chuyển kế tiếp. ---- */
+const SNEAK_MOVE_COST_MIN = 16;      // chậm hơn hẳn so với 10 phút bình thường
+const SNEAK_STAMINA_COST = 20;       // tốn thể lực hơn di chuyển thường (đi khom người mệt hơn)
+const SNEAK_METER_MASK = 28;         // "che mắt" The TIU: coi như meter thấp hơn ngần này khi nó tính hướng đi kế tiếp
+
+/* ---- Mức Độ Hoạt Động (meter) giờ còn tăng liên tục theo tình huống, không chỉ khi bỏ lỡ/thất bại
+   sự cố — tạo áp lực dồn dập hơn qua thời gian thay vì chỉ nhảy bậc theo phase. ---- */
+const TENSION_NEARMISS_GAIN = 4;        // The TIU áp sát (phòng liền kề) -> hoạt động tăng vọt
+const TENSION_NEARMISS_COOLDOWN = 26;   // phút game giữa 2 lần cộng dồn near-miss (tránh cộng dồn liên tục)
+const TENSION_IDLE_GRACE_MIN = 40;      // đứng yên một chỗ (khu KHÔNG an toàn) bao lâu thì mới bắt đầu bị tính
+const TENSION_IDLE_GAIN_PER_MIN = 0.05; // mỗi phút đứng yên thêm (sau khi hết grace) cộng dồn hoạt động
 
 /* ---- Giới hạn tài nguyên an toàn: số Bim Bim tối đa có thể mua tại Căn tin MỖI ĐÊM.
    Giảm dần qua từng đêm để buộc người chơi không thể chỉ camping mua Bim Bim hồi máu
@@ -441,6 +459,10 @@ function freshState(night, chapter){
     // --- camping fix ---
     stamina: 100,
     nextStarveTickAt: 0,
+    // --- nhịp độ dồn dập (mục 1) & rón rén (mục 2) ---
+    lastMoveAt: 0,        // gameMinutes tại lần di chuyển gần nhất, dùng để phát hiện đứng yên quá lâu
+    nextTensionTickAt: 0, // cooldown giữa 2 lần cộng dồn "near-miss" vào meter
+    sneakMode: false,     // đang bật chế độ Rón Rén hay không
     // --- Huyết Nguyệt ---
     enraged: (chapter===2 && night===2), // Đêm 2 Chapter 2: TIU Cuồng Nộ NGAY TỪ ĐẦU đêm (Phần 6.1), giữ mãi tới hết đêm — xem advanceWorld()
     enrageUntil: 0,
@@ -770,6 +792,17 @@ function refreshHud(){
   }
   document.getElementById('meterFill').style.width = Math.min(100,S.meter)+'%';
   document.getElementById('vignette').classList.toggle('critical', S.hp===1);
+
+  // --- Mục 1: đưa Mức Độ Hoạt Động ra CSS/DOM để tạo áp lực hình ảnh liên tục, mượt dần
+  //     theo mức độ thay vì chỉ nhảy bậc — xem #tensionPulse và body.tension-* trong style.css,
+  //     và horror-polish.js đọc data-tension để random nhấp nháy môi trường. ---
+  const tensionPct = S.epilogue ? 0 : Math.max(0, Math.min(100, S.meter));
+  document.documentElement.style.setProperty('--tension', (tensionPct/100).toFixed(3));
+  document.body.dataset.tension = tensionPct.toFixed(0);
+  document.body.classList.toggle('tension-mid', tensionPct>=40 && tensionPct<70);
+  document.body.classList.toggle('tension-high', tensionPct>=70 && tensionPct<90);
+  document.body.classList.toggle('tension-critical', tensionPct>=90);
+  if(window.__syncSneakToggleUI) window.__syncSneakToggleUI();
   const meterLabelEl = document.getElementById('meterLabel');
   if(meterLabelEl) meterLabelEl.textContent = 'MỨC ĐỘ HOẠT ĐỘNG — '+chaseMonsterLabel();
 
@@ -1657,23 +1690,38 @@ function onRoomClick(k){
 function movePlayer(dest){
   if(!S.running || S.paused) return;
   if(S.epilogue){ epilogueMove(dest); return; }
-  const noisy = S.gameMinutes < S.speedBuffUntil;
-  const cost = noisy ? BUFF_MOVE_COST_MIN : BASE_MOVE_COST_MIN; // 10 phút bình thường, 5 phút khi có buff Nước tăng lực
-  const staminaCost = noisy ? MOVE_STAMINA_COST_BUFFED : MOVE_STAMINA_COST; // % thể lực tiêu hao mỗi lần di chuyển
+  const noisy = S.gameMinutes < S.speedBuffUntil; // buff Nước tăng lực: nhanh nhưng ồn
+  const sneaking = !noisy && !!S.sneakMode;       // rón rén: chậm nhưng gần như im lặng (không cùng lúc với buff)
+  const cost = noisy ? BUFF_MOVE_COST_MIN : (sneaking ? SNEAK_MOVE_COST_MIN : BASE_MOVE_COST_MIN);
+  const staminaCost = noisy ? MOVE_STAMINA_COST_BUFFED : (sneaking ? SNEAK_STAMINA_COST : MOVE_STAMINA_COST);
   S.stamina = Math.max(0, S.stamina - staminaCost);
   S.gameMinutes += cost;
   S.playerRoom = dest;
-  addLog('Bạn di chuyển đến '+ROOM_DEF[dest].name+'.','');
+  S.lastMoveAt = S.gameMinutes; // reset đồng hồ "đứng yên quá lâu" dùng cho mục 1 (tension liên tục)
+  addLog(sneaking ? ('Bạn rón rén di chuyển đến '+ROOM_DEF[dest].name+'...') : ('Bạn di chuyển đến '+ROOM_DEF[dest].name+'.'), '');
   if(S.cameraMovesLeft>0) S.cameraMovesLeft--;
   markActionDirty();
-  advanceWorld(cost, {isMove:true}); // di chuyển tốn 10 phút (hoặc 5 phút nếu có buff) -> không hồi thể lực trong khoảng thời gian này
+  advanceWorld(cost, {isMove:true}); // di chuyển tốn thời gian tương ứng -> không hồi thể lực trong khoảng đó
 
-  // Hệ thống tiếng ồn: buff tốc độ khiến bước chân ồn hơn, có xác suất TIU bị thu hút
-  if(S.running && noisy && Math.random()<NOISE_ATTRACT_CHANCE){
-    const path = bfsPath(S.monsterRoom, dest, !S.enraged);
-    if(path && path.length>1 && S.gameMinutes>=S.breakerUntil){
-      S.monsterRoom = path[1];
-      addLog('Tiếng bước chân ồn ào của bạn vọng khắp hành lang... '+chaseMonsterLabel()+' đã nghe thấy!','tiu');
+  // Hệ thống tiếng ồn:
+  // 1) buff tốc độ (Nước tăng lực) khiến bước chân ồn hẳn -> xác suất cố định bị nghe thấy
+  // 2) rón rén: gần như không bao giờ gây chú ý (bỏ qua hoàn toàn bước kiểm tra tiếng ồn)
+  // 3) di chuyển bình thường: khi The TIU đã khá "căng" (meter cao), ngay cả bước chân bình
+  //    thường cũng có xác suất nhỏ (tăng dần theo meter) khiến nó chú ý -> nhịp chơi dồn dập hơn
+  if(S.running && !sneaking && S.gameMinutes>=S.breakerUntil){
+    let attractChance = 0;
+    if(noisy){
+      attractChance = NOISE_ATTRACT_CHANCE;
+    } else if(S.meter > NOISE_NORMAL_METER_FLOOR){
+      const t = (S.meter - NOISE_NORMAL_METER_FLOOR) / (100 - NOISE_NORMAL_METER_FLOOR);
+      attractChance = t * NOISE_NORMAL_MAX_CHANCE;
+    }
+    if(attractChance>0 && Math.random()<attractChance){
+      const path = bfsPath(S.monsterRoom, dest, !S.enraged);
+      if(path && path.length>1){
+        S.monsterRoom = path[1];
+        addLog('Tiếng bước chân của bạn vọng khắp hành lang... '+chaseMonsterLabel()+' đã nghe thấy!','tiu');
+      }
     }
   }
 
@@ -2705,7 +2753,36 @@ function advanceWorld(minutesPassed, opts={}){
     S.nextMonsterMoveAt += rand(...NIGHT_CFG[S.night].monsterMoveEvery) * meterSpeed / factor;
     guard++;
   }
+
+  updateProximityTension(minutesPassed);
+
   if(S.gameMinutes >= S.nightTotalMin) endNightSuccess();
+}
+
+/* ============== MỤC 1: NHỊP ĐỘ DỒN DẬP — MỨC ĐỘ HOẠT ĐỘNG TĂNG LIÊN TỤC ==============
+   Trước đây S.meter chỉ tăng khi người chơi bỏ lỡ/thất bại sự cố -> áp lực tăng theo bậc
+   rời rạc. Hàm này bổ sung 2 nguồn tăng liên tục, mượt hơn, khiến ván chơi ngày càng dồn
+   dập thay vì chỉ đột biến theo phase:
+     1) Đứng yên quá lâu ở khu KHÔNG an toàn -> The TIU ngày càng táo tợn hơn theo thời gian.
+     2) The TIU áp sát (chỉ còn cách 1 phòng) -> hoạt động tăng vọt, có cooldown để không
+        cộng dồn liên tục mỗi khung hình. */
+function updateProximityTension(minutesPassed){
+  if(!S || !S.running || S.epilogue) return;
+
+  if(!isRoomSafe(S.playerRoom) && !S.enraged){
+    const idleMin = S.gameMinutes - (S.lastMoveAt||0);
+    if(idleMin > TENSION_IDLE_GRACE_MIN){
+      S.meter = Math.min(100, S.meter + TENSION_IDLE_GAIN_PER_MIN*minutesPassed);
+    }
+  }
+
+  if(!isRoomSafe(S.playerRoom) && S.gameMinutes >= (S.nextTensionTickAt||0)){
+    const d = roomDistance(S.playerRoom, S.monsterRoom);
+    if(d===1){
+      S.meter = Math.min(100, S.meter + TENSION_NEARMISS_GAIN);
+      S.nextTensionTickAt = S.gameMinutes + TENSION_NEARMISS_COOLDOWN;
+    }
+  }
 }
 
 function spawnEvent(){
@@ -2887,12 +2964,17 @@ function moveMonster(){
   if(opts.length===0) opts = ROOM_DEF[from].connects.slice();
   let next;
 
-  if(S.enraged || S.meter>70){
+  // Rón rén (mục 2): "che mắt" The TIU trong lượt quyết định này — coi như meter thấp hơn
+  // hẳn, khiến nó khó bám đúng hướng người chơi hơn. Không áp dụng khi đang Huyết Nguyệt
+  // (enraged luôn rình rập bất chấp), chỉ giảm nhẹ chứ không vô hiệu hoá hoàn toàn.
+  const decisionMeter = (S.sneakMode && !S.enraged) ? Math.max(0, S.meter - SNEAK_METER_MASK) : S.meter;
+
+  if(S.enraged || decisionMeter>70){
     // >70% (hoặc Huyết Nguyệt): rình rập — bám theo đường đi ngắn nhất tới người chơi
     const path = bfsPath(from, S.playerRoom, !S.enraged);
     if(path && path.length>1) next = path[1];
     else next = pick(opts);
-  } else if(S.meter>=30){
+  } else if(decisionMeter>=30){
     // 30-70%: ưu tiên các phòng đang có sự cố (nơi người chơi khả năng đến)
     const withEvents = opts.filter(r=>S.activeEvents[r]);
     next = withEvents.length ? pick(withEvents) : pick(opts);
@@ -5830,6 +5912,31 @@ document.getElementById('closeMapBtn').onclick=()=>{
     try{ localStorage.setItem('uit_sound_muted', muted ? '1' : '0'); }catch(e){}
     apply();
   };
+})();
+
+/* ============== Mục 2: nút bật/tắt Rón Rén (HUD) ==============
+   Rón rén = di chuyển chậm hơn & tốn thể lực hơn, đổi lại gần như không gây tiếng động và
+   khiến The TIU khó bám đúng hướng hơn (xem movePlayer()/moveMonster()). Không tự tắt khi
+   hết đêm để người chơi có thể để bật xuyên suốt nếu muốn lối chơi thận trọng. */
+(function initSneakToggle(){
+  const btn = document.getElementById('sneakToggleBtn');
+  if(!btn) return;
+  function apply(){
+    const on = !!(S && S.sneakMode);
+    btn.classList.toggle('active', on);
+    btn.setAttribute('aria-pressed', String(on));
+    btn.title = on
+      ? 'RÓN RÉN: đang BẬT — di chuyển chậm hơn & tốn thể lực hơn, nhưng gần như không gây tiếng động'
+      : 'RÓN RÉN: đang TẮT — bấm để di chuyển chậm & yên tĩnh hơn';
+  }
+  btn.onclick = ()=>{
+    if(!S) return;
+    S.sneakMode = !S.sneakMode;
+    addLog(S.sneakMode ? '🤫 Bạn chuyển sang di chuyển rón rén.' : '🤫 Bạn thôi rón rén, di chuyển bình thường trở lại.', '');
+    apply();
+  };
+  apply();
+  window.__syncSneakToggleUI = apply; // để refreshHud có thể đồng bộ lại khi bắt đầu đêm mới / tải save
 })();
 
 /* ============== title screen rotating building carousel ============== */
