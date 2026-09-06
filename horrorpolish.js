@@ -78,6 +78,30 @@
       titleObserver.observe(roomTitleEl, { childList: true, characterData: true, subtree: true });
     }
 
+    /* ---------- 2b) Mục 1: nhấp nháy môi trường NGẪU NHIÊN theo Mức Độ Hoạt Động ----------
+       script.js ghi mức căng thẳng hiện tại (0-100) vào body.dataset.tension mỗi khung hình
+       (xem refreshHud()). Ở đây, mỗi ~2.2s ta tung xúc xắc: căng thẳng càng cao thì xác suất
+       nháy môi trường (glitchBars/neon) càng lớn -> nhịp chơi cảm giác dồn dập dần đều thay
+       vì chỉ giật hình khi đổi phòng. Tách riêng khỏi triggerVhsGlitch() (mục 2 ở trên) vì
+       đây là hiệu ứng nhẹ hơn, không rung app, không cần đợi đổi phòng mới xảy ra. */
+    window.triggerTensionFlicker = function () {
+      document.body.classList.remove("tension-flicker-active");
+      void document.body.offsetWidth;
+      document.body.classList.add("tension-flicker-active");
+      setTimeout(function () {
+        document.body.classList.remove("tension-flicker-active");
+      }, 240);
+    };
+
+    setInterval(function () {
+      var titleScreen = document.getElementById("titleScreen");
+      if (titleScreen && !titleScreen.classList.contains("hidden")) return; // chỉ trong lúc đang chơi
+      var t = parseFloat(document.body.dataset.tension || "0");
+      if (!t || isNaN(t) || t < 35) return; // dưới ngưỡng này coi như chưa đủ căng để nháy
+      var chance = ((t - 35) / 65) * 0.5; // 0 tại t=35 -> tối đa 0.5 tại t=100
+      if (Math.random() < chance) window.triggerTensionFlicker();
+    }, 2200);
+
     /* ---------- 3) Đồng bộ trạng thái Nguy kịch (HP=1) ---------- */
     var vignetteEl = document.getElementById("vignette");
     if (vignetteEl && "MutationObserver" in window) {
