@@ -16,6 +16,7 @@
   --font-disp: 'Special Elite', 'Courier Prime', 'VT323', monospace;
   --monitor-bezel: #08090a;
   --monitor-bezel-2: #1a1c1f;
+  --tension: 0; /* 0-1, đồng bộ với S.meter mỗi khung hình (xem refreshHud() trong script.js) */
 }
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-family:var(--font-mono);height:100%;overflow:hidden;}
@@ -44,6 +45,28 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
   36%{box-shadow:inset 0 0 160px 40px rgba(0,0,0,0.85);}
 }
 #flash{position:fixed;inset:0;pointer-events:none;z-index:80;background:var(--blood-bright);opacity:0;}
+
+/* ---------- Mục 1: áp lực hình ảnh tăng LIÊN TỤC theo Mức Độ Hoạt Động (S.meter) ----------
+   #tensionPulse tự mờ dần vào bằng chính --tension (đặt mỗi khung hình từ script.js), còn
+   3 mốc body.tension-mid/high/critical bồi thêm animation dồn dập hơn ở các ngưỡng cao —
+   kết hợp lại tạo cảm giác nhịp độ leo thang mượt thay vì chỉ nhảy bậc theo phase. */
+#tensionPulse{position:fixed;inset:0;pointer-events:none;z-index:47;
+  background:radial-gradient(circle at 50% 52%, transparent 48%, rgba(181,24,42,0.6) 100%);
+  opacity:calc(var(--tension,0) * 0.42);transition:opacity .6s ease;}
+body.tension-high #tensionPulse{animation:tensionThrob 2s ease-in-out infinite;}
+body.tension-critical #tensionPulse{animation:tensionThrob 1s ease-in-out infinite;}
+@keyframes tensionThrob{0%,100%{opacity:calc(var(--tension,0) * 0.42);}50%{opacity:calc(var(--tension,0) * 0.62);}}
+
+body.tension-mid #filmGrain{animation-duration:0.45s;}
+body.tension-high #filmGrain{animation-duration:0.3s;opacity:0.07;}
+body.tension-critical #filmGrain{animation-duration:0.18s;opacity:0.1;}
+body.tension-mid #neonFlicker{animation-duration:4.6s;}
+body.tension-high #neonFlicker{animation-duration:2.8s;}
+body.tension-critical #neonFlicker{animation-duration:1.4s;}
+
+/* Nhấp nháy môi trường ngẫu nhiên, xác suất tăng theo --tension — do horror-polish.js kích hoạt */
+body.tension-flicker-active #glitchBars{animation:glitchBarsRun .22s steps(1,end) both;}
+body.tension-flicker-active #neonFlicker{opacity:0.72;}
 
 /* ---------- film grain + neon flicker overlay ---------- */
 #filmGrain{position:fixed;inset:-10%;width:120%;height:120%;pointer-events:none;z-index:51;
@@ -137,6 +160,19 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
 #soundToggleBtn:hover::before,#soundToggleBtn:hover::after{opacity:1;color:var(--scan);}
 #soundToggleBtn.muted{color:var(--text-dim);border-color:var(--line);}
 #soundToggleBtn.muted #soundIcon{opacity:0.6;}
+
+/* ---------- Mục 2: nút Rón Rén (Sneak Mode) — cùng khuôn dạng nút HUD, riêng trạng thái "active" ---------- */
+#sneakToggleBtn{display:flex;align-items:center;justify-content:center;width:38px;height:38px;flex-shrink:0;
+  background:#0d0e10;border:1px solid var(--line);color:var(--text);font-family:var(--font-mono);font-size:16px;cursor:pointer;border-radius:0;
+  box-shadow:2px 3px 0 rgba(0,0,0,0.55);transition:border-color .1s,color .1s,box-shadow .1s;position:relative;}
+#sneakToggleBtn::before{content:'[';position:absolute;left:2px;color:var(--text-dim);font-family:var(--font-mono);opacity:0;transition:opacity .1s;}
+#sneakToggleBtn::after{content:']';position:absolute;right:2px;color:var(--text-dim);font-family:var(--font-mono);opacity:0;transition:opacity .1s;}
+#sneakToggleBtn:hover{border-color:var(--scan);color:var(--scan);box-shadow:3px 4px 0 rgba(0,0,0,0.6);
+  animation:termBtnShake .28s steps(2) 1;
+  text-shadow:1.5px 0 var(--blood-bright),-1.5px 0 var(--scan);}
+#sneakToggleBtn:hover::before,#sneakToggleBtn:hover::after{opacity:1;color:var(--scan);}
+#sneakToggleBtn.active{color:var(--scan);border-color:var(--scan);box-shadow:0 0 8px rgba(61,220,132,0.45),2px 3px 0 rgba(0,0,0,0.55);}
+#sneakToggleBtn.active::before,#sneakToggleBtn.active::after{opacity:1;color:var(--scan);}
 
 #bagArea{display:flex;align-items:center;gap:4px;flex-shrink:0;}
 #bagBtn{display:flex;align-items:center;justify-content:center;gap:5px;height:38px;flex-shrink:0;padding:0 12px;
