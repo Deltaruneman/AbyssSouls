@@ -15,12 +15,9 @@ const ROOM_DEF = {
 };
 const ROOM_KEYS = Object.keys(ROOM_DEF);
 
-/* Sprite riêng cho từng NPC — điền URL ảnh vào đây để thay avatar chữ cái mặc định,
-   ví dụ: E:"images/wibu.png" */
 const NPC_IMAGES = { E:"", B:"", TRONG:"" };
 
-// Ảnh riêng cho từng phòng — thay các URL này bằng ảnh của bạn (đặt file vào cùng thư mục
-// với file HTML này và sửa đường dẫn bên dưới, ví dụ: A:"images/nha-a.jpg").
+
 const ROOM_IMAGES = {
   A:"assets/images/ToaA.png", 
   B:"assets/images/ToaB.png", 
@@ -32,10 +29,7 @@ const ROOM_IMAGES = {
   PARK:"assets/images/park.png", 
   FIELD:"assets/images/field.png"
 };
-// Ảnh riêng cho từng phòng LÚC BUỔI SÁNG — dùng cho đoạn epilogue sau khi kết thúc thành
-// công (đêm 3 sinh tồn bình thường HOẶC secret ending). Điền URL ảnh chụp ban ngày của
-// từng tòa vào đây, ví dụ: A:"assets/images/ToaA-day.png". Để trống thì sẽ tự dùng lại
-// ảnh ban đêm (ROOM_IMAGES) làm ảnh dự phòng.
+
 const ROOM_IMAGES_DAY = {
   A:"assets/images/ToaAs.png",
   B:"assets/images/ToaBs.png", 
@@ -48,35 +42,16 @@ const ROOM_IMAGES_DAY = {
   FIELD:""
 };
 
-// Khung giờ của đoạn epilogue (buổi sáng cuối cùng, sau khi kết thúc thành công): đồng hồ
-// bắt đầu từ 15:00 và không vượt quá 18:00. Thời gian chỉ trôi khi người chơi di chuyển
-// (xem epilogueMove) — không đếm theo thời gian thực như lúc đang trốn ban đêm.
+
 const EPILOGUE_START_MIN = 15*60;
 const EPILOGUE_END_MIN = 18*60;
-
-// Ảnh quái vật The TIU dùng cho pha jumpscare toàn màn hình — điền đường dẫn PNG vào đây,
-// ví dụ: 'assets/images/tiu-monster.png'. Để trống thì sẽ hiện icon dự phòng.
 const TIU_IMAGE = "assets/images/TIU.png";
-/* Đêm 3 (secret route) — ảnh/nhạc riêng cho Trọng "The Curse One", KHÁC hẳn TIU_IMAGE/
-   BATTLE_MUSIC dùng cho các trận khác. Đường dẫn placeholder — thay bằng asset thật khi có. */
 const TRONG_CURSE_IMAGE = "assets/images/trong_curse.png";
 const TRONG_CURSE_MUSIC = "assets/sfx/OST/battle2.mp3";
-/* Chapter 2, Đêm 3 — Trọng "The Curse One" đuổi bắt nhân vật chính, tái dùng đúng engine
-   né tránh của Đêm 1/2 (di chuyển giữa các tòa, cầu dao, HP 3 điểm) nhưng toàn bộ jumpscare +
-   nhạc cảnh báo được đổi sang Trọng thay vì The TIU — xem isTrongChaseNight()/jumpscare() và
-   updateProximityAudio() bên dưới. Đường dẫn placeholder — thay bằng asset thật khi có. */
 const TRONG_CHASE_JUMPSCARE_SFX = "assets/sfx/TrongAttack.mp3";
 const TRONG_CHASE_PROXIMITY_MUSIC = "assets/sfx/OST/TrongNear.mp3";
-
-
-// SFX phát đúng lúc The TIU lao ra khỏi màn hình (jumpscare) — điền đường dẫn file âm thanh
-// vào đây, ví dụ: 'assets/sfx/jumpscare.mp3'. Để trống thì sẽ không phát SFX (chỉ có hiệu ứng hình).
 const TIU_JUMPSCARE_SFX = "assets/sfx/TIUAttack.mp3";
-
-// Nhạc cảnh báo khi The TIU ở gần — điền đường dẫn file âm thanh vào đây,
-// ví dụ: 'assets/audio/tiu-near.mp3'. Để trống thì tính năng này sẽ tự tắt.
 const TIU_PROXIMITY_MUSIC = "assets/sfx/OST/TIU.mp3";
-// Từ khoảng cách (số tòa) này trở đi thì coi như The TIU đã đi xa hẳn -> nhạc tắt hẳn.
 const PROXIMITY_FAR_DISTANCE = 3;
 
 
@@ -305,22 +280,9 @@ function nextStepToward(fromRoom, toRoom){
   return (path && path.length>1) ? path[1] : fromRoom;
 }
 
-/* Vật phẩm/linh kiện được giữ lại xuyên suốt các đêm của một lượt chơi thường (đêm 1 -> 3).
-   Được ghi lại mỗi khi thắng một đêm, áp dụng lại khi đêm tiếp theo (hoặc lúc retry sau khi
-   thua) bắt đầu. Reset về null khi bắt đầu lại hẳn từ Đêm 1. Vật phẩm ở chế độ chơi lẻ từng
-   đêm (standalone, chọn qua "CHỌN MÀN") KHÔNG dùng cơ chế này — luôn bắt đầu với vật phẩm mặc định. */
 let campaignCarry = null;
-/* Chapter 2 — buổi dạy phép của Trọng (16:30-20:45): mức thành thạo học được PHẢI sống sót
-   qua việc retry (chết giữa đêm rồi thử lại) mà không mất tiến độ, và KHÔNG được replay lại
-   toàn bộ cảnh học mỗi lần retry — nên tách thành biến cấp phiên chơi riêng, không nằm trong
-   S (vốn bị tạo mới hoàn toàn mỗi khi beginNight() chạy). Xem startTrongTrainingSequence(). */
 let campaignSpellMastery = 0;
 let trongTrainedForNight = { 1:false, 2:false };
-
-/* ---- Lưu game (localStorage) ----
-   Cơ chế lưu/tải toàn bộ tiến trình (đêm hiện tại, vật phẩm, linh kiện, tiến độ manh mối/NPC...)
-   để có thể tiếp tục sau khi đóng trình duyệt. Có thể bấm lưu/tải thủ công trong CÀI ĐẶT, và
-   game cũng tự lưu mỗi khi có thay đổi (nhặt/dùng vật phẩm, di chuyển, bắt đầu đêm mới...). */
 const SAVE_KEY = 'uit_savegame_v1';
 
 function pickDistinctRooms(pool, n){
@@ -5598,10 +5560,10 @@ const CHAPTER_INTRO = {
   1:{
     title:'CHAPTER 1',
     subtitle:'ĐỪNG NGỦ QUÊN Ở UIT',
-    html:`<p>Phòng trọ của bạn phải <b>3 ngày nữa mới dọn vào được</b>, nên tối nay bạn đành lén ở lại trong khuôn viên trường để chờ qua ngày.
-    Bạn phải sống sót qua các khu vực: Nhà A, B, C, D, E, Thư viện và Căn tin.
-    Mỗi đêm trôi qua từ 00:00 đến 07:30 (kéo dài khoảng 15 phút thực tế). Mỗi khu vực sẽ phát sinh sự cố ngẫu nhiên — bỏ lỡ hoặc làm hỏng
-    sẽ khiến <b style="color:var(--blood-bright)">The TIU</b> hoạt động mạnh hơn và dễ phát hiện ra bạn hơn. Nếu bạn đứng cùng tòa với The TIU, bạn sẽ bị jumpscare
+    html:`<p>Một đêm kì lại <b> bạn mở mắt trong không gian thật yên ắng </b>, nên tối nay bạn đã vô tình ngủ quên ở UIT, mọi chuyện sẽ thật bình thường nếu như không có nó xuất hiện.
+    Bạn phải sống sót qua các khu vực: Nhà A, B, C, D, E, Thư viện và Căn tin theo luật chơi mà một thứ sinh vật mang tên the TIU đặt ra.
+    Mỗi đêm trôi qua từ 00:00 đến 07:30. Mỗi khu vực sẽ phát sinh sự cố ngẫu nhiên — bỏ lỡ hoặc làm hỏng
+    sẽ khiến <b style="color:var(--blood-bright)">The TIU, thứ thực thể sinh ra từ những lỗi bug</b> hoạt động mạnh hơn và dễ phát hiện ra bạn hơn. Nếu bạn đứng cùng tòa với The TIU, bạn sẽ bị jumpscare
     và mất 1 HP. Mất 3 HP là thua. <b>Căn tin chỉ an toàn khi mở cửa</b> (01:00-02:00 &amp; 04:00-05:00) — nán lại đó quá lâu cũng khiến bạn cạn <b>Thể lực</b> và bị đói.
     Khi thanh mức độ hoạt động chạm 100%, <b style="color:var(--blood-bright)">Huyết Nguyệt</b> sẽ kích hoạt và không nơi nào còn an toàn. Hãy để ý các sinh viên khác cũng đang lén ở lại trong khuôn viên — họ có thể giúp bạn.</p>
     <p>Mỗi đêm chia làm 3 giai đoạn: <b>Khởi động</b> (tuần tra, xử lý sự cố nhỏ), rồi <b>Săn đuổi dồn dập</b> về cuối đêm khi The TIU nhanh hơn hẳn. Đừng quên tìm các <b>manh mối</b> ẩn (nhật ký, đĩa ghi âm, mật mã) để hiểu thêm về The TIU.

@@ -5,39 +5,47 @@
    Phải được nạp (<script>) TRƯỚC script.js trong index.html.
    ============================================================== */
 "use strict";
-
-/* ---- Lời thoại mở màn / kết màn mỗi đêm ---- */
 const VN_INTRO = {
   1: [
     {spk:'', text:'"Khuôn viên trường sẽ đóng cổng chính lúc 18:00. Sinh viên còn lại vui lòng rời khỏi trường trước giờ đóng cổng."'},
-    {spk:'BẠN', text:'Trọ của mình còn 3 ngày nữa mới dọn vào được... thôi thì tối nay lại phải lén ở lại trường một mình rồi.'},
-    {spk:'BẠN', text:'Nah tìm một chỗ nào đó mà ngủ cho ấm.'},
+    {spk:'BẠN', text:'Z.'},
+    {spk:'BẠN', text:'ZZ.'},
+    {spk:'BẠN', text:'ZZZ.'},
     {spk:'BẠN', text:'.'},
     {spk:'BẠN', text:'..'},
     {spk:'BẠN', text:'...'},
-    {spk:'BẠN', text:'Ahh, ngủ chẳng sâu tí nào cả'},
+    {spk:'BẠN', text:'Ahh'},
     {spk:'BẠN', text:'(Xem điện thoại)'},
-    {spk:'BẠN', text:'12 giờ đêm à thôi thì đành ng...'},
-    {spk:'BẠN', text:'!!!Tiếng gì vậy'}
+    {spk:'BẠN', text:'12 giờ đêm à '},
+    {spk:'BẠN', text:'Mà ban nãy học môn gì ấy nhỉ '},
+    {spk:'BẠN', text:'Mà sao mình lại ngủ quên được cơ chứ??'},
+    {spk:'BẠN', text:'Chắc tại tối qua ngồi fix bug tới 3 giờ sáng...'},
+    {spk:'BẠN', text:'Giờ này chắc chẳng có xe bus hay các chú xe ôm công nghệ rồi.'},
+    {spk:'BẠN', text:'!!!Tiếng gì vậy — hình như có ai đó đang lầm bầm than thở...'}
   ],
   2: [
-    {spk:'BẠN', text:'Đêm thứ hai lén ở lại trường.Typeshit.'},
-    {spk:'BẠN', text:'Ráng thêm 2 đêm nữa thôi... rồi mình sẽ có chỗ ở đàng hoàng.'},
-    {spk:'BẠN', text:'Hy vọng con quái vật đó ko xiêng 2 người kia'},
-    {spk:'BẠN', text:'Thôi thì đành sinh tồn đêm nay vậy.'}
+    {spk:'BẠN', text:'Điều này rõ ràng không hề tự nhiên chút nào cả.'},
+    {spk:'BẠN', text:'Mình rõ ràng không hề có thói quen ngủ trong tiết như thế này.'},
+    {spk:'BẠN', text:'Đêm qua thứ đó cứ lầm bầm gì nhỉ... "lỗi rồi", "deadline", "sao chạy được trên máy tao mà"...'},
+    {spk:'BẠN', text:'Đó đâu phải tiếng gầm của quái vật. Đó là tiếng than của sinh viên.'},
+    {spk:'BẠN', text:'Quá nhiều chuyện kì lạ xẩy ra và cũng có khả năng mình không phải người duy nhất bị vậy.'},
+    {spk:'BẠN', text:'Mà dù nó là gì, để nó tóm được thì toi. Phải lo giữ mạng cái đã.'}
   ],
   3: [
-    {spk:'BẠN', text:'Đêm cuối cùng phải trốn ở đây. Ngày mai phòng trọ sẽ sẵn sàng — chỉ cần qua được đêm nay.'},
-    {spk:'BẠN', text:'Sao không khí đêm nay lại nặng nề đến vậy?'},
-     {spk:'BẠN', text:'Khá chắc đây sẽ là 1 đêm khó khăn rồi đây'}
+    {spk:'BẠN', text:'Ư..ư..ư.'},
+    {spk:'BẠN', text:'Lại nữa rồi sao?'},
+    {spk:'BẠN', text:'Lại nữa rồi sao?Lại nữa rồi sao?Lại nữa rồi sao?Lại nữa rồi sao?Lại nữa rồi sao?Lại nữa rồi sao?Lại nữa rồi sao?'},
+    {spk:'BẠN', text:'Chết tiệt vì sao cơ chứ.'},
+    {spk:'BẠN', text:'Mình cần phải làm gì bây giờ??'},
+    {spk:'BẠN', text:'Chết tiệt!!Chết tiệt!!Chết tiệt!!Chết tiệt!!'},
+     {spk:'BẠN', text:'Mình cần phải sống sót.'}
   ]
 };
 const VN_OUTRO = {
-  1: [ {spk:'BẠN', text:'7:30 sáng. Ánh nắng đầu tiên len qua cửa sổ. Đêm trốn đầu tiên trong khuôn viên trường đã qua — còn 2 đêm nữa mới đến ngày dọn vào trọ.'} ],
-  2: [ {spk:'BẠN', text:'Lại một đêm lén ở trường nữa trôi qua an toàn. Chỉ còn 1 đêm nữa là mình có chỗ ở hẳn hoi.'} ],
+  1: [ {spk:'BẠN', text:'7:30 sáng. Ánh nắng đầu tiên len qua cửa sổ. Đêm trốn đầu tiên trong khuôn viên trường đã qua.'} ],
+  2: [ {spk:'BẠN', text:'Một đêm nữa bình an vô sự. Thứ đó cứ than về bug... sao nghe quen tai thế nhỉ?? Thôi, mình muốn về nhà!!'} ],
   3: [
-    {spk:'BẠN', text:'7:30 sáng, đêm thứ ba — cũng là đêm cuối cùng phải trốn ở trường — đã kết thúc. Từ mai mình đã có phòng trọ.'},
-    {spk:'???', text:'"...Hahaha"'}
+    {spk:'BẠN', text:'7:30 sáng, đêm thứ ba. Có lẽ đây là kết thúc chăng..'},
   ]
 };
 
@@ -64,8 +72,8 @@ const NPC_DIALOGUES = {
     },
     2: {
       lines:[
-        {spk:'WIBU VIỆT NHẬT', text:'"Đêm nay tao nghe tiếng bước chân nặng nề ở phía... hình như là gần Nhà C thì phải."'},
-        {spk:'WIBU VIỆT NHẬT', text:'"Cẩn thận đó, thứ đó hôm nay có vẻ khó chịu hơn mọi khi."'},
+        {spk:'WIBU VIỆT NHẬT', text:'"Đêm nay tao nghe tiếng than thở rầu rĩ ở phía... hình như là gần Nhà C thì phải."'},
+        {spk:'WIBU VIỆT NHẬT', text:'"Cẩn thận đó, hôm nay nó có vẻ bực hơn mọi khi. Chắc lại có đứa push code lỗi lên main rồi."'},
         {spk:'Bạn', text:'"À ờ cảm ơn nha!"'},
         {spk:'Bạn', text:'"Mà sao mày vẫn ở đây vậy."'},
         {spk:'WIBU VIỆT NHẬT', text:'"Mày biết khu KHTN không?."'},
@@ -77,7 +85,7 @@ const NPC_DIALOGUES = {
     },
     3: {
       lines:[
-        {spk:'WIBU VIỆT NHẬT', text:'"Đêm cuối của mày rồi ha. Thật ra... tớ cũng hơi sợ, nhưng có cậu trực cùng nên đỡ hơn nhiều."'},
+        {spk:'WIBU VIỆT NHẬT', text:'"Thật ra... tao cũng hơi sợ, nhưng có mày ở cùng nên đỡ hơn nhiều."'},
         {spk:'WIBU VIỆT NHẬT', text:'"Nếu qua được đêm nay, tao đãi cậu ăn ramen. Cố lên!"'},
         {spk:'Bạn', text:'"Hôm nay sẽ là chiều thứ 6 kì lạ nhất đời tao"'},
         {spk:'WIBU VIỆT NHẬT', text:'"Không có gì kì lạ hơn lịch học môn tiếng Nhật của chúng ta đâu lil bro!"'},
@@ -110,12 +118,12 @@ const NPC_DIALOGUES = {
     2: {
       lines:[
         {spk:'CHÀNG LÍNH NGU LẮM', text:'"Hôm qua tao suýt bị bắt vì ngủ gật giữa hành lang... !"'},
-        {spk:'CHÀNG LÍNH NGU LẮM', text:'"À mà lúc nãy tao thấy có bóng gì đó lướt qua phía Nhà A, cậu để ý nhé."'},
+        {spk:'CHÀNG LÍNH NGU LẮM', text:'"À mà lúc nãy tao nghe có tiếng than lướt qua phía Nhà A, giống hệt giọng tao hồi nộp đồ án. Cậu để ý nhé."'},
         {spk:'Bạn', text:'"Riel ko vậy ông già??"'},
         {spk:'CHÀNG LÍNH NGU LẮM', text:'"Riel nha tao lấy năng lực ra đảm bảo!"'},
         {spk:'Bạn', text:'"Typeshit lo cho cái tay bị thương của mày đi"'},
         {spk:'CHÀNG LÍNH NGU LẮM', text:'"Ờ tao sẽ cố gắn!"'}
-      ], reward:{type:'reveal', moves:2, msg:'Chàng Lính Ngu Lắm kể lại nơi cậu ta vừa thấy bóng The TIU.'}
+      ], reward:{type:'reveal', moves:2, msg:'Chàng Lính Ngu Lắm kể lại nơi cậu ta vừa nghe thấy tiếng than của The TIU.'}
     },
     3: {
       lines:[
@@ -133,48 +141,41 @@ const NPC_DIALOGUES = {
 const TRONG_DIALOGUE = {
   lines:[
     {spk:'TRỌNG', text:'"...Đứng lại. Tao thấy khí sắc của ngươi đã suy kiệt lắm rồi."'},
-    {spk:'TRỌNG', text:'"Thứ đó, tên nó là TIU, một thực thể trái ngược với UIT được tạo nên từ... mà chuyện đó không quan trọng."'},
+    {spk:'TRỌNG', text:'"Thứ đó, tên nó là TIU, mặt trái của UIT. Nó sinh ra từ thứ mà sinh viên chúng ta cứ dồn nén mãi không nói ra... mà chuyện đó dài dòng lắm."'},
     {spk:'TRỌNG', text:'" Nhận lấy thứ này — nó sẽ giúp ngươi cầm cự."'},
     {spk:'Bạn', text:'"Khoan khoan mày là ai cơ."'},
     {spk:'TRỌNG', text:'"Cùng là sinh viên trong trường thôi."'},
-    {spk:'TRỌNG', text:'"Nếu có được thứ gì đó có khi chúng ta sẽ đánh bại được TIU cũng nên."'},
+    {spk:'TRỌNG', text:'"Nếu có được thứ gì đó có khi chúng ta sẽ xoa dịu được TIU cũng nên."'},
     {spk:'Bạn', text:'"Cụ thể là gì??"'},
-    {spk:'TRỌNG', text:'"Chịu, tao thậm chí còn đang chạy trốn nó đây, theo tao nghĩ đó là 1 sức mạnh nào đó trái người với TIU."'},
+    {spk:'TRỌNG', text:'"Chịu, tao thậm chí còn đang chạy trốn nó đây, theo tao nghĩ đó là 1 sức mạnh nào đó trái ngược với TIU."'},
   ],
   reward:{type:'special_trong', msg:'Trọng ban cho bạn 1 HP và 1 chai Nước tăng lực trước khi biến mất trong bóng tối.'}
 };
 
-/* ---- Hội thoại bí mật: chỉ xảy ra khi người chơi đã nhặt đủ 3 mảnh La Peace
-   (mảnh năng lượng ôn hòa), ĐÃ nói chuyện với cả Wibu Việt Nhật (Tòa E) VÀ Chàng Lính
-   Ngu Lắm (Tòa B) trong CẢ 3 đêm (đủ 3/3 mỗi người — xem campaignNpcTalks trong script.js),
-   và nói chuyện với Trọng trong lần gặp duy nhất tại Nhà C, đêm 3, lúc HP = 1.
-   Chỉ kích hoạt trong chế độ chơi thường (nút BẮT ĐẦU).
-   Đoạn hội thoại này dẫn thẳng vào trận đánh boss bí mật (xem BATTLE SYSTEM trong script.js). ---- */
 const TRONG_SECRET_DIALOGUE = {
   lines:[
     {spk:'Bạn', text:'"Khoan đã Trọng — trước khi mày đi, tao có thứ này."'},
     {spk:'Bạn', text:'"(Rút ra 3 mảnh sáng lấp lánh mà mình nhặt được rải rác quanh trường)"'},
     {spk:'TRỌNG', text:'"...Không thể nào. Ba mảnh La Peace, đủ cả ba?"'},
     {spk:'TRỌNG', text:'"Tao đã tìm thứ này suốt bao lâu nay mà không dám tin có ai tìm đủ được."'},
-    {spk:'TRỌNG', text:'"La Peace — năng lượng ôn hòa, thứ đối nghịch hoàn toàn với bản chất của TIU."'},
-    {spk:'TRỌNG', text:'"Đưa hết cho tao. Tao sẽ bố trí tế lễ thanh tẩy ngay bây giờ — nhưng cần thời gian để hoàn tất."'},
+    {spk:'TRỌNG', text:'"La Peace — năng lượng ôn hòa, thứ duy nhất đủ dịu để xoa dịu oán khí của TIU."'},
+    {spk:'TRỌNG', text:'"Đưa hết cho tao. Tao sẽ bố trí tế lễ giải oán ngay bây giờ — nhưng cần thời gian để hoàn tất."'},
     {spk:'TRỌNG', text:'"Trong lúc đó, chúng ta cần cầm cự trước mặt nó. Gọi thêm hai đứa kia đến đây!"'},
     {spk:'WIBU VIỆT NHẬT', text:'"Nghe nói có trận đánh boss à?? Tao vào!!"'},
     {spk:'CHÀNG LÍNH NGU LẮM', text:'"Đù, cuối cùng cũng có cơ hội chứng minh tao không ngu lắm..."'},
     {spk:'TRỌNG', text:'"Nhận lấy — mana của tao, tạm thời đủ cho cả ba người cầm cự với nó."'},
     {spk:'', text:'"(Một luồng sáng ấm áp bao trùm lấy cả ba người)"'},
-    {spk:'TRỌNG', text:'"Cầm cự đủ lâu, tao sẽ hoàn tất tế lễ và thanh tẩy TIU vĩnh viễn! Đi thôi!"'},
+    {spk:'TRỌNG', text:'"Cầm cự đủ lâu, tao sẽ hoàn tất tế lễ giải oán cho TIU! Đi thôi!"'},
     {spk:'BẠN', text:'Không gian bỗng rung chuyển dữ dội — thực tại vỡ tan thành từng mảnh...'}
   ]
 };
 
-/* ---- Hội thoại chiến thắng của Trọng: chạy ngay sau khi party cầm cự đủ 15 lượt trong
-   trận đánh boss bí mật, trước khi triggerSecretEnding() được gọi (xem finishBattle trong
-   script.js). ---- */
+
 const TRONG_VICTORY_DIALOGUE = {
   lines:[
     {spk:'TRỌNG', text:'"...Xong rồi. Tế lễ đã hoàn tất."'},
     {spk:'TRỌNG', text:'"La Peace đã hòa tan vào TIU — không phải để tiêu diệt nó, mà là để xoa dịu nó."'},
+    {spk:'TRỌNG', text:'"Oán niệm không tự biến mất đâu. Nó chỉ lắng xuống, cho tới lần tiếp theo có đứa nào đó gặp bug."'},
     {spk:'WIBU VIỆT NHẬT', text:'"Ơ... nó biến mất thật rồi à?"'},
     {spk:'CHÀNG LÍNH NGU LẮM', text:'"Tao... tao vẫn còn sống? TAO VẪN CÒN SỐNG!!"'},
     {spk:'TRỌNG', text:'"Cảm ơn cả ba người. Nếu không có các cậu cầm cự đủ lâu, tế lễ này đã không thể hoàn thành."'},
@@ -183,14 +184,7 @@ const TRONG_VICTORY_DIALOGUE = {
   ]
 };
 
-/* ==============================================================
-   EPILOGUE — BUỔI SÁNG SAU CÙNG
-   Chạy sau khi kết thúc thành công (đêm 3 sinh tồn bình thường HOẶC
-   thắng trận đánh boss bí mật). Người chơi lang thang tự do quanh
-   trường trong buổi sáng (15:00 -> 18:00 trên đồng hồ) trước khi đi
-   đến Thư viện, nơi hé lộ đoạn kết thật sự — xem startEpilogue() /
-   triggerEpilogueLibraryDiscovery() trong script.js.
-   ============================================================== */
+
 const EPILOGUE_INTRO_NORMAL = [
   {spk:'BẠN', text:'7:30 sáng. Ba đêm lẩn trốn cuối cùng cũng qua. Nhưng thay vì về thẳng phòng trọ, có gì đó thôi thúc mình đi một vòng quanh trường lần cuối.'},
   {spk:'BẠN', text:'Nắng đã lên cao, sân trường tấp nập người qua lại như chưa từng có chuyện gì xảy ra. Vậy mà sao mình vẫn thấy lạnh sống lưng.'}
@@ -203,68 +197,49 @@ const EPILOGUE_INTRO_SECRET = [
 
 const EPILOGUE_LIB_NORMAL = [
   {spk:'BẠN', text:'Thư viện vắng tanh. Mình bước vào định kiểm tra lần cuối trước khi rời khỏi trường.'},
-  {spk:'BẠN', text:'...Trên kệ sách gần cửa sổ có những vết cào dài, sâu hoắm, còn mới nguyên.'},
+  {spk:'BẠN', text:'...Trên kệ sách gần cửa sổ có những dòng chữ bị cào sâu hoắm, còn mới nguyên: "undefined", "segmentation fault", "chạy được trên máy tao mà"...'},
   {spk:'BẠN', text:'Giữa sàn nhà là một vũng chất lỏng đen sệt — y hệt thứ mình từng thấy tối qua ở The TIU.'},
-  {spk:'BẠN', text:'Nó... chưa từng thật sự rời khỏi khuôn viên trường này.'},
-  {spk:'???', text:'"...Hahaha"'}
+  {spk:'BẠN', text:'Nó... vẫn còn ở khuôn viên trường này. Mà sinh viên ở đây thì ngày nào chả gặp bug...'},
 ];
 
 const EPILOGUE_LIB_SECRET = [
   {spk:'BẠN', text:'Trước khi về, mình ghé qua Thư viện — nơi cuối cùng còn chưa kiểm tra.'},
   {spk:'BẠN', text:'Không khí ở đây lạnh hơn hẳn những nơi khác, dù nắng đã lên cao ngoài kia.'},
   {spk:'BẠN', text:'Trên bàn đọc sách, ba mảnh La Peace mình từng đưa cho Trọng lại nằm ở đó, nguyên vẹn, như chưa từng được dùng đến.'},
-  {spk:'BẠN', text:'Và ngay cạnh đó là một vết cào dài, còn mới — y hệt móng vuốt của The TIU.'},
+  {spk:'BẠN', text:'Và ngay cạnh đó là một dòng chữ cào sâu, còn mới — "undefined is not a function" — nét cào y hệt những gì The TIU để lại.'},
   {spk:'BẠN', text:'Tế lễ có thật sự thành công không... hay đó chỉ là điều Trọng muốn mình tin?'},
-  {spk:'???', text:'"...Hahaha"'}
 ];
 
-/* ==============================================================
-   CHAPTER 2 — MỞ ĐẦU
-   Chạy ngay sau showChapterEndScreen() của Chapter 1 (xem
-   startChapter2Opening() trong script.js). Nội dung rẽ nhánh theo
-   S.epilogueVariant ('normal' | 'secret') của lần chơi Chapter 1
-   vừa hoàn thành:
 
-   - normal: nhân vật chính tự tìm NPC nào mình đã có đủ tin tưởng
-     (campaignNpcTalks.E / .B, xem script.js) rồi tập hợp tại Tòa A.
-     Không có NPC nào tin tưởng thì vẫn một mình ra Tòa A.
-   - secret: Trọng xuất hiện trước khi kịp tìm ai khác, giải thích
-     sự thật về TIU / tà thần / 12 con giáp / La Peace, hỏi người
-     chơi đoán con giáp của TIU (dùng cơ chế `choices`/`insert` mới
-     trong playVN — xem script.js), rồi kể về thân thế của chính
-     mình (hiện tượng thai trong thai) trước khi cùng cả nhóm ra
-     Tòa A.
-   ============================================================== */
-
-/* ---- Normal: cả hai NPC (Wibu Việt Nhật + Chàng Lính Ngu Lắm) đã đủ tin tưởng ---- */
 const CHAPTER2_OPEN_NORMAL_BOTH = [
-  {spk:'BẠN', text:'Vết cào trên kệ sách... vũng chất lỏng đen sệt giữa sàn. Dấu vết của The TIU, giữa ban ngày ban mặt.'},
+  {spk:'BẠN', text:'Những dòng lỗi bị cào trên kệ sách... vũng chất lỏng đen sệt giữa sàn. Dấu vết của The TIU, giữa ban ngày ban mặt.'},
   {spk:'BẠN', text:'Không thể giữ chuyện này một mình được. Phải tìm Wibu Việt Nhật với Chàng Lính Ngu Lắm.'},
   {spk:'BẠN', text:'(Chạy khắp khuôn viên, cuối cùng cũng tìm được cả hai đang đứng gần Tòa E)'},
   {spk:'WIBU VIỆT NHẬT', text:'"Ê ê, mặt mày tái mét vậy, có chuyện gì à?"'},
   {spk:'CHÀNG LÍNH NGU LẮM', text:'"Đù, lại The TIU nữa hả? Ngay giữa ban ngày ư?."'},
   {spk:'BẠN', text:'"Ra Tòa A đã. Tao có chuyện cần nói với cả hai đứa."'},
   {spk:'BẠN', text:'(Ba người lặng lẽ kéo nhau ra hiên Tòa A, ánh đèn hành lang chớp tắt yếu ớt dù trời đã sáng)'},
-  {spk:'BẠN', text:'"Sáng nay tao thấy vết cào với vũng chất lỏng đen trong Thư viện. Y hệt thứ The TIU để lại."'},
+  {spk:'BẠN', text:'"Sáng nay tao thấy mấy dòng lỗi bị cào trên kệ với vũng chất lỏng đen trong Thư viện. Y hệt thứ The TIU để lại."'},
   {spk:'WIBU VIỆT NHẬT', text:'"Khoan, tụi mình chỉ thấy nó vào ban đêm thôi mà. Sao ban ngày cũng có dấu vết được?"'},
   {spk:'CHÀNG LÍNH NGU LẮM', text:'"Ý mày là... nó không còn chỉ hoạt động ban đêm nữa?"'},
+  {spk:'WIBU VIỆT NHẬT', text:'"Mà... tụi mày có để ý nó toàn lầm bầm về lỗi với deadline không?"'},
+  {spk:'CHÀNG LÍNH NGU LẮM', text:'"Đù, nghe y chang tao lúc ba giờ sáng..."'},
   {spk:'BẠN', text:'"Tao cũng không chắc. Nhưng nếu đúng vậy thì ba đêm tụi mình vừa sống sót... có khi chỉ là màn khởi đầu."'},
-  {spk:'WIBU VIỆT NHẬT', text:'" Là con quái đó tự thay đổi, hay có gì khác đang xảy ra với nó?"'},
+  {spk:'WIBU VIỆT NHẬT', text:'" Là nó tự thay đổi, hay có gì khác đang xảy ra với nó?"'},
   {spk:'CHÀNG LÍNH NGU LẮM', text:'"Ba chàng lính ngu lắm đã cầm cự qua bao đêm rồi, lần này chắc phải tính đường dài."'},
   {spk:'BẠN', text:'"Từ khi nào bọn tao trở thành Lính ngu lam rồi??..."'},
   {spk:'BẠN', text:'"Dù sao thì cũng phải tìm hiểu thêm. Nếu The TIU đã đổi luật chơi, tụi mình cũng phải đổi cách đối phó."'},
   {spk:'BẠN', text:'Ba người nhìn nhau, không ai nói thêm gì — nhưng ai cũng hiểu, những gì sắp tới sẽ khác hẳn ba đêm vừa qua.'}
 ];
 
-/* ---- Normal: chỉ Wibu Việt Nhật (Tòa E) đủ tin tưởng ---- */
 const CHAPTER2_OPEN_NORMAL_SINGLE_E = [
-  {spk:'BẠN', text:'Vết cào trên kệ sách... vũng chất lỏng đen sệt giữa sàn. Dấu vết của The TIU, giữa ban ngày ban mặt.'},
+  {spk:'BẠN', text:'Những dòng lỗi bị cào trên kệ sách... vũng chất lỏng đen sệt giữa sàn. Dấu vết của The TIU, giữa ban ngày ban mặt.'},
   {spk:'BẠN', text:'Chàng Lính Ngu Lắm thì mình chưa đủ thân, nhưng Wibu Việt Nhật chắc sẽ nghe mình nói.'},
   {spk:'BẠN', text:'(Tìm đến gần Nhà E, thấy Wibu Việt Nhật đang ngồi thẫn thờ)'},
   {spk:'WIBU VIỆT NHẬT', text:'"Ơ, mày còn sống à! Mà sao mặt như thấy ma vậy?"'},
   {spk:'BẠN', text:'"Đi ra Tòa A với tao. Có chuyện quan trọng."'},
   {spk:'BẠN', text:'(Hai người ra hiên Tòa A ngồi xuống, ánh đèn hành lang chớp tắt yếu ớt dù trời đã sáng)'},
-  {spk:'BẠN', text:'"Sáng nay tao thấy vết cào với vũng chất lỏng đen trong Thư viện. Y hệt thứ The TIU để lại."'},
+  {spk:'BẠN', text:'"Sáng nay tao thấy mấy dòng lỗi bị cào trên kệ với vũng chất lỏng đen trong Thư viện. Y hệt thứ The TIU để lại."'},
   {spk:'WIBU VIỆT NHẬT', text:'"Khoan, tụi mình chỉ thấy nó vào ban đêm thôi mà. Ban ngày cũng có dấu vết luôn hả?"'},
   {spk:'BẠN', text:'"Tao cũng không chắc. Nhưng nếu đúng vậy thì ba đêm vừa qua có khi chỉ là màn khởi đầu thôi."'},
   {spk:'WIBU VIỆT NHẬT', text:'"Điên vậy... Nghe mày nói xong tao thấy khu KHTN của tao còn nguy hiểm hơn tao tưởng."'},
@@ -272,15 +247,14 @@ const CHAPTER2_OPEN_NORMAL_SINGLE_E = [
   {spk:'BẠN', text:'Hai người ngồi lặng lẽ dưới hiên Tòa A, cố ghép lại từng manh mối — nhưng câu trả lời vẫn còn xa lắm.'}
 ];
 
-/* ---- Normal: chỉ Chàng Lính Ngu Lắm (Tòa B) đủ tin tưởng ---- */
 const CHAPTER2_OPEN_NORMAL_SINGLE_B = [
-  {spk:'BẠN', text:'Vết cào trên kệ sách... vũng chất lỏng đen sệt giữa sàn. Dấu vết của The TIU, giữa ban ngày ban mặt.'},
+  {spk:'BẠN', text:'Những dòng lỗi bị cào trên kệ sách... vũng chất lỏng đen sệt giữa sàn. Dấu vết của The TIU, giữa ban ngày ban mặt.'},
   {spk:'BẠN', text:'Wibu Việt Nhật thì mình chưa đủ thân, nhưng Chàng Lính Ngu Lắm chắc sẽ tin mình.'},
   {spk:'BẠN', text:'(Tìm đến gần Nhà B, thấy Chàng Lính Ngu Lắm đang ngáp ngắn ngáp dài)'},
   {spk:'CHÀNG LÍNH NGU LẮM', text:'"Ơ, mày tìm tao có việc gì á?"'},
   {spk:'BẠN', text:'"Đi ra Tòa A với tao. Có chuyện quan trọng."'},
   {spk:'BẠN', text:'(Hai người ra hiên Tòa A ngồi xuống, ánh đèn hành lang chớp tắt yếu ớt dù trời đã sáng)'},
-  {spk:'BẠN', text:'"Sáng nay tao thấy vết cào với vũng chất lỏng đen trong Thư viện. Y hệt thứ The TIU để lại."'},
+  {spk:'BẠN', text:'"Sáng nay tao thấy mấy dòng lỗi bị cào trên kệ với vũng chất lỏng đen trong Thư viện. Y hệt thứ The TIU để lại."'},
   {spk:'CHÀNG LÍNH NGU LẮM', text:'"Khoan, tụi mình chỉ thấy nó vào ban đêm thôi mà. Ban ngày cũng ra tay luôn hả?"'},
   {spk:'BẠN', text:'"Tao cũng không chắc. Nhưng nếu đúng vậy thì ba đêm vừa qua có khi chỉ là màn khởi đầu thôi."'},
   {spk:'CHÀNG LÍNH NGU LẮM', text:'"Chàng lính ngu lắm này không ngu đến mức không sợ đâu nha... nhưng dù sao cũng phải tìm hiểu cho ra lẽ."'},
@@ -288,59 +262,34 @@ const CHAPTER2_OPEN_NORMAL_SINGLE_B = [
   {spk:'BẠN', text:'Hai người ngồi lặng lẽ dưới hiên Tòa A, cố ghép lại từng manh mối — nhưng câu trả lời vẫn còn xa lắm.'}
 ];
 
-/* ---- Normal: không NPC nào đủ tin tưởng, người chơi một mình ---- */
 const CHAPTER2_OPEN_NORMAL_SOLO = [
-  {spk:'BẠN', text:'Vết cào, vũng chất lỏng đen sệt... The TIU để lại dấu vết ngay giữa ban ngày. Không thể tin nổi.'},
+  {spk:'BẠN', text:'Những dòng lỗi bị cào lên kệ, vũng chất lỏng đen sệt... The TIU để lại dấu vết ngay giữa ban ngày. Không thể tin nổi.'},
   {spk:'BẠN', text:'Ba đêm qua mình toàn tự xoay xở một mình, giờ chắc cũng vậy thôi.'},
   {spk:'BẠN', text:'(Đi bộ một mình ra Tòa A, ngồi xuống bậc thềm quen thuộc)'},
   {spk:'BẠN', text:'"Nếu nó hoạt động cả ban ngày... thì ba đêm mình vừa sống sót, có khi chỉ là màn dạo đầu."'},
   {spk:'BẠN', text:'"Không có ai để bàn bạc cùng. Được thôi — tự mình suy luận vậy."'},
-  {spk:'BẠN', text:'Cố ghép lại từng manh mối: cái bóng ở Tòa A, tiếng bước chân gần Tòa C... liệu có liên hệ gì không?'},
+  {spk:'BẠN', text:'Cố ghép lại từng manh mối: cái bóng ở Tòa A, tiếng than thở gần Tòa C... toàn là những câu than về lỗi. Liệu có liên hệ gì không?'},
   {spk:'BẠN', text:'Nắng đã lên, nhưng không khí vẫn lạnh như thể đêm qua chưa từng kết thúc.'}
 ];
 
-/* ---- Secret: Trọng xuất hiện, giải thích sự thật, hỏi người chơi đoán con giáp của
-   TIU (đáp án đúng: Sửu), rồi tự kể thân thế của mình trước khi cả nhóm — có thêm
-   Trọng — tập hợp tại Tòa A. ---- */
+
 const CHAPTER2_OPEN_SECRET = [
   {spk:'BẠN', text:'Trước khi kịp đi tìm hai đứa kia, một bóng người khoác áo choàng bước ra từ góc khuất của Thư viện.'},
   {spk:'TRỌNG', text:'"...Tao biết thế nào mày cũng tìm ra thôi. La Peace không giữ được nó mãi mãi."'},
   {spk:'BẠN', text:'"Trọng?! Mày... mày?? nó không biến mất sau tế lễ à?"'},
   {spk:'TRỌNG', text:'"Tế lễ chỉ xoa dịu, không tiêu diệt. Về cơ bản thì TIU chính là những gì còn thiếu của UIT, một cách nói khác là mặt trái."'},
-  {spk:'TRỌNG', text:'"Sự thật là... TIU chưa từng là một con quái vật thuần túy. Nó vốn dĩ là một con người."'},
+  {spk:'TRỌNG', text:'"Sự thật là... TIU chưa từng là một con quái vật thuần túy. Nó vốn dĩ là tập hợp oán niệm của sinh viên — của các ngươi, và cả ta nữa — mỗi lần đối mặt với bug."'},
   {spk:'BẠN', text:'"...Cái gì cơ?"'},
-  {spk:'TRỌNG', text:'"Một con người đã giao kèo với tà thần. Đổi lấy sức mạnh, đổi lấy một điều ước — và cái giá là để tà thần dần dần chiếm lấy thân xác, dung hợp với mặt trái của UIT để tạo ra TIU."'},
-  {spk:'TRỌNG', text:'"Đó là lý do vì sao ta không thể ra tay dứt điểm với nó. Sâu bên trong lớp vỏ đó, vẫn còn một con người đang mắc kẹt."'},
-  {spk:'TRỌNG', text:'"Ta đã cố khống chế nó bằng La Peace... nhưng nó đã xổng mất. Ý chí của tà thần bên trong có lẽ vẫn còn quá mạnh."'},
+  {spk:'TRỌNG', text:'"TIU kết tụ từ những đêm thức trắng vì code lỗi, những tính năng lỗi, những lần demo là sập, những lần ‘chạy được trên máy tao mà’ — toàn bộ oán khí mà chúng ta thở ra."'},
+  {spk:'TRỌNG', text:'"Đó là lý do vì sao ta không thể ra tay dứt điểm với nó. Miễn là code còn bug thì nó sẽ không thể bị tiêu diệt."'},
+  {spk:'TRỌNG', text:'"Ta đã cố khống chế nó bằng La Peace... nhưng nó đã xổng mất. Oán niệm của nó có lẽ vẫn còn quá lớn."'},
   {spk:'BẠN', text:'"Vậy La Peace — thứ năng lượng ôn hòa mày nói tới — thực chất là gì?"'},
-  {spk:'TRỌNG', text:'"Là mana thuần khiết, được ngưng tụ lại từ linh hồn con người. Càng có nhiều La Peace, tà thần cần nó để hồi sinh."'},
-  {spk:'TRỌNG', text:'"Đó là lý do ta phải giữ La Peace tránh xa TIU bằng mọi giá."'},
+  {spk:'TRỌNG', text:'"Là nguồn năng lượng ôn hòa khiến cho TIU trở nên dịu đi 1 chút."'},
+  {spk:'TRỌNG', text:'"Đó là lý do tao phải đi tiềm kiếm chúng."'},
   {spk:'BẠN', text:'"..."'},
-  {spk:'TRỌNG', text:'"Ngươi có biết TIU vốn mang dáng dấp của con vật nào trong 12 con giáp không?"',
-   choices:[
-     {label:'Tý (Chuột)', insert:[{spk:'TRỌNG', text:'"Không phải. Thử nghĩ lại xem."'}]},
-     {label:'Sửu (Trâu)', insert:[{spk:'TRỌNG', text:'"...Đúng vậy. Sửu."'}]},
-     {label:'Dần (Hổ)', insert:[{spk:'TRỌNG', text:'"Không phải, nhưng cách nó gầm gừ cũng dễ khiến người ta nghĩ vậy."'}]},
-     {label:'Mão (Mèo)', insert:[{spk:'TRỌNG', text:'"Không, nhưng cách nó rình rập trong bóng tối cũng khiến người ta liên tưởng."'}]}
-   ]},
-  {spk:'TRỌNG', text:'"Là Sửu — con Trâu."'},
-  {spk:'TRỌNG', text:'"Tà thần đó ban phát sức mạnh của cả 12 con giáp cho những kẻ khốn khổ và bất lực nhất."'},
-  {spk:'TRỌNG', text:'"Đổi lại là một lời hứa: nó sẽ thực hiện điều ước của họ — nếu họ thu thập đủ La Peace để giúp nó hồi sinh sang dạng hoàn chỉnh."'},
-  {spk:'BẠN', text:'"Vậy con người mang hình dạng Sửu đó... đã ước điều gì mà phải trả giá bằng cả thân xác mình?"'},
-  {spk:'TRỌNG', text:'"Ta không biết. Có lẽ chính người đó cũng không còn nhớ nữa."'},
-  {spk:'BẠN', text:'"Còn mày? Sao mày lại biết rõ đến vậy, Trọng?"'},
-  {spk:'TRỌNG', text:'"...Vì ta cũng đang mang trên mình một phần của tà thần đó."'},
-  {spk:'BẠN', text:'"!!"'},
-  {spk:'TRỌNG', text:'"Ta sinh ra với hai linh hồn trong cùng một cơ thể. Một là của ta, một là của người anh song sinh."'},
-  {spk:'TRỌNG', text:'"Anh ấy đã mất từ trong bụng mẹ — một hiện tượng hiếm gặp gọi là thai trong thai."'},
-  {spk:'TRỌNG', text:'"Nhưng linh hồn anh ấy chưa từng hoàn toàn biến mất. Nó vẫn ở đó, gắn chặt lấy tao."'},
-  {spk:'TRỌNG', text:'"Tà thần tìm đến những kẻ mang bất lực nhất.. vừa hay là... mấy hiểu đúng chứ. Tao đoán, đó là lý do nó chọn ký sinh lên tao."'},
-  {spk:'BẠN', text:'"Vậy... mày cũng có thể trở thành như TIU sao?"'},
-  {spk:'TRỌNG', text:'"Có thể lắm. Nhưng hiện tại nó chỉ chiếm được linh hồn kia nên tao vẫn kiểm soát được."'},
-  {spk:'TRỌNG', text:'"Thôi, không còn nhiều thời gian đâu. Gọi hai đứa kia lại, ra Tòa A. Lần này ta sẽ đi cùng."'},
-  {spk:'BẠN', text:'"...Được."'},
+  {spk:'TRỌNG', text:'"Kết quả thì mày thấy rồi đấy, giờ tao không chắc bản thân còn dùng nổi ma lực không nữa."'},
   {spk:'TRỌNG', text:'"Tạm thời nhờ bọn mày vậy, tao đã trọng thương rồi."'},
-  {spk:'BẠN', text:'"Trọng à, mày có lẽ đã bị TRỌNG thương NẶNG lắm nhỉ??'},
+  {spk:'BẠN', text:'"Trọng à, mày có lẽ đã bị TRỌNG thương NẶNG lắm nhỉ??"'},
   {spk:'TRỌNG', text:'"Mày... mày không hài đâu."'},
   {spk:'...', text:'(Wibu Việt Nhật và Chàng Lính Ngu Lắm gấp rút chạy đến khi nghe tiếng gọi)'},
   {spk:'WIBU VIỆT NHẬT', text:'"Trọng?? Ủa mày còn sống — ý tao là, còn ở đây à??"'},
@@ -348,52 +297,35 @@ const CHAPTER2_OPEN_SECRET = [
   {spk:'TRỌNG', text:'"Chuyện dài lắm. Ra Tòa A rồi kể."'},
   {spk:'BẠN', text:'Bốn người lặng lẽ tập hợp dưới hiên Tòa A.'}
 ];
-/* ==============================================================
-   CHAPTER 2 — ĐÊM 2: HỘI THOẠI SAU TRẬN QUÁ TẢI CẦU DAO (NORMAL ENDING)
-   Chạy ngay sau khi party cầm cự đủ số lượt trong màn đánh boss cuối cùng của
-   Chapter 2 (xem triggerNight2Climax() trong script.js). Route Normal duy nhất —
-   route Secret (do dự trước đòn kết liễu) hiện CHƯA implement, để dành cho phần sau.
-   ============================================================== */
+
 const VN_CH2_VICTORY_DIALOGUE = {
   lines:[
-    {spk:'BẠN', text:'Dòng điện cuối cùng cũng phóng thẳng vào TIU. Một tiếng rú xé toạc màn đêm, rồi... im bặt.'},
+    {spk:'BẠN', text:'Dòng điện cuối cùng cũng phóng thẳng vào TIU. Một tiếng rú xé toạc màn đêm — nghe như tiếng thở dài của cả nghìn sinh viên vừa nộp bài xong — rồi... im bặt.'},
     {spk:'WIBU VIỆT NHẬT', text:'"...Xong thật rồi à? Tao không dám tin luôn."'},
     {spk:'CHÀNG LÍNH NGU LẮM', text:'"Ê ê, sống rồi tụi mày ơi! SỐNG RỒI!!"'},
     {spk:'BẠN', text:'Giữa lúc cả hai còn đang reo hò, Trọng vẫn đứng lặng một góc, mắt dán vào đám tro tàn còn vương mùi điện cháy nơi TIU vừa tan biến.'},
     {spk:'BẠN', text:'"Trọng? Xong rồi mà, sao mặt mày như vậy?"'},
     {spk:'TRỌNG', text:'"...Xong rồi. Chúng ta thật sự thắng rồi nhỉ."'},
     {spk:'TRỌNG', text:'Trọng trầm ngân nghĩ về vài chuyện.'},
-    {spk:'TRỌNG', text:'(Về một ông chú, một kẻ bình thường cũng có thể gọi là khốn cùng.)'},
-    {spk:'TRỌNG', text:'(Chấp nhận giao kèo để rồi kẻ khốn cùng ấy lại trở thành một tên sát nhân.)'},
-    {spk:'TRỌNG', text:'(Hy sinh mạng sống kẻ khác để đổi lấy điều ước hồi sinh con gái mình.)'},
-    {spk:'TRỌNG', text:'(Và rồi... mình cũng đã trở thành 1 tên sát nhân.)'},
-    {spk:'TRỌNG', text:'(Chính mình là người đã giết Tông dồ Tý.)'},
     {spk:'BẠN', text:'"...Này sao mày im lặng vậy"'},
-    {spk:'TRỌNG', text:'"Mày biết không...đêm nay không phải lần đầu tao tiếp tay giết một mạng người."'},
-    {spk:'TRỌNG', text:'"Tý, và giờ là Sửu. Cả hai đều là người, trước khi trở thành thứ mà tụi mày phải run rẩy chạy trốn."'},
-    {spk:'WIBU VIỆT NHẬT', text:'"Trọng... không phải lỗi của mày."'},
-    {spk:'TRỌNG', text:'"Ừ. Có lẽ vậy."'},
-    {spk:'TRỌNG', text:'"Tụi mày cứ về nghỉ đi. Tao... muốn đi dạo một mình."'},
+    {spk:'TRỌNG', text:'"Tao không biết nữa..."'},
+    {spk:'TRỌNG', text:'"Cứ có một chút cảm giác bug là 1 cái gì đó mà bản thân không thể tránh khỏi."'},
+    {spk:'WIBU VIỆT NHẬT', text:'"Này... không phải lỗi của tao đâu."'},
+    {spk:'TRỌNG', text:'"Ừ. Bug thật ra là người bạn đã đồng hành cùng chúng ta xuốt hành trình này mà."'},
+    {spk:'TRỌNG', text:'"Tụi mày cứ về nghỉ đi. Tao đi về đây."'},
     {spk:'BẠN', text:'Trọng quay lưng, bước chậm rãi về phía chân trời đang ửng hồng, không nói thêm lời nào.'},
     {spk:'BẠN', text:'Bình minh đã lên. UIT lại một lần nữa im lìm như chưa từng có chuyện gì xảy ra. Nhưng có lẽ, không ai trong ba người bọn tôi còn nhìn nó bằng ánh mắt như cũ nữa.'},
   ]
 };
 
-/* ==============================================================
-   CHAPTER 2 — BUỔI HỌC PHÉP VỚI TRỌNG (16:30 - 20:45)
-   Chạy trước Đêm 1 (chỉ Trọng + Bạn — Trọng chủ động tìm đến) và trước Đêm 2 (Trọng dạy
-   cùng lúc cho cả 3 người). Sau đoạn hội thoại mở đầu là minigame bấm phím mũi tên theo thứ
-   tự (xem startTrongTrainingSequence()/openTrongTrainingMinigame() trong script.js); kết quả
-   minigame quyết định dùng bộ thoại SUCCESS hay FAIL bên dưới.
-   ============================================================== */
 
-/* ---- Trước Đêm 1: chỉ có Trọng + Bạn ---- */
+
 const VN_TRONG_TEACH_SOLO_INTRO = {
   lines:[
     {spk:'BẠN', text:'Trời chạng vạng, tôi còn đang gói ghém đồ nghề thì Trọng bất ngờ xuất hiện, đứng chắn ngay lối đi.'},
     {spk:'TRỌNG', text:'"Khoan đã. Trước khi mày mò vào trỏng đêm nay — tao có thứ cần dạy mày."'},
     {spk:'BẠN', text:'"Dạy tôi? Giờ này á? Tôi tưởng ông chỉ đứng nhìn thôi chứ."'},
-    {spk:'TRỌNG', text:'"Bình thường thì đúng vậy. Nhưng lần này khác — tụi mày đang định NHỐT một con quái vào ma trận La Peace. Không có dấu ấn cơ bản, ma trận đó chỉ là đống dây điện vô dụng."'},
+    {spk:'TRỌNG', text:'"Bình thường thì đúng vậy. Nhưng lần này khác — tụi mày đang định NHỐT một khối oán niệm khổng lồ vào ma trận La Peace. Không có dấu ấn cơ bản, ma trận đó chỉ là đống dây điện vô dụng."'},
     {spk:'TRỌNG', text:'"Dấu ấn không khó — chỉ cần mày nhớ đúng THỨ TỰ. Sai nhịp, năng lượng sẽ tản mất thay vì tụ lại."'},
     {spk:'TRỌNG', text:'"Tao sẽ đọc một chuỗi ký hiệu. Mày lặp lại y hệt bằng phím mũi tên. Càng chuẩn, dấu ấn càng bám chắc vào mày."'},
     {spk:'BẠN', text:'"...Rồi, thử thì thử."'},
@@ -469,22 +401,21 @@ const VN_CH2_SECRET_HESITATION_DIALOGUE = {
     {spk:'BẠN', text:'Dòng điện đã tích đủ. Chỉ cần một cái gật đầu, ma trận sẽ phóng thẳng luồng năng lượng cuối cùng vào TIU.'},
     {spk:'BẠN', text:'Nhưng tay tôi không nhấc lên nổi.'},
     {spk:'CHÀNG LÍNH NGU LẮM', text:'"Ơ? Sao còn chưa hô lệnh? Giờ là lúc đó mà!"'},
-    {spk:'BẠN', text:'Tôi nhìn TIU — hay đúng hơn là cái thứ từng là Sửu — đang run rẩy trong xích điện, gần như kiệt sức. Nó không còn gầm gừ nữa. Chỉ còn thở dốc, từng nhịp yếu ớt.'},
     {spk:'BẠN', text:'"...Tôi không làm được."'},
-    {spk:'WIBU VIỆT NHẬT', text:'"Mày điên à? Nó giết bao nhiêu người rồi đó!"'},
-    {spk:'BẠN', text:'"Tôi biết! Nhưng... nó cũng từng là người mà. Giống Sửu. Giống Tý."'},
-    {spk:'BẠN', text:'Trọng đứng lặng, không nói gì suốt cả phút. Rồi cuối cùng cũng lên tiếng, giọng khản đặc.'},
-    {spk:'TRỌNG', text:'"...Tao cũng không muốn giết nó."'},
-    {spk:'TRỌNG', text:'"Nhưng tao cũng không thể để nó sống. Không phải vì nó đáng chết — mà vì tao không tin bản thân tao đủ mạnh để canh giữ nó mãi mãi."'},
-    {spk:'TRỌNG', text:'(Một lần nữa... lại phải là mình sao?)'},
-    {spk:'BẠN', text:'"Trọng, mày định—"'},
+    {spk:'WIBU VIỆT NHẬT', text:'"Mày điên à? Một là nó chết hai là chúng ta!"'},
+    {spk:'BẠN', text:'"Tôi biết! Nhưng... nó... nó là oán niệm của chính chúng ta — của đứa nào từng chửi bug lúc ba giờ sáng. Chúng ta mới là căn nguyên, vậy mà giờ lại đi xoá sổ nó ư."'},
+    {spk:'TRỌNG', text:'"Chứ còn gì nữa."'},
+    {spk:'TRỌNG', text:'"Mày thử vào công ty xem code sai có bị trừ lương không."'},
+    {spk:'BẠN', text:'"Trọng, mày..."'},
+    {spk:'TRỌNG', text:'"Thật lòng mà nói thì nó chính là trách nhiệm của chúng ta, chúng ta phải giải quyết nó."'},
+    {spk:'TRỌNG', text:'"Sự do dự của mày chỉ là hành động ng... á á á."'},
   ]
 };
 const VN_CH2_SECRET_TRANSFORM_DIALOGUE = {
   lines:[
     {spk:'BẠN', text:'Chưa kịp nói hết câu, một luồng sáng đen kịt bùng lên từ ngực Trọng, xé toạc cả không gian quanh Trận Địa.'},
     {spk:'CHÀNG LÍNH NGU LẮM', text:'"TRỌNG?! CÁI GÌ VẬY?!"'},
-    {spk:'BẠN', text:'Thứ năng lượng đó không phóng vào TIU — nó NUỐT lấy TIU. Cả ma trận La Peace cũng bị hút theo, từng tia điện cuộn xoáy vào người Trọng như một cơn lốc.'},
+    {spk:'BẠN', text:'Thứ năng lượng đó không phóng vào TIU — nó NUỐT lấy TIU, cả một biển oán niệm ùa vào người hắn. Cả ma trận La Peace cũng bị hút theo, từng tia điện cuộn xoáy vào người Trọng như một cơn lốc.'},
     {spk:'WIBU VIỆT NHẬT', text:'"Chạy! Tránh xa ra!!"'},
     {spk:'BẠN', text:'Tiếng gào của TIU tắt lịm giữa chừng. Khi luồng sáng tan đi, thứ đứng đó không còn là Trọng như tôi từng biết.'},
     {spk:'BẠN', text:'Đôi mắt hắn giờ đen kịt không còn tròng, những đường vân đỏ như máu bò lan khắp cơ thể, run lên theo từng nhịp thở nặng nề.'},
@@ -502,18 +433,11 @@ const VN_CH2_SECRET_TRANSFORM_DIALOGUE = {
   ]
 };
 
-/* ==============================================================
-   CHAPTER 2 — ĐÊM 2: LỰA CHỌN Ở KHOẢNH KHẮC KẾT LIỄU
-   Hiện ra ngay khi dòng điện quá tải tích đủ 100% (trước khi vào trận đánh cuối), cho người
-   chơi TỰ CHỌN giữa route Normal (ra lệnh kết liễu ngay — TIU bị thanh tẩy, kết thúc câu
-   chuyện ở Đêm 2) và route Secret (do dự — dẫn tới VN_CH2_SECRET_HESITATION_DIALOGUE rồi
-   VN_CH2_SECRET_TRANSFORM_DIALOGUE, mở khóa Đêm 3: Trọng "The Curse One" đuổi bắt nhân vật
-   chính). Xem triggerNight2Climax() trong script.js.
-   ============================================================== */
+
 const VN_CH2_CLIMAX_CHOICE = {
   lines:[
     {spk:'TRỌNG', text:'"Dòng điện đã tích đủ. Chỉ cần ra lệnh, mọi chuyện sẽ kết thúc ngay bây giờ."'},
-    {spk:'BẠN', text:'Ngón tay tôi dừng lại ngay phía trên công tắc kích hoạt. TIU — hay đúng hơn là cái thứ từng là Sửu — đang run rẩy trong xích điện, gần như kiệt sức.'},
+    {spk:'BẠN', text:'Ngón tay tôi dừng lại ngay phía trên công tắc kích hoạt. TIU — khối oán niệm kết tụ từ biết bao sinh viên từng bị bug hành, trong đó có cả chấp niệm của Sửu — đang run rẩy trong xích điện, gần như kiệt sức.'},
     {spk:'BẠN', text:'Chỉ cần một cái gật đầu.', choices:[
       {label:'⚡ RA LỆNH — kết liễu ngay, không do dự', insert:[]},
       {label:'✦ DO DỰ — khựng lại, nhìn nó lần cuối', insert:[]},
@@ -521,12 +445,6 @@ const VN_CH2_CLIMAX_CHOICE = {
   ]
 };
 
-/* ==============================================================
-   CHAPTER 2 — ĐÊM 3: MỞ ĐẦU
-   Chạy ngay khi beginNight(3, ..., 2) bắt đầu — chỉ xảy ra sau route Secret của Đêm 2 (hoặc
-   khi chơi lẻ qua "CHỌN MÀN"). Không còn Wibu Việt Nhật hay Chàng Lính Ngu Lắm đi cùng — nhân
-   vật chính phải tự mình lẩn trốn TRỌNG — THE CURSE ONE.
-   ============================================================== */
 const VN_CH2_NIGHT3_INTRO = [
   {spk:'BẠN', text:'21:00. Trận Địa hôm qua vẫn còn ngổn ngang. Wibu Việt Nhật với Chàng Lính Ngu Lắm đã trốn về ký túc xá — tôi bảo họ đi, chuyện này để một mình tôi lo.'},
   {spk:'BẠN', text:'Ba mảnh La Peace vẫn còn nằm trong túi tôi. Trọng nói đúng — chỉ có tôi là người duy nhất từng chạm vào cả ba mảnh cùng lúc.'},
@@ -536,13 +454,6 @@ const VN_CH2_NIGHT3_INTRO = [
   {spk:'BẠN', text:'!!! Tiếng gì vậy — đó là giọng Trọng. Nhưng trầm hơn, vang hơn, không còn chút gì con người.'}
 ];
 
-/* ==============================================================
-   CHAPTER 2 — ĐÊM 3: LA PEACE THỨC TỈNH
-   Chạy khi người chơi bị TRỌNG tóm được đủ 3 lần (HP về 0) trong lúc lẩn trốn — thay vì Game
-   Over, đây là khoảnh khắc nhân vật chính tự cảm nhận và thức tỉnh La Peace bên trong bản thân,
-   chính thức trở thành một pháp sư thật sự, trước khi bước thẳng vào trận đánh cuối cùng với
-   TRỌNG — THE CURSE ONE (xem startTrongCurseOneBattle() trong script.js).
-   ============================================================== */
 const VN_CH3_LAPEACE_AWAKENING = {
   lines:[
     {spk:'BẠN', text:'Lần thứ ba. Lưng tôi va vào tường, hơi thở đứt quãng — không còn chạy nổi nữa.'},
@@ -562,15 +473,6 @@ const VN_CH3_LAPEACE_AWAKENING = {
 };
 
 
-
-/* ==============================================================
-   ĐÊM 3 — TRẬN CHIẾN VỚI TRỌNG "THE CURSE ONE"
-   Xem startTrongCurseOneBattle() trong script.js. Khi HP của Trọng chạm mốc 20%, trận đấu tạm
-   dừng và VN_TRONG_CURSE_SEAL_PROMPT hiện ra với 2 lựa chọn:
-     - "PHONG ẤN" -> chèn VN_TRONG_SEAL_CHOSEN, kết thúc trận đấu, dẫn tới VN_TRONG_SEALED_ENDING_DIALOGUE
-     - "KẾT LIỄU" -> chèn VN_TRONG_KILL_CHOSEN, trận đấu tiếp tục tới khi HP về 0, dẫn tới
-       VN_TRONG_BAD_ENDING_DIALOGUE (bad ending)
-   ============================================================== */
 const VN_TRONG_CURSE_SEAL_PROMPT = {
   lines:[
     {spk:'BẠN', text:'Một đòn cuối cùng xé toạc lớp giáp tà thuật quanh người Trọng. Hắn khuỵu xuống một chân, hơi thở đứt quãng.'},
@@ -588,8 +490,9 @@ const VN_TRONG_CURSE_SEAL_PROMPT = {
 const VN_TRONG_SEAL_CHOSEN = {
   lines:[
     {spk:'BẠN', text:'"...Không. Tôi sẽ không giết mày."'},
-    {spk:'BẠN', text:'Tôi dồn hết sức mạnh còn lại của Souls of the Undying One vào La Peace — không phải để đâm xuyên qua Trọng, mà để LỌC RA thứ không thuộc về hắn.'},
+    {spk:'BẠN', text:'Tôi dồn hết sức mạnh còn lại của Souls of the Undying One vào La Peace — không phải để đâm xuyên qua Trọng, mà để LỌC oán niệm ra khỏi hắn.'},
     {spk:'TRỌNG', text:'"...mày định... tách tụi nó ra khỏi tao?"'},
+    {spk:'BẠN', text:'"Oán niệm nào cũng có lý do để tồn tại. Chỉ là chưa ai chịu lắng nghe chúng, thay vì đè chúng xuống."'},
     {spk:'BẠN', text:'"Tao không biết có làm được không. Nhưng Sửu với Tý không đáng bị xoá sổ như vậy — và mày cũng không đáng phải mang chúng nó theo suốt đời."'},
     {spk:'TRỌNG', text:'"...ngu... mày sẽ hối hận..."'},
     {spk:'BẠN', text:'"Có thể. Nhưng tao thà hối hận vì đã cố cứu, còn hơn phải sống với việc đã giết thêm một người bạn."'},
@@ -649,6 +552,7 @@ const VN_TRONG_SEALED_ENDING_DIALOGUE = {
     {spk:'WIBU VIỆT NHẬT', text:'"...Đừng làm tao khóc chứ, ghê thấy mồ."'},
     {spk:'BẠN', text:'Chúng tôi đứng đó, giữa Trận Địa đổ nát, giữa ánh nắng đầu tiên của một buổi sáng mà không ai trong chúng tôi dám chắc mình sẽ sống để thấy.'},
     {spk:'BẠN', text:'Nhưng câu chuyện này — có lẽ chưa dừng lại ở đây. Còn Sửu, còn Tý, còn lời hứa của Trọng, còn cả những câu hỏi mà đêm nay chưa kịp trả lời.'},
+    {spk:'BẠN', text:'Bug thì vẫn còn đó, sinh viên thì vẫn cứ than. Chỉ mong lần sau, oán niệm sẽ có chỗ để nói ra, thay vì tích tụ lại thành quái vật.'},
     {spk:'BẠN', text:'Có lẽ, đó sẽ là một câu chuyện khác. Vào một ngày khác.'},
   ]
 };
@@ -665,6 +569,7 @@ const TRONG_TAUNT_LINES = [
   'Sửu với Tý chắc hẳn thất vọng lắm, TRỌNG à.',
   'Quá đổi kém cỏi, kể cả so với một con chimera',
   'Umm có vẻ có người không thể rời khỏi đây lành lặng rồi.',
+  'Code của mày còn nhiều bug hơn cả tinh thần chiến đấu đó, TRỌNG.',
 ];
 // Phản ứng của TRỌNG khi bị Chế nhạo — càng lúc càng mất kiểm soát, giận dữ.
 const TRONG_TAUNT_REPLY_LINES = [
@@ -674,6 +579,7 @@ const TRONG_TAUNT_REPLY_LINES = [
   '"...Đừng nhắc tới Sửu với Tý. ĐỪNG. NHẮC. TỚI. BỌN. HỌ."',
   '"Chimera? Mày sắp biết thế nào là thật sự tuyệt vọng rồi đó."',
   '"...Được thôi. Nếu mày muốn thấy tao mất kiểm soát đến mức nào."',
+  '"...Bug? Mày dám nhắc tới bug trước mặt tao sao?!"',
 ];
 const TRONG_REASSURE_LINES = [
   'Trọng tĩnh lại ngây đi!!',
@@ -681,6 +587,7 @@ const TRONG_REASSURE_LINES = [
   'Mày không cần phải gồng mình làm quái vật đâu, TRỌNG.',
   'TRỌNG mày vẫn còn điều cần làm mà.',
   'Đừng NẶNG nề vậy chứ Trọng.',
+  'Bug nào rồi cũng fix được mà, TRỌNG. Kể cả cái bug trong lòng mày.',
 ];
 // Phản ứng của TRỌNG khi được Trấn an — dần dịu lại, vẫn còn giằng co với chính mình.
 const TRONG_REASSURE_REPLY_LINES = [
@@ -689,6 +596,7 @@ const TRONG_REASSURE_REPLY_LINES = [
   '"Quái vật hay không, ít nhất... nó vẫn đang bảo vệ được điều gì đó."',
   '"...Điều tao cần làm. Phải rồi. Tao suýt quên mất."',
   '"...Được. Chỉ một chút thôi. Tao sẽ cố."',
+  '"...Fix được thật không? Tao đã ngồi debug nó suốt bao lâu rồi."',
 ];
 
 /* Câu thoại RIÊNG khi Chế nhạo đạt tối đa (3/3) và biến thành SÁT CHIÊU HOÀN HẢO — chiêu kết
@@ -710,6 +618,7 @@ const VN_TRONG_BAD_ENDING_DIALOGUE = {
     {spk:'BẠN', text:'Không ai reo hò. Không ai thấy nhẹ nhõm. Ba chúng tôi đứng đó, nhìn cái xác không còn nhận ra là Trọng nữa, giữa đống đổ nát của Trận Địa.'},
     {spk:'BẠN', text:'Tôi tự hỏi — liệu đây có phải là điều Trọng thật sự muốn không? Hay tôi vừa lặp lại đúng thứ mà chính hắn từng sợ hãi: tiếp tay giết thêm một người nữa?'},
     {spk:'BẠN', text:'Sửu. Tý. Và giờ là Trọng.'},
+    {spk:'BẠN', text:'Oán niệm không biến mất khi bị giết. Nó chỉ đổi chủ.'},
     {spk:'BẠN', text:'Bình minh lên, nhưng không mang lại cảm giác nhẹ nhõm nào cả. Chúng tôi đã thắng. Nhưng thắng để làm gì, khi cái giá phải trả là chính người đã dẫn đường cho chúng tôi suốt hai đêm qua?'},
     {spk:'BẠN', text:'UIT lại im lìm như chưa từng có chuyện gì xảy ra. Nhưng lần này, không ai trong ba chúng tôi còn muốn quay lại nhìn nó thêm một lần nào nữa.'},
   ]
