@@ -137,19 +137,77 @@ const NPC_DIALOGUES = {
   }
 };
 
+
 const TRONG_DIALOGUE = {
-  lines:[
-    {spk:'TRỌNG', text:'"...Đứng lại. Tao thấy khí sắc của ngươi đã suy kiệt lắm rồi."'},
-    {spk:'TRỌNG', text:'"Thứ đó, tên nó là TIU, mặt trái của UIT. Nó sinh ra từ thứ mà sinh viên chúng ta cứ dồn nén mãi không nói ra... mà chuyện đó dài dòng lắm."'},
-    {spk:'TRỌNG', text:'" Nhận lấy thứ này — nó sẽ giúp ngươi cầm cự."'},
-    {spk:'Bạn', text:'"Khoan khoan mày là ai cơ."'},
-    {spk:'TRỌNG', text:'"Cùng là sinh viên trong trường thôi."'},
-    {spk:'TRỌNG', text:'"Nếu có được thứ gì đó có khi chúng ta sẽ xoa dịu được TIU cũng nên."'},
-    {spk:'Bạn', text:'"Cụ thể là gì??"'},
-    {spk:'TRỌNG', text:'"Chịu, tao thậm chí còn đang chạy trốn nó đây, theo tao nghĩ đó là 1 sức mạnh nào đó trái ngược với TIU."'},
-  ],
   reward:{type:'special_trong', msg:'Trọng ban cho bạn 1 HP và 1 chai Nước tăng lực trước khi biến mất trong bóng tối.'}
 };
+
+function buildTrongLines(night, shards){
+  const n = Math.max(0, Math.min(3, shards|0));
+  const lines = [];
+
+  if(night===1){
+    lines.push(
+      {spk:'TRỌNG', text:'"...Đứng lại. Tao thấy khí sắc của mày suy kiệt lắm rồi."'},
+      {spk:'TRỌNG', text:'"Thứ đó, tên nó là TIU, mặt trái của UIT. Nó sinh ra từ thứ mà sinh viên chúng ta cứ dồn nén mãi không nói ra... chuyện đó dài dòng lắm."'},
+      {spk:'Bạn', text:'"Khoan khoan mày là ai cơ."'},
+      {spk:'TRỌNG', text:'"Cùng là sinh viên trong trường thôi. Tên tao là Trọng."'},
+      {spk:'TRỌNG', text:'"Nghe cho kỹ: quanh trường có 3 mảnh La Peace — năng lượng ôn hòa, thứ duy nhất trái ngược với oán khí của TIU. Mỗi đêm sẽ có một mảnh ẩn ở đâu đó, Chỗ Gửi Xe với Sân Bóng hay có nhất."'},
+      {spk:'TRỌNG', text:'"Phải gom đủ cả ba, thiếu một cũng không được. Đêm nào tao cũng ở Tòa C từ 4 đến 6 giờ sáng — đến đó tao sẽ hỏi mày gom được mấy mảnh."'},
+      {spk:'TRỌNG', text:'"Nhận lấy thứ này, nó sẽ giúp mày cầm cự."'}
+    );
+    return lines;
+  }
+
+  lines.push(
+    {spk:'TRỌNG', text: night===3
+      ? '"Đêm cuối rồi. TIU sẽ điên cuồng nhất đêm nay. Nói cho tao biết — mày gom được mấy mảnh La Peace?"'
+      : '"...Vẫn còn sống, tốt. Tao hỏi lại như hôm qua — mày gom được mấy mảnh La Peace rồi?"'},
+    {spk:'Bạn', text: n===0 ? '"Tao chưa tìm thấy mảnh nào cả."' : '"Tao có '+n+' mảnh rồi."'}
+  );
+
+  if(night===3 && n>=3){
+    lines.push({spk:'TRỌNG', text:'"...Khoan. Mày vừa nói là bao nhiêu?"'});
+    return lines;
+  }
+
+  if(n===0){
+    lines.push({spk:'TRỌNG', text: night===3
+      ? '"Không có mảnh nào... Vậy là không thể làm tế lễ được rồi."'
+      : '"Chưa có mảnh nào à... Không sao, còn thời gian. Nhưng đừng để sát đêm cuối mới đi tìm."'});
+  } else {
+    lines.push({spk:'TRỌNG', text: night===3
+      ? '"'+n+'/3... Thiếu rồi. Thiếu một mảnh thôi cũng không đủ để làm tế lễ."'
+      : '"'+n+'/3. Giữ chặt chúng, đừng để TIU đánh hơi được."'});
+  }
+
+  if(night===2){
+    lines.push(
+      {spk:'TRỌNG', text:'"Đêm mai là đêm cuối. Tao vẫn ở Tòa C từ 4 đến 6 giờ sáng — nhớ mang đủ ba mảnh đến."'},
+      {spk:'TRỌNG', text:'"Cầm lấy, đỡ được chút nào hay chút đó."'}
+    );
+  } else {
+    lines.push(
+      {spk:'TRỌNG', text:'"Nếu đến sáng vẫn không đủ thì tao chỉ còn cách phong ấn nó bằng chính thân xác này."'},
+      {spk:'Bạn', text:'"Mày điên à?! Phong ấn kiểu đó thì mày—"'},
+      {spk:'TRỌNG', text:'"Kiếm tiếp đi. Còn không thì cứ giữ mạng mà sống sót. Cầm lấy — đây là thứ cuối tao giúp được mày."'}
+    );
+  }
+  return lines;
+}
+
+const TRONG_SEAL_FAIL_ENDING = [
+  {spk:'BẠN', text:'Ngay khi tôi tưởng đêm đã kết thúc, một tiếng nổ trầm vang lên từ phía Tòa C, làm rung cả mặt đất.'},
+  {spk:'BẠN', text:'Tôi chạy tới. Giữa sân, Trọng đứng một mình, hai tay giơ cao, những đường phù văn đỏ thẫm chằng chịt trên nền đất.'},
+  {spk:'BẠN', text:'Trước mặt cậu ấy là THE TIU — bị trói trong những sợi xích sáng, gào lên thứ tiếng than chẳng còn ra hình người.'},
+  {spk:'BẠN', text:'Máu rỉ ra từ khoé miệng Trọng. Từng đường phù văn dưới chân cậu ấy đang nứt dần, từng đường một.'},
+  {spk:'TRỌNG', text:'"Tao... vẫn phải giữ nó lại..."'},
+  {spk:'BẠN', text:'Trọng đã đến giới hạn. Đầu gối cậu ấy khuỵu xuống, nhưng hai tay vẫn không chịu buông.'},
+  {spk:'BẠN', text:'Tôi lao tới định giúp — rồi TIU quay đầu lại.'},
+  {spk:'BẠN', text:'Khoảnh khắc thứ đó nhìn thẳng vào tôi, mọi suy nghĩ trong đầu tôi tắt ngấm. Đôi chân tự chuyển động — không phải do tôi quyết định.'},
+  {spk:'BẠN', text:'Tôi quay lưng. Tôi chạy. Tiếng Trọng phía sau nhỏ dần... rồi tắt hẳn.'},
+  {spk:'BẠN', text:'Tôi không ngoảnh lại. Và tôi không còn dám nghĩ về chuyện gì đã xảy ra với Trọng nữa.'}
+];
 
 const TRONG_SECRET_DIALOGUE = {
   lines:[
@@ -192,6 +250,12 @@ const EPILOGUE_INTRO_NORMAL = [
 const EPILOGUE_INTRO_SECRET = [
   {spk:'BẠN', text:'The TIU đã tan biến. Trọng nói tế lễ đã hoàn tất... nhưng lòng mình vẫn chưa thấy yên hẳn.'},
   {spk:'BẠN', text:'Dù đã 1 tuần trôi qua rồi nhưng mình muốn đi một vòng để chắc chắn rằng mọi thứ thật sự đã kết thúc.'}
+];
+
+const EPILOGUE_INTRO_SEALED = [
+  {spk:'BẠN', text:'7:30 sáng. Tôi đã sống sót qua ba đêm — nhưng chẳng thấy nhẹ nhõm chút nào.'},
+  {spk:'BẠN', text:'Không thấy Trọng ở đâu cả. Tôi tự nhủ cậu ấy chỉ đang nghỉ ngơi đâu đó... rồi không dám nghĩ tiếp.'},
+  {spk:'BẠN', text:'Nhưng mình vẫn phải đi một vòng quanh trường lần cuối.'}
 ];
 
 const EPILOGUE_LIB_NORMAL = [
@@ -533,11 +597,7 @@ const VN_TRONG_SEALED_ENDING_DIALOGUE = {
   ]
 };
 
-/* ---- NÂNG CẤP UNDERTALE/DELTARUNE — thoại ACT trong trận Trọng "The Curse One" (xem
-   resolveActTaunt() / resolveActReassure() trong script.js). Mỗi lần chọn Chế nhạo hoặc
-   Trấn an, script pick() ngẫu nhiên 1 câu của BẠN + 1 câu TRỌNG phản ứng lại, rồi phát qua
-   playVN() y hệt các đoạn hội thoại thông thường trong game (hộp thoại có tên người nói,
-   bấm TIẾP TỤC để qua câu kế) — không còn chỉ in thẳng vào battle log nữa. ---- */
+
 const TRONG_TAUNT_LINES = [
   'Yếu vậy thôi à, TRỌNG? Tao sẽ cho mày TRỌNG thương.',
   'The Curse One? Mày chỉ là một thứ lai tạp hạ đẳng.',

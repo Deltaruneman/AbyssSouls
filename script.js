@@ -107,6 +107,10 @@ function nightClockCfg(chapter){
 const BASE_MOVE_COST_MIN = 10; // mỗi lượt di chuyển giữa 2 tòa liền kề LUÔN mất đúng 10 phút (game-time)
 const BUFF_MOVE_COST_MIN = 5;  // đang có buff Nước tăng lực -> mỗi lượt di chuyển chỉ mất 5 phút
 
+/* ---- Trọng (Chapter 1): luôn xuất hiện ở Tòa C trong khung 04:00-06:00 mỗi đêm ---- */
+const TRONG_WINDOW = [240, 360]; // phút kể từ 00:00 (Chapter 1 bắt đầu ca trực lúc 00:00)
+function isTrongWindow(){ return !!S && S.gameMinutes>=TRONG_WINDOW[0] && S.gameMinutes<TRONG_WINDOW[1]; }
+
 /* ---- Camping fix: Căn tin chỉ mở trong khung giờ cố định ---- */
 const CANTEEN_WINDOWS = [[60,120],[240,300]]; // 01:00-02:00 & 04:00-05:00 (giờ THỰC trong ngày, không phải phút kể từ lúc bắt đầu ca trực)
 function isCanteenOpen(gmin){
@@ -435,6 +439,8 @@ function freshState(night, chapter){
     paused: false,
     npcSeen: {},     // {roomKey: nightNumber đã xem}
     trongSeen: false,
+    trongBattleStarted: false, // true nếu đã đưa đủ 3 mảnh cho Trọng & vào trận tế lễ (Đêm 3)
+    trongSealFail: false,      // true nếu Đêm 3 kết thúc mà không có tế lễ -> ending Trọng phong ấn TIU
     introShown: false,
     // --- La Peace (mảnh năng lượng ôn hòa) ---
     laPeaceRoom: laPeaceRoom,
@@ -523,6 +529,11 @@ function shuffle(arr){
    một lựa chọn sẽ chèn `insert` (nếu có) ngay sau dòng hiện tại rồi tiếp tục
    như bình thường. Dùng cho đoạn Trọng hỏi về con giáp của TIU (xem
    CHAPTER2_OPEN_SECRET trong dialogue.js). */
+/* Bộ điều khiển của đoạn hội thoại ĐANG PHÁT (null nếu không có) — phục vụ phím tắt J / Ctrl
+   (xem mục "PHÍM TẮT" ở cuối file). Mỗi lần gọi playVN() sẽ tạo bộ điều khiển mới và ghi đè. */
+let VN_ACTIVE = null;
+function isChoiceLine(l){ return !!(l && l.choices && l.choices.length); }
+
 function playVN(lines, onDone){
   if(!lines || !lines.length){ if(onDone) onDone(); return; }
   S.paused = true;
@@ -533,6 +544,7 @@ function playVN(lines, onDone){
   const footer = document.getElementById('vnFooter');
   overlay.classList.remove('hidden');
   let i = 0;
+  let finished = false;
   const queue = lines.slice();
   function clearChoiceButtons(){
     footer.querySelectorAll('.vnChoiceBtn').forEach(b=>b.remove());
@@ -563,6 +575,8 @@ function playVN(lines, onDone){
   function advance(){
     i++;
     if(i>=queue.length){
+      finished = true;
+      if(VN_ACTIVE === ctl) VN_ACTIVE = null; // gỡ TRƯỚC onDone để onDone có thể mở đoạn thoại mới
       overlay.classList.add('hidden');
       clearChoiceButtons();
       nextBtn.onclick = null;
@@ -574,6 +588,22 @@ function playVN(lines, onDone){
     showLine();
   }
   nextBtn.onclick = advance;
+  const ctl = {
+    /* Phím J: sang câu thoại kế tiếp. Không làm gì nếu câu hiện tại đang chờ chọn nhánh. */
+    next(){
+      if(finished || isChoiceLine(queue[i])) return false;
+      advance();
+      return true;
+    },
+    /* Phím Ctrl: tua qua toàn bộ phần hội thoại còn lại. Dừng lại tại dòng có lựa chọn để
+       người chơi tự quyết định (vì lựa chọn có thể chèn thoại / tác động cơ chế game). */
+    skip(){
+      if(finished) return false;
+      while(!finished && !isChoiceLine(queue[i])) advance();
+      return true;
+    }
+  };
+  VN_ACTIVE = ctl;
   showLine();
 }
 
@@ -600,7 +630,7 @@ function applyVNReward(reward){
 function getRoomNPCMeta(roomKey){
   if(S.epilogue) return null;
   if(S.chapter===2) return null; // Hội thoại NPC riêng cho Chapter 2 sẽ được bổ sung sau
-  if(roomKey==='C' && S.night===3 && S.hp===1 && !S.trongSeen){
+  if(roomKey==='C' && isTrongWindow() && !S.trongSeen){
     return {key:'TRONG', name:'TRỌNG', avatarBg:'#7a1a1a', avatarText:'✦', talkable:true};
   }
   const npc = NPC_DIALOGUES[roomKey];
@@ -617,11 +647,13 @@ function getRoomNPCMeta(roomKey){
 function talkToNPC(meta){
   if(meta.key==='TRONG'){
     S.trongSeen = true;
-    const unlockSecret = !S.standalone && campaignLaPeace>=3
-      && campaignNpcTalks.E.size>=3 && campaignNpcTalks.B.size>=3;
-    playVN(TRONG_DIALOGUE.lines, ()=>{
+    const shards = campaignLaPeace;
+    // Đủ 3 mảnh ở Đêm 3 (chế độ chơi thường) -> Trọng làm tế lễ, không còn yêu cầu tin tưởng Wibu/Lính.
+    const unlockSecret = !S.standalone && S.night===3 && shards>=3;
+    playVN(buildTrongLines(S.night, shards), ()=>{
       applyVNReward(TRONG_DIALOGUE.reward);
       if(unlockSecret){
+        S.trongBattleStarted = true;
         playVN(TRONG_SECRET_DIALOGUE.lines, ()=>{ startSecretBattle(); });
       } else {
         refreshActionPane();
@@ -789,6 +821,7 @@ function refreshHud(){
 
 /* ============== ACTION PANE ============== */
 let actionPaneDirty = true;
+let lastNpcVisible = false; // theo dõi NPC (vd. Trọng 04:00-06:00) xuất hiện/biến mất theo thời gian
 function markActionDirty(){ actionPaneDirty = true; scheduleAutoSave(); refreshBagBadge(); }
 
 function roomDescExtras(def){
@@ -1209,11 +1242,20 @@ const BAG_ITEM_USE = {
   uvlight:   { can: ()=> !!S && S.inventory.uvlight>0, use: useUVLight, label: 'Dùng' },
   noisetrap: { can: ()=> !!S && S.inventory.noisetrap>0, use: useNoiseTrap, label: 'Đặt bẫy' }
 };
+const BAG_TITLE = '🎒 TÚI ĐỒ';
+/* Túi đồ dùng chung #mgModal với minigame/bàn chế tạo -> nhận biết "đang mở túi đồ" qua tiêu đề. */
+function isBagOpen(){
+  const m = document.getElementById('mgModal');
+  return !!m && !m.classList.contains('hidden') && document.getElementById('mgTitle').textContent === BAG_TITLE;
+}
+function closeBagModal(){
+  if(isBagOpen()) document.getElementById('mgModal').classList.add('hidden');
+}
 function openBagModal(){
   if(!S) return;
   const modal = document.getElementById('mgModal');
   modal.classList.remove('hidden');
-  document.getElementById('mgTitle').textContent = '🎒 TÚI ĐỒ';
+  document.getElementById('mgTitle').textContent = BAG_TITLE;
   document.getElementById('mgTimer').textContent = '';
   const body = document.getElementById('mgBody');
   const footer = document.getElementById('mgFooter');
@@ -1557,7 +1599,7 @@ function startEpilogue(variant){
   buildMap();
   refreshAll();
 
-  const introLines = variant==='secret' ? EPILOGUE_INTRO_SECRET : EPILOGUE_INTRO_NORMAL;
+  const introLines = variant==='secret' ? EPILOGUE_INTRO_SECRET : (S.trongSealFail ? EPILOGUE_INTRO_SEALED : EPILOGUE_INTRO_NORMAL);
   playVN(introLines, ()=>{});
 }
 
@@ -3112,6 +3154,8 @@ function tick(now){
       // full action-pane rebuild only when something actually changed,
       // or at most once a second (for the countdown text) — rebuilding on
       // every animation frame was eating clicks on the item buttons.
+      const npcVisibleNow = !!getRoomNPCMeta(S.playerRoom);
+      if(npcVisibleNow !== lastNpcVisible){ lastNpcVisible = npcVisibleNow; actionPaneDirty = true; }
       if(actionPaneDirty){
         refreshActionPane();
         actionPaneDirty = false;
@@ -3585,6 +3629,12 @@ function endNightSuccess(){
   if(S.chapter===2 && S.night===1) finalizeSetupGauge();
   // VN_OUTRO hiện chỉ có nội dung cho Chapter 1 — Chapter 2 chuyển thẳng sang màn hình kết quả.
   if(S.chapter===2){ showEndScreen(); return; }
+  // Đêm 3 (Chapter 1, chơi thường) mà không có tế lễ -> đoạn kết Trọng cố phong ấn TIU.
+  if(S.night===3 && !S.standalone && !S.trongBattleStarted){
+    S.trongSealFail = true;
+    playVN(VN_OUTRO[S.night], ()=>playVN(TRONG_SEAL_FAIL_ENDING, showEndScreen));
+    return;
+  }
   playVN(VN_OUTRO[S.night], showEndScreen);
 }
 function showEndScreen(){
@@ -3631,7 +3681,9 @@ function showEndScreen(){
     document.getElementById('nextNightBtn').onclick=()=>{ document.getElementById('winScreen').classList.add('hidden'); beginNight(S.night,true); };
   } else if(S.night>=3){
     document.getElementById('winTitle').textContent='BẠN ĐÃ SỐNG SÓT QUA 3 ĐÊM';
-    document.getElementById('winSub').textContent='Phòng trọ giờ đã sẵn sàng để dọn vào. The TIU tạm thời im lặng... nhưng trước khi rời trường, có lẽ nên đi một vòng lần cuối.';
+    document.getElementById('winSub').textContent = S.trongSealFail
+      ? 'Bạn đã sống sót, nhưng phải đánh đổi bằng thứ gì đó mà bạn không dám nghĩ tới. Trước khi rời trường, có lẽ nên đi một vòng lần cuối.'
+      : 'Phòng trọ giờ đã sẵn sàng để dọn vào. The TIU tạm thời im lặng... nhưng trước khi rời trường, có lẽ nên đi một vòng lần cuối.';
     document.getElementById('nextNightBtn').textContent='TIẾP TỤC';
     document.getElementById('nextNightBtn').onclick=()=>{ document.getElementById('winScreen').classList.add('hidden'); startEpilogue('normal'); };
   } else {
@@ -3686,9 +3738,7 @@ const BOSS_PATTERNS = [
   {name:'GỌNG KÌM BỐN PHÍA', desc:'Đạn ập vào liên tục từ cả bốn phía, siết chặt không gian né tránh.', dmg:[6,10], bulletType:'cross', dodgeDuration:5000},
   {name:'SÓNG TRUY SÁT', desc:'Từng luồng đạn lượn sóng bay ra từ rìa màn hình, nhắm thẳng vào vị trí của bạn lúc phóng ra.', dmg:[5,9], bulletType:'wave', dodgeDuration:4800},
   {name:'VỌT TỐC BẤT NGỜ', desc:'Đạn xuất phát chậm rãi rồi đột ngột tăng tốc gấp nhiều lần giữa chừng — chớ chủ quan!', dmg:[6,11], bulletType:'acceldash', dodgeDuration:4600},
-  // ---- 4 pattern mới lấy cảm hứng trực tiếp từ các trận boss kinh điển Undertale/Deltarune ----
-  {name:'BỨC TƯỜNG XƯƠNG TRẮNG', desc:'Từng bức tường xương lần lượt ập vào từ hai bên, chỉ chừa lại một khe hở hẹp — phải tìm đúng khe mà luồn qua, style Sans.', dmg:[6,10], bulletType:'bonewall', dodgeDuration:5200},
-  {name:'TRIỀU LỬA PHÁN XÉT', desc:'Những bức tường lửa quét thẳng từ trên xuống, chỉ chừa một khe hẹp để né — style ngọn lửa của Asgore.', dmg:[7,12], bulletType:'firewall', dodgeDuration:5000},
+  // ---- 2 pattern lấy cảm hứng từ các trận boss kinh điển Undertale/Deltarune (đã gỡ các pattern dạng tường) ----
   {name:'LƯỠI KIẾM XOAY TÍT', desc:'Từng chùm lưỡi kiếm xoay tít quanh tâm rồi văng dần ra ngoài thành vòng xoáy mở rộng — style The Knight.', dmg:[6,10], bulletType:'orbit', dodgeDuration:5000},
   {name:'BÚA CÔNG LÝ GIÁNG XUỐNG', desc:'Hàng loạt giáo phán xét dựng lên dồn dập khắp trận địa theo từng cụm liên tiếp, không kịp thở — style Hammer of Justice.', dmg:[7,11], bulletType:'judgement', dodgeDuration:5000},
 ];
@@ -3737,17 +3787,16 @@ const BOSS_PATTERNS_TRONG_UNDERTALE = [
   {name:'MƯA THOI DỆT ĐỊNH MỆNH', desc:'Từng tia đạn bay thẳng ngang và dọc khung né, mỗi đợt lại đổi tốc độ — không đợt nào giống đợt nào.', dmg:[4,8], bulletType:'uxlinear', dodgeDuration:4600},
   {name:'NÒNG SÚNG PHÁN XÉT', desc:'Một cỗ nòng súng vô hình khoá thẳng vào đúng vị trí bạn đang đứng, cảnh báo đúng 1 giây rồi xả hết đạn thành cột tia xuyên suốt khung né.', dmg:[9,15], bulletType:'uxblaster', dodgeDuration:5200},
   {name:'ĐÙA CỢT HỖN MANG', desc:'Từng viên đạn nảy bật điên loạn giữa các cạnh khung né, quỹ đạo không thể đoán trước — càng lâu càng dày đặc.', dmg:[5,9], bulletType:'uxbounce', dodgeDuration:5000},
-  // ---- Bổ sung thêm 4 pattern kinh điển Undertale/Deltarune cho trận Trọng ----
-  {name:'BỨC TƯỜNG XƯƠNG TRẮNG', desc:'Từng bức tường xương lần lượt ập vào từ hai bên, chỉ chừa lại một khe hở hẹp — style Sans.', dmg:[5,9], bulletType:'bonewall', dodgeDuration:5000},
-  {name:'TRIỀU LỬA PHÁN XÉT', desc:'Những bức tường lửa quét thẳng từ trên xuống, chỉ chừa một khe hẹp để né — style Asgore.', dmg:[7,11], bulletType:'firewall', dodgeDuration:4800},
+  // ---- Bổ sung thêm 2 pattern kinh điển Undertale/Deltarune cho trận Trọng (đã gỡ các pattern dạng tường) ----
   {name:'LƯỠI KIẾM XOAY TÍT', desc:'Từng chùm lưỡi kiếm xoay tít quanh tâm rồi văng dần ra ngoài — style The Knight.', dmg:[6,9], bulletType:'orbit', dodgeDuration:4800},
   {name:'BÚA CÔNG LÝ GIÁNG XUỐNG', desc:'Hàng loạt giáo phán xét dựng lên dồn dập liên tiếp khắp trận địa — style Hammer of Justice.', dmg:[6,10], bulletType:'judgement', dodgeDuration:4800},
 ];
-// Dạ Thử (Tý — nhanh nhẹn/xảo quyệt) hấp thụ thêm Tuyến Tính + Hỗn Mang + Xương Trắng + Xoay Tít
-// (dồn dập, khó đoán); Thiết Ngưu (Sửu — sức mạnh tuyệt đối) hấp thụ Nòng Súng Phán Xét + Triều
-// Lửa + Búa Công Lý (đòn nặng, mang chất "cực nặng, dồn ép không gian").
-BOSS_PATTERNS_TRONG_DATHU.push(BOSS_PATTERNS_TRONG_UNDERTALE[0], BOSS_PATTERNS_TRONG_UNDERTALE[2], BOSS_PATTERNS_TRONG_UNDERTALE[3], BOSS_PATTERNS_TRONG_UNDERTALE[5]);
-BOSS_PATTERNS_TRONG_THIETNGUU.push(BOSS_PATTERNS_TRONG_UNDERTALE[1], BOSS_PATTERNS_TRONG_UNDERTALE[4], BOSS_PATTERNS_TRONG_UNDERTALE[6]);
+// Dạ Thử (Tý — nhanh nhẹn/xảo quyệt) hấp thụ thêm Tuyến Tính + Hỗn Mang + Xoay Tít
+// (dồn dập, khó đoán); Thiết Ngưu (Sửu — sức mạnh tuyệt đối) hấp thụ Nòng Súng Phán Xét + Búa
+// Công Lý (đòn nặng, mang chất "cực nặng, dồn ép không gian").
+// Chỉ số trong BOSS_PATTERNS_TRONG_UNDERTALE: 0 Tuyến Tính | 1 Nòng Súng | 2 Hỗn Mang | 3 Xoay Tít | 4 Búa Công Lý
+BOSS_PATTERNS_TRONG_DATHU.push(BOSS_PATTERNS_TRONG_UNDERTALE[0], BOSS_PATTERNS_TRONG_UNDERTALE[2], BOSS_PATTERNS_TRONG_UNDERTALE[3]);
+BOSS_PATTERNS_TRONG_THIETNGUU.push(BOSS_PATTERNS_TRONG_UNDERTALE[1], BOSS_PATTERNS_TRONG_UNDERTALE[4]);
 
 const BOSS_PATTERNS_TRONG = [...BOSS_PATTERNS_TRONG_DATHU, ...BOSS_PATTERNS_TRONG_THIETNGUU];
 
@@ -4638,7 +4687,7 @@ function buildDodgeSpawnQueue(pattern, rect, turn, densityBoost){
     ambush: genAmbushQueue, quake: genQuakeQueue, charge: genChargeQueue, shield: genShieldQueue,
     straight: genStraightQueue, wave: genWaveQueue, acceldash: genAccelDashQueue, combo: genComboSpiralWaveQueue,
     uxlinear: genUxLinearQueue, uxblaster: genUxBlasterQueue, uxbounce: genUxBounceQueue,
-    bonewall: genBoneWallQueue, firewall: genFireWallQueue, orbit: genOrbitQueue, judgement: genJudgementQueue,
+    orbit: genOrbitQueue, judgement: genJudgementQueue,
   };
   const fn = gens[pattern.bulletType] || genRainQueue;
   return fn(rect, (pattern.dodgeDuration||4600), density);
@@ -4931,55 +4980,12 @@ function genUxBounceQueue(rect, duration, density){
   return q;
 }
 
-/* ============== 4 PATTERN LẤY CẢM HỨNG TRỰC TIẾP TỪ UNDERTALE/DELTARUNE ==============
-   Bổ sung theo yêu cầu — mượn tinh thần thiết kế (không sao chép asset/hình ảnh gốc) từ 4
-   trận boss kinh điển: Sans, Asgore, The Knight (Deltarune), và bản nhạc/độ dồn dập kiểu
-   "Hammer of Justice" (Undyne). Cả 4 đều mới hoàn toàn về CƠ CHẾ so với các pattern cũ, để
-   giảm cảm giác lặp lại mà người chơi phản ánh. */
+/* ============== 2 PATTERN LẤY CẢM HỨNG TỪ UNDERTALE/DELTARUNE ==============
+   Mượn tinh thần thiết kế (không sao chép asset/hình ảnh gốc) từ The Knight (Deltarune) và
+   nhịp độ dồn dập kiểu "Hammer of Justice" (Undyne). Các pattern dạng TƯỜNG (Bức Tường Xương
+   kiểu Sans, Triều Lửa kiểu Asgore) đã được gỡ bỏ theo yêu cầu. */
 
-/* 1) SANS — BỨC TƯỜNG XƯƠNG: một "bức tường xương" (thanh dọc cao hết khung né) trượt ngang
-   từ trái hoặc phải, chỉ chừa đúng 1 khe hở (gapY/gapH) — người chơi phải ĐOÁN TRƯỚC khe hở
-   nằm ở đâu và di chuyển tới đó trước khi tường ập tới, đúng tinh thần "bức tường xương có khe
-   phải luồn qua" nổi tiếng của Sans. Khe hở đổi vị trí ngẫu nhiên mỗi đợt, tường bên trái/phải
-   xen kẽ nhau, càng về sau càng dày (2 tường cùng lúc từ 2 phía, buộc phải né đúng khe của CẢ
-   HAI cùng lúc). */
-function genBoneWallQueue(rect, duration, density){
-  const q=[]; let t=350; let wave=0;
-  while(t < duration-600){
-    const dual = wave>=3; // càng về sau, 2 bức tường cùng lúc từ 2 phía cho khó hơn
-    const gapH = Math.max(64, 96 - wave*4);
-    if(dual){
-      const gapY1 = 24 + Math.random()*(rect.h-gapH-48);
-      const gapY2 = 24 + Math.random()*(rect.h-gapH-48);
-      q.push({t, kind:'bonewall', fromLeft:true,  gapY:gapY1+gapH/2, gapH, speed:0.14+Math.random()*0.05});
-      q.push({t, kind:'bonewall', fromLeft:false, gapY:gapY2+gapH/2, gapH, speed:0.14+Math.random()*0.05});
-    } else {
-      const fromLeft = wave%2===0;
-      const gapY = 24 + Math.random()*(rect.h-gapH-48) + gapH/2;
-      q.push({t, kind:'bonewall', fromLeft, gapY, gapH, speed:0.15+Math.random()*0.05});
-    }
-    t += 780*density;
-    wave++;
-  }
-  return q;
-}
-
-/* 2) ASGORE — TRIỀU LỬA PHÁN XÉT: tương tự bức tường xương nhưng XOAY TRỤC 90° — một "bức
-   tường lửa" ngang (cao hết bề rộng khung né) quét từ trên xuống, chỉ chừa 1 khe hở theo trục
-   X — gợi nhớ những đợt lửa quét ngang sân đấu của Asgore. Tốc độ quét nhanh dần theo từng đợt. */
-function genFireWallQueue(rect, duration, density){
-  const q=[]; let t=400; let wave=0;
-  while(t < duration-700){
-    const gapW = Math.max(70, 110 - wave*5);
-    const gapX = 24 + Math.random()*(rect.w-gapW-48) + gapW/2;
-    q.push({t, kind:'firewall', gapX, gapW, speed:(0.13+wave*0.01)+Math.random()*0.03});
-    t += 900*density;
-    wave++;
-  }
-  return q;
-}
-
-/* 3) THE KNIGHT (Deltarune) — LƯỠI KIẾM XOAY TÍT: từng chùm lưỡi kiếm bắn ra rồi XOAY QUANH
+/* 1) THE KNIGHT (Deltarune) — LƯỠI KIẾM XOAY TÍT: từng chùm lưỡi kiếm bắn ra rồi XOAY QUANH
    TÂM khung né (thay vì bay thẳng ra như 'spiral' cũ) trong khi bán kính quỹ đạo tăng dần —
    tạo cảm giác một vòng xoáy lưỡi kiếm mở rộng dần ra khắp trận địa, đúng chất "cơn lốc kiếm"
    của The Knight. Tốc độ xoay tăng dần theo thời gian trong cùng 1 pattern để dồn ép người chơi. */
@@ -5003,7 +5009,7 @@ function genOrbitQueue(rect, duration, density){
   return q;
 }
 
-/* 4) "HAMMER OF JUSTICE" (nhịp độ kiểu Undyne) — BÚA CÔNG LÝ: tái dùng cơ chế 'laser' dọc sẵn
+/* 2) "HAMMER OF JUSTICE" (nhịp độ kiểu Undyne) — BÚA CÔNG LÝ: tái dùng cơ chế 'laser' dọc sẵn
    có nhưng bắn thành CỤM 4-6 mũi giáo liên tiếp cực nhanh (telegraph rút ngắn còn ~1/3 so với
    pattern thường) ở nhiều vị trí X ngẫu nhiên cùng lúc — tạo cảm giác dồn dập, gấp gáp không
    kịp thở đúng tinh thần các đợt giáo phán xét dồn dập của Undyne. */
@@ -5117,26 +5123,6 @@ function spawnDodgeBullet(ev, box){
     const rad = ev.ang*Math.PI/180;
     b.x = ev.x; b.y = ev.y; b.vx = Math.cos(rad)*ev.speed*sf; b.vy = Math.sin(rad)*ev.speed*sf; b.r=6;
     b.bounce = true; b.life = 9000; b.bounces = 0;
-  } else if(ev.kind==='bonewall'){
-    // Sans — Bức Tường Xương: thanh dọc cao hết khung né trượt ngang từ trái/phải, chỉ chừa
-    // đúng 1 khe hở (gapY±gapH/2) render bằng gradient nền có đoạn trong suốt.
-    el.className = 'dbullet t-bone';
-    const rect = DZ.rect;
-    const gapTop = ev.gapY - ev.gapH/2, gapBot = ev.gapY + ev.gapH/2;
-    el.style.background = `linear-gradient(to bottom, #f5e6c8 0px, #f5e6c8 ${Math.max(0,gapTop)}px, transparent ${Math.max(0,gapTop)}px, transparent ${Math.min(rect.h,gapBot)}px, #f5e6c8 ${Math.min(rect.h,gapBot)}px, #f5e6c8 ${rect.h}px)`;
-    b.x = ev.fromLeft ? -16 : rect.w+16; b.y = 0;
-    b.vx = (ev.fromLeft ? 1 : -1) * ev.speed * sf; b.vy = 0; b.r = 13;
-    b.bonewall = true; b.gapTop = gapTop; b.gapBot = gapBot;
-  } else if(ev.kind==='firewall'){
-    // Asgore — Triều Lửa Phán Xét: thanh ngang rộng hết khung né quét từ trên xuống, chỉ chừa
-    // đúng 1 khe hở theo trục X (gapX±gapW/2).
-    el.className = 'dbullet t-fire';
-    const rect = DZ.rect;
-    const gapL = ev.gapX - ev.gapW/2, gapR = ev.gapX + ev.gapW/2;
-    el.style.background = `linear-gradient(to right, #ffb347 0px, #ffb347 ${Math.max(0,gapL)}px, transparent ${Math.max(0,gapL)}px, transparent ${Math.min(rect.w,gapR)}px, #ffb347 ${Math.min(rect.w,gapR)}px, #ffb347 ${rect.w}px)`;
-    b.x = 0; b.y = -18;
-    b.vx = 0; b.vy = ev.speed * sf; b.r = 13;
-    b.firewall = true; b.gapLeft = gapL; b.gapRight = gapR;
   } else if(ev.kind==='orbit'){
     // The Knight — Lưỡi Kiếm Xoay Tít: đạn xoay quanh tâm với bán kính tăng dần theo thời gian
     // thay vì bay thẳng ra — quỹ đạo cong thành vòng xoáy mở rộng dần.
@@ -5238,18 +5224,6 @@ function dodgeHitTest(b, dz){
     if(b.el.classList.contains('telegraph')) return false; // chỉ đang cảnh báo địa chấn, chưa "nổ" thật
     const distFromSafe = Math.hypot(dz.x-b.safeX, dz.y-b.safeY);
     return distFromSafe > (b.safeR - dz.soulR*0.4); // ra ngoài vùng an toàn = trúng đòn địa chấn
-  }
-  if(b.bonewall){
-    // Sans — chỉ tính trúng đòn nếu đang ở trong bề dày tường VÀ không nằm trong khe hở (gapTop/gapBot).
-    const halfW = 13 + dz.soulR*0.5;
-    if(Math.abs(dz.x - b.x) > halfW) return false;
-    return !(dz.y > b.gapTop + 3 && dz.y < b.gapBot - 3);
-  }
-  if(b.firewall){
-    // Asgore — tương tự bonewall nhưng theo trục ngang (khe hở nằm trên trục X).
-    const halfH = 13 + dz.soulR*0.5;
-    if(Math.abs(dz.y - b.y) > halfH) return false;
-    return !(dz.x > b.gapLeft + 3 && dz.x < b.gapRight - 3);
   }
   return Math.hypot(dz.x-b.x, dz.y-b.y) < (b.r + dz.soulR - 1);
 }
@@ -5846,14 +5820,76 @@ document.addEventListener('keydown', (e)=>{
   }
 });
 
-document.getElementById('miniMapExpand').onclick=()=>{
+/* ============== PHÍM TẮT ==============
+   J    : tiếp tục hội thoại (sang câu thoại kế tiếp)
+   Ctrl : bỏ qua (skip) hội thoại — tua tới hết đoạn, tự dừng nếu gặp câu có lựa chọn
+   B    : mở / đóng Túi đồ
+   M    : mở / đóng Bản đồ
+   Quy tắc chung: không kích hoạt khi đang gõ vào ô nhập liệu; các phím chữ bị bỏ qua nếu đang
+   giữ Ctrl/Alt/Meta (tránh đè lên Ctrl+B, Ctrl+M... của trình duyệt); giữ phím không lặp lại
+   (tránh lỡ tay trượt qua nhiều câu thoại hoặc đóng/mở liên tục). B/M chỉ MỞ được khi game
+   đang chạy, không có overlay/minigame/trận đấu nào khác, không ở menu tạm dừng, và nút HUD
+   tương ứng đang hiện & không bị vô hiệu (vd. bản đồ bị khoá khi mất điện). */
+function isVNOpen(){ return !document.getElementById('vnOverlay').classList.contains('hidden'); }
+function isPauseMenuOpen(){ return !document.getElementById('pauseMenu').classList.contains('hidden'); }
+function isTypingTarget(t){
+  return !!t && (t.tagName==='INPUT' || t.tagName==='TEXTAREA' || t.tagName==='SELECT' || t.isContentEditable);
+}
+function hudButtonUsable(id){
+  const btn = document.getElementById(id);
+  return !!btn && !btn.disabled && btn.getClientRects().length > 0; // getClientRects: đúng cả với phần tử position:fixed
+}
+document.addEventListener('keydown', (e)=>{
+  if(isTypingTarget(e.target)) return;
+
+  // Ctrl bấm riêng (không phải một phần của tổ hợp phím) -> skip hội thoại
+  if(e.key === 'Control'){
+    if(e.repeat) return;
+    if(VN_ACTIVE && isVNOpen()) VN_ACTIVE.skip();
+    return;
+  }
+
+  if(e.ctrlKey || e.metaKey || e.altKey) return;
+  if(e.repeat) return;
+  const k = (e.key || '').toLowerCase();
+
+  if(k === 'j'){
+    if(VN_ACTIVE && isVNOpen()){ e.preventDefault(); VN_ACTIVE.next(); }
+    return;
+  }
+
+  if(k === 'b'){
+    if(!S || !S.running || isPauseMenuOpen()) return;
+    if(isBagOpen()){ e.preventDefault(); closeBagModal(); return; } // bấm B lần nữa để đóng
+    if(isBlockingOverlayOpen() || !hudButtonUsable('bagBtn')) return;
+    e.preventDefault();
+    openBagModal();
+    return;
+  }
+
+  if(k === 'm'){
+    if(!S || !S.running || isPauseMenuOpen()) return;
+    if(isMapOpen()){ e.preventDefault(); closeMapModal(); return; } // bấm M lần nữa để đóng
+    if(isBlockingOverlayOpen() || !hudButtonUsable('miniMapExpand')) return;
+    e.preventDefault();
+    openMapModal();
+    return;
+  }
+});
+
+function isMapOpen(){
+  return !document.getElementById('mapModal').classList.contains('hidden');
+}
+function openMapModal(){
   document.getElementById('mapModal').classList.remove('hidden');
   buildMap();
   refreshMap();
-};
-document.getElementById('closeMapBtn').onclick=()=>{
+}
+function closeMapModal(){
   document.getElementById('mapModal').classList.add('hidden');
-};
+}
+document.getElementById('miniMapExpand').onclick = openMapModal;
+document.getElementById('closeMapBtn').onclick = closeMapModal;
 
 /* ============== sound toggle (HUD) ============== */
 (function initSoundToggle(){
@@ -5945,6 +5981,20 @@ document.getElementById('closeMapBtn').onclick=()=>{
   const btn = document.getElementById('bagBtn');
   if(!btn) return;
   btn.onclick = openBagModal;
+})();
+
+/* ============== GỢI Ý PHÍM TẮT (tooltip) — không ghi đè title đã có sẵn trong HTML ============== */
+(function initShortcutHints(){
+  const hints = {
+    bagBtn: 'Túi đồ [B]',
+    miniMapExpand: 'Phóng to bản đồ [M]',
+    closeMapBtn: 'Đóng bản đồ [M]',
+    vnNextBtn: 'Tiếp tục [J] · Bỏ qua hội thoại [Ctrl]'
+  };
+  Object.keys(hints).forEach(id=>{
+    const el = document.getElementById(id);
+    if(el && !el.title) el.title = hints[id];
+  });
 })();
 
 /* ============== NÚT NHỎ "⋮" — CHỈ SỐ ẨN (độ tin tưởng NPC...) ============== */
