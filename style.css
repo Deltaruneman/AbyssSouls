@@ -209,8 +209,8 @@ body.tension-flicker-active #neonFlicker{opacity:0.72;}
 .bagItemQty{font-family:var(--font-mono);font-size:13px;color:var(--scan);white-space:nowrap;flex-shrink:0;}
 #bagList{max-height:52vh;overflow-y:auto;padding-right:4px;}
 
-#mapModalWrap{width:min(640px,92vw);}
-#mapSvgWrap{position:relative;width:100%;height:420px;background:radial-gradient(circle at 50% 30%, #14171c 0%, #0a0b0d 70%);border:1px solid var(--line);border-radius:4px;overflow:hidden;}
+#mapModalWrap{width:min(560px,92vw,calc((100vh - 130px) * 0.995));}
+#mapSvgWrap{position:relative;width:100%;aspect-ratio:446/448;height:auto;background:radial-gradient(circle at 50% 30%, #14171c 0%, #0a0b0d 70%);border:1px solid var(--line);border-radius:4px;overflow:hidden;}
 .room-node{position:absolute;transform:translate(-50%,-50%);width:96px;text-align:center;cursor:pointer;user-select:none;}
 /* ---- Radar cũ: nền xanh phosphor + lưới quét, viền báo động đỏ nhấp nháy khi có TIU ---- */
 .room-box{
@@ -250,7 +250,7 @@ body.tension-flicker-active #neonFlicker{opacity:0.72;}
 #miniMapHead span{font-size:9px;letter-spacing:2px;color:var(--text-dim);}
 #miniMapExpand{background:transparent;border:1px solid var(--line);color:var(--text-dim);font-size:11px;padding:2px 7px;cursor:pointer;border-radius:2px;}
 #miniMapExpand:hover{border-color:var(--scan);color:var(--scan);}
-#miniMapSvgWrap{position:relative;width:100%;height:150px;background:radial-gradient(circle at 50% 30%, #14171c 0%, #0a0b0d 70%);border:1px solid var(--line);border-radius:4px;overflow:hidden;}
+#miniMapSvgWrap{position:relative;width:100%;aspect-ratio:446/448;height:auto;background:radial-gradient(circle at 50% 30%, #14171c 0%, #0a0b0d 70%);border:1px solid var(--line);border-radius:4px;overflow:hidden;}
 #miniMapSvgWrap .room-node{width:52px;}
 #miniMapSvgWrap .room-box{padding:4px 2px;font-size:8px;letter-spacing:0.5px;}
 #miniMapSvgWrap .event-badge{width:12px;height:12px;font-size:8px;top:-6px;right:-6px;}
@@ -987,3 +987,16 @@ body.hp-critical #main,body.hp-critical #hud{animation:criticalWaver 1.15s ease-
 }
 body.hp-critical #filmGrain{opacity:0.11;animation-duration:0.32s;}
 body.hp-critical #neonFlicker{opacity:0.55;}
+
+/* ---------- Bản đồ dùng ảnh nền thật (images.png) ---------- */
+.map-img{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;user-select:none;pointer-events:none;filter:brightness(.78) saturate(.9);}
+.map-edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;}
+.edge-line{stroke:#fff;stroke-width:2.5;stroke-dasharray:6 5;stroke-linecap:round;opacity:.9;vector-effect:non-scaling-stroke;filter:drop-shadow(0 0 2px #000);}
+#miniMapSvgWrap .edge-line{stroke-width:1.5;stroke-dasharray:4 3;}
+.room-box{background:
+    repeating-linear-gradient(0deg, rgba(0,0,0,0.3) 0px, rgba(0,0,0,0.3) 1px, transparent 1px, transparent 3px),
+    rgba(4,18,12,0.85) !important;}
+.room-node.tiu-alert .room-box{background:
+    repeating-linear-gradient(0deg, rgba(0,0,0,0.4) 0px, rgba(0,0,0,0.4) 1px, transparent 1px, transparent 3px),
+    rgba(58,13,18,0.92) !important;}
+.room-node{z-index:2;}

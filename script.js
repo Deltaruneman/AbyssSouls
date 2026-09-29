@@ -2,16 +2,17 @@
 "use strict";
 
 /* ============== CONFIG ============== */
+const MAP_IMG = {src:"map.png", w:446, h:448};
 const ROOM_DEF = {
-  A:      {name:"TÒA A", sub:"Hội trường", x:30, y:76, connects:["LIB","E","B"], event:"stage"},
-  B:      {name:"TÒA B", sub:"7 tầng", x:26, y:44, connects:["A","C","E","CANTEEN","PARK"], event:"floors"},
-  C:      {name:"TÒA C", sub:"Tủ điện", x:58, y:44, connects:["B","D","E","CANTEEN"], event:"wire"},
-  D:      {name:"TÒA D", sub:"Ban chỉ huy", x:80, y:14, connects:["C","FIELD"], event:"quiz"},
-  E:      {name:"TÒA E", sub:"11 tầng", x:56, y:70, connects:["A","B","C","FIELD"], event:"wibu"},
-  LIB:    {name:"THƯ VIỆN", sub:"Kho sách", x:9, y:88, connects:["A","PARK"], event:"books"},
-  CANTEEN:{name:"CĂN TIN", sub:"Khu an toàn", x:44, y:20, connects:["B","C"], safe:true},
-  PARK:   {name:"CHỖ GỬI XE", sub:"Bãi giữ xe", x:7, y:55, connects:["LIB","B"], event:"bikes", noEvent:true},
-  FIELD:  {name:"SÂN BÓNG", sub:"Sân thể thao ngoài trời", x:86, y:60, connects:["D","E"], event:"ball", noEvent:true}
+  A:      {name:"TÒA A", sub:"Hội trường", x:48, y:65, connects:["LIB","E","B"], event:"stage"},
+  B:      {name:"TÒA B", sub:"7 tầng", x:33, y:38, connects:["A","C","E","CANTEEN","PARK"], event:"floors"},
+  C:      {name:"TÒA C", sub:"Tủ điện", x:57, y:38, connects:["B","D","E","CANTEEN"], event:"wire"},
+  D:      {name:"TÒA D", sub:"Ban chỉ huy", x:65, y:10, connects:["C","FIELD"], event:"quiz"},
+  E:      {name:"TÒA E", sub:"11 tầng", x:68, y:59, connects:["A","B","C","FIELD"], event:"wibu"},
+  LIB:    {name:"THƯ VIỆN", sub:"Kho sách", x:46, y:84, connects:["A","PARK"], event:"books"},
+  CANTEEN:{name:"CĂN TIN", sub:"Khu an toàn", x:43, y:16, connects:["B","C"], safe:true},
+  PARK:   {name:"CHỖ GỬI XE", sub:"Bãi giữ xe", x:27, y:93, connects:["LIB","B"], event:"bikes", noEvent:true},
+  FIELD:  {name:"SÂN BÓNG", sub:"Sân thể thao ngoài trời", x:67, y:22, connects:["D","E"], event:"ball", noEvent:true}
 };
 const ROOM_KEYS = Object.keys(ROOM_DEF);
 
@@ -688,9 +689,19 @@ function buildMapInto(wrapId, prefix){
   const wrap = document.getElementById(wrapId);
   if(!wrap) return;
   wrap.innerHTML = '';
-  const rect = wrap.getBoundingClientRect();
-  const w = rect.width || 600, h = rect.height || 420;
-  // edges first
+  // Ảnh nền bản đồ (là phần tử con nên vẫn bị ẩn khi mất điện)
+  const img = document.createElement('img');
+  img.className = 'map-img';
+  img.src = MAP_IMG.src;
+  img.alt = '';
+  img.draggable = false;
+  wrap.appendChild(img);
+  // Đường nối: vẽ bằng SVG theo toạ độ %, không phụ thuộc kích thước thực của khung
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS,'svg');
+  svg.setAttribute('class','map-edges');
+  svg.setAttribute('viewBox','0 0 100 100');
+  svg.setAttribute('preserveAspectRatio','none');
   const drawn = new Set();
   ROOM_KEYS.forEach(k=>{
     ROOM_DEF[k].connects.forEach(c=>{
@@ -698,19 +709,14 @@ function buildMapInto(wrapId, prefix){
       if(drawn.has(key)) return;
       drawn.add(key);
       const a = ROOM_DEF[k], b = ROOM_DEF[c];
-      const ax=a.x/100*w, ay=a.y/100*h, bx=b.x/100*w, by=b.y/100*h;
-      const dx = bx-ax, dy = by-ay;
-      const lenPx = Math.sqrt(dx*dx+dy*dy);
-      const edge = document.createElement('div');
-      edge.className='edge';
-      edge.style.left = ax+'px';
-      edge.style.top = ay+'px';
-      edge.style.width = lenPx+'px';
-      const angle = Math.atan2(dy,dx)*180/Math.PI;
-      edge.style.transform = `rotate(${angle}deg)`;
-      wrap.appendChild(edge);
+      const line = document.createElementNS(NS,'line');
+      line.setAttribute('x1',a.x); line.setAttribute('y1',a.y);
+      line.setAttribute('x2',b.x); line.setAttribute('y2',b.y);
+      line.setAttribute('class','edge-line');
+      svg.appendChild(line);
     });
   });
+  wrap.appendChild(svg);
   ROOM_KEYS.forEach(k=>{
     const def = ROOM_DEF[k];
     const node = document.createElement('div');
