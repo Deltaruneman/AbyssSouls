@@ -9,7 +9,7 @@ const ROOM_DEF = {
   C:      {name:"TÒA C", sub:"Tủ điện", x:57, y:38, connects:["B","D","E","CANTEEN"], event:"wire"},
   D:      {name:"TÒA D", sub:"Ban chỉ huy", x:65, y:10, connects:["C","FIELD"], event:"quiz"},
   E:      {name:"TÒA E", sub:"11 tầng", x:68, y:59, connects:["A","B","C","FIELD"], event:"wibu"},
-  LIB:    {name:"THƯ VIỆN", sub:"Kho sách", x:46, y:84, connects:["A","PARK"], event:"books"},
+  LIB:    {name:"THƯ VIỆN", sub:"Kho sách", x:37, y:76, connects:["A","PARK"], event:"books"},
   CANTEEN:{name:"CĂN TIN", sub:"Khu an toàn", x:43, y:16, connects:["B","C"], safe:true},
   PARK:   {name:"CHỖ GỬI XE", sub:"Bãi giữ xe", x:27, y:93, connects:["LIB","B"], event:"bikes", noEvent:true},
   FIELD:  {name:"SÂN BÓNG", sub:"Sân thể thao ngoài trời", x:67, y:22, connects:["D","E"], event:"ball", noEvent:true}
