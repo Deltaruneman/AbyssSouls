@@ -283,6 +283,10 @@ let campaignCarry = null;
 let campaignSpellMastery = 0;
 let trongTrainedForNight = { 1:false, 2:false };
 const SAVE_KEY = 'uit_savegame_v1';
+/* Cờ "đã hoàn thành Chapter 1" — lưu riêng, không bị xoá khi deleteSaveGame(). Chapter 2 bị khoá cho tới khi có cờ này. */
+const CH1_CLEARED_KEY = 'uit_chapter1_cleared';
+function isChapter1Cleared(){ try{ return localStorage.getItem(CH1_CLEARED_KEY)==='1'; }catch(e){ return false; } }
+function markChapter1Cleared(){ try{ localStorage.setItem(CH1_CLEARED_KEY,'1'); }catch(e){} }
 
 function pickDistinctRooms(pool, n){
   const arr = shuffle(pool.slice());
@@ -1619,6 +1623,7 @@ function triggerEpilogueLibraryDiscovery(){
 /* Màn hình kết thúc Chapter 1 — xuất hiện đột ngột (kèm chớp trắng) ngay sau khi người
    chơi tìm thấy dấu vết của TIU trong Thư viện, bất kể đến từ ending thường hay secret. */
 function showChapterEndScreen(){
+  markChapter1Cleared(); // đã tới màn kết Chapter 1 (ending thường hoặc secret) -> mở khoá Chapter 2
   if(SETTINGS.flash){
     document.getElementById('flash').classList.remove('flash-on'); void document.getElementById('flash').offsetWidth;
     document.getElementById('flash').classList.add('flash-on');
@@ -4266,8 +4271,10 @@ function resolveActTaunt(key, atkCount){
     return;
   }
 
-  const line = pick(TRONG_TAUNT_LINES);
-  const reply = pick(TRONG_TAUNT_REPLY_LINES);
+  // Câu nói & câu đáp trả được viết theo từng cặp (cùng vị trí trong mảng) -> phải lấy CÙNG index.
+  const tIdx = Math.floor(Math.random()*Math.min(TRONG_TAUNT_LINES.length, TRONG_TAUNT_REPLY_LINES.length));
+  const line = TRONG_TAUNT_LINES[tIdx];
+  const reply = TRONG_TAUNT_REPLY_LINES[tIdx];
   playVN([
     {spk:'BẠN', text:'"'+line+'"'},
     {spk:'TRỌNG', text:reply},
@@ -4309,8 +4316,9 @@ function resolveActReassure(key, atkCount){
     return;
   }
 
-  const line = pick(TRONG_REASSURE_LINES);
-  const reply = pick(TRONG_REASSURE_REPLY_LINES);
+  const rIdx = Math.floor(Math.random()*Math.min(TRONG_REASSURE_LINES.length, TRONG_REASSURE_REPLY_LINES.length));
+  const line = TRONG_REASSURE_LINES[rIdx];
+  const reply = TRONG_REASSURE_REPLY_LINES[rIdx];
   playVN([
     {spk:'BẠN', text:'"'+line+'"'},
     {spk:'TRỌNG', text:reply},
@@ -5525,7 +5533,7 @@ function refreshContinueBtn(){
    thu gom & chế tạo vật phẩm) đã được chuyển hẳn sang đây, xem isHardMode(). ---- */
 const CHAPTERS = [
   { id:1, name:'CHAPTER 1', title:'ĐỪNG NGỦ QUÊN Ở UIT', desc:'3 đêm lén ở lại khuôn viên trường để trốn The TIU.', locked:false },
-  { id:2, name:'CHAPTER 2', title:'???', desc:'Bản dựng thử — khó hơn: có cúp điện & chế tạo vật phẩm. Chi tiết sẽ được bổ sung sau.', locked:false }
+  { id:2, name:'CHAPTER 2', title:'???', desc:'Bản dựng thử — khó hơn: có cúp điện & chế tạo vật phẩm. Chi tiết sẽ được bổ sung sau.', locked:false, requiresCh1:true }
 ];
 
 /* ---- Panel tóm tắt / hướng dẫn hiện ra khi bắt đầu một chapter ---- */
@@ -5569,11 +5577,14 @@ function buildChapterSelect(){
   const wrap = document.getElementById('chapterCardWrap');
   wrap.innerHTML='';
   CHAPTERS.forEach(ch=>{
+    const needCh1 = !!ch.requiresCh1 && !isChapter1Cleared();
     const card=document.createElement('div');
-    card.className='nightCard chapterCard' + (ch.locked ? ' locked' : '');
+    card.className='nightCard chapterCard' + ((ch.locked || needCh1) ? ' locked' : '');
     card.innerHTML = `<b>${ch.name} — ${ch.title}</b><span>${ch.desc}</span>`;
     if(ch.locked){
       card.innerHTML += `<span class="chapterLockedTag">🔒 SẮP RA MẮT</span>`;
+    } else if(needCh1){
+      card.innerHTML += `<span class="chapterLockedTag">🔒 HOÀN THÀNH CHAPTER 1 ĐỂ MỞ KHÓA</span>`;
     } else {
       card.onclick=()=>{
         showChapterIntro(ch.id, ()=>{
