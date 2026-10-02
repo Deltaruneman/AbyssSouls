@@ -5,14 +5,14 @@
 const MAP_IMG = {src:"map.png", w:446, h:448};
 const ROOM_DEF = {
   A:      {name:"TÒA A", sub:"Hội trường", x:48, y:65, connects:["LIB","E","B"], event:"stage"},
-  B:      {name:"TÒA B", sub:"7 tầng", x:33, y:38, connects:["A","C","E","CANTEEN","PARK"], event:"floors"},
-  C:      {name:"TÒA C", sub:"Tủ điện", x:57, y:38, connects:["B","D","E","CANTEEN"], event:"wire"},
-  D:      {name:"TÒA D", sub:"Ban chỉ huy", x:65, y:10, connects:["C","FIELD"], event:"quiz"},
-  E:      {name:"TÒA E", sub:"11 tầng", x:68, y:59, connects:["A","B","C","FIELD"], event:"wibu"},
+  B:      {name:"TÒA B", sub:"Khu học tập", x:33, y:38, connects:["A","C","E","CANTEEN","PARK"], event:"floors"},
+  C:      {name:"TÒA C", sub:"Khu học tập nhưng high tech", x:57, y:38, connects:["B","D","E","CANTEEN","FIELD"], event:"wire"},
+  D:      {name:"TÒA D", sub:"", x:65, y:10, connects:["C","FIELD"], event:"quiz"},
+  E:      {name:"TÒA E", sub:"Khu học tập nhưng 2 thang máy", x:68, y:59, connects:["A","B","C","FIELD"], event:"wibu"},
   LIB:    {name:"THƯ VIỆN", sub:"Kho sách", x:37, y:76, connects:["A","PARK"], event:"books"},
   CANTEEN:{name:"CĂN TIN", sub:"Khu an toàn", x:43, y:16, connects:["B","C"], safe:true},
   PARK:   {name:"CHỖ GỬI XE", sub:"Bãi giữ xe", x:27, y:93, connects:["LIB","B"], event:"bikes", noEvent:true},
-  FIELD:  {name:"SÂN BÓNG", sub:"Sân thể thao ngoài trời", x:67, y:22, connects:["D","E"], event:"ball", noEvent:true}
+  FIELD:  {name:"SÂN BÓNG", sub:"Sân thể thao ngoài trời", x:67, y:22, connects:["D","E","C"], event:"ball", noEvent:true}
 };
 const ROOM_KEYS = Object.keys(ROOM_DEF);
 
