@@ -5502,7 +5502,7 @@ function beginNight(n, standalone, chapter){
   // (buổi học phép, xem startTrongTrainingSequence) và Đêm 3 (VN_CH2_NIGHT3_INTRO — TRỌNG "The
   // Curse One" đuổi bắt nhân vật chính, xem isTrongChaseNight()).
   if(chapter===1){
-    playVN(VN_INTRO[n], ()=>{});
+    playVN(VN_INTRO[n], ()=>{ maybeAutoTutorial(n, chapter); });
   } else if(chapter===2 && (n===1 || n===2) && !trongTrainedForNight[n]){
     // Buổi học phép 16:30-20:45 với Trọng — CHỈ diễn ra lần đầu tiên đêm đó được bắt đầu trong
     // phiên chơi hiện tại (không replay khi retry sau khi chết giữa đêm). Xem PHẦN 7 design doc.
@@ -5772,7 +5772,7 @@ document.getElementById('chapter2ComingSoonMenuBtn').onclick = showTitle;
 
 /* ============== PAUSE MENU (ESC) ============== */
 function isBlockingOverlayOpen(){
-  return ['mgModal','mapModal','vnOverlay','jumpscareOverlay','gameOverScreen','winScreen','settingsScreen','battleOverlay','chapterEndScreen','chapter2ComingSoonScreen']
+  return ['tutorialLayer','mgModal','mapModal','vnOverlay','jumpscareOverlay','gameOverScreen','winScreen','settingsScreen','battleOverlay','chapterEndScreen','chapter2ComingSoonScreen']
     .some(id=>!document.getElementById(id).classList.contains('hidden'));
 }
 function openPauseMenu(){
@@ -6007,6 +6007,144 @@ document.getElementById('closeMapBtn').onclick = closeMapModal;
     }
   });
 })();
+
+/* ============== HƯỚNG DẪN (TUTORIAL) ==============
+   Tour ngắn giới thiệu CƠ CHẾ CHÍNH của Chapter 1 (đồng hồ, HP, TIU, mức độ hoạt động, thể lực,
+   di chuyển, sự cố, Căn tin, túi đồ, phím tắt). CỐ Ý không nhắc tới các chi tiết ẩn (La Peace,
+   manh mối, NPC, kết thúc bí mật...) để người chơi tự khám phá.
+   - Tự chạy 1 lần duy nhất sau hội thoại mở đầu Đêm 1 (cờ lưu ở localStorage).
+   - Xem lại bất cứ lúc nào: nút "HƯỚNG DẪN" ở màn hình chính hoặc menu tạm dừng (ESC).
+   - Khi mở từ màn hình chính (chưa có ván nào) sẽ chỉ hiện thẻ chữ ở giữa màn hình, không có vùng sáng. */
+const TUTORIAL_KEY = 'uit_tutorial_done_v1';
+const TUTORIAL_STEPS = [
+  { title:'Chào mừng đến ca trực đêm',
+    html:`Bạn bị kẹt lại UIT từ <b>00:00 đến 07:30</b>. Mục tiêu duy nhất: <b>sống sót đến sáng</b> và tránh <span class="tutWarn">THE TIU</span>.<br><br>Hướng dẫn này chỉ nói những điều cơ bản — còn lại hãy tự khám phá. Game <b>tạm dừng</b> trong lúc bạn xem.` },
+  { title:'Đồng hồ', sel:'#clockVal', block:true,
+    html:`Thời gian trôi liên tục, kể cả khi bạn đứng yên. Mỗi lần di chuyển còn tốn thêm <b>10 phút</b>. Sống đến <b>07:30</b> là qua đêm.` },
+  { title:'Máu (HP)', sel:'#hpWrap', block:true,
+    html:`Bạn có <b>3 HP</b>. Nếu ở <b>cùng tòa với The TIU</b>, bạn bị jumpscare và <span class="tutWarn">mất 1 HP</span>. Hết HP là thua (có thể thử lại đêm đó).` },
+  { title:'Vị trí The TIU', sel:'#tiuLastSeen', block:true,
+    html:`Ô này cho biết <b>nơi The TIU được thấy lần cuối</b>. Nó luôn lang thang — dựa vào đó đoán hướng nó đi và tránh xa, nhất là khi nó ở tòa liền kề.` },
+  { title:'Mức độ hoạt động', sel:'#meterOuter',
+    html:`Càng cao, The TIU càng <b>nhanh</b> và càng biết đường tới chỗ bạn.<ul>
+      <li>Tăng khi bạn bỏ lỡ / làm hỏng sự cố, hoặc đứng yên quá lâu.</li>
+      <li>Giảm khi bạn xử lý xong sự cố.</li>
+      <li>Chạm <span class="tutWarn">100%</span> → <b>Huyết Nguyệt</b>: không còn nơi nào an toàn.</li></ul>` },
+  { title:'Thể lực', sel:'#staminaOuter',
+    html:`Mỗi lần di chuyển tốn <b>15% thể lực</b>; đứng yên thì hồi dần. Cạn thể lực bạn sẽ <span class="tutWarn">không đi được</span> và bị đói mất máu. Đừng chạy loạn, cũng đừng trốn mãi một chỗ.` },
+  { title:'Di chuyển', sel:'#actionButtons .actionGroup',
+    html:`Bấm tên một <b>tòa liền kề</b> để đi tới đó. Chỉ đi được giữa các khu có đường nối với nhau.` },
+  { title:'Sơ đồ', sel:'#miniMapWrap',
+    html:`Sơ đồ cho thấy vị trí của bạn, các khu vực và sự cố đang có. Bấm <b>Phóng to</b> hoặc phím <b>M</b> để xem rõ hơn và bấm thẳng vào khu liền kề để đi.` },
+  { title:'Xử lý sự cố', sel:'#roomBanner',
+    html:`Sự cố hay xuất hiện <b>gần The TIU</b>. Khi phòng bạn đứng có sự cố, nút đỏ <b>XỬ LÝ SỰ CỐ</b> sẽ hiện ở khung này.<ul>
+      <li>Làm xong mini-game kịp giờ → <b>+điểm</b>, giảm mức hoạt động.</li>
+      <li>Bỏ lỡ hoặc làm hỏng → The TIU bất ổn hơn.</li></ul>Hãy cân nhắc: sự cố đáng làm, nhưng cũng là chỗ nguy hiểm.` },
+  { title:'Điểm & Căn tin', sel:'#pointsHud', block:true,
+    html:`<b>Điểm</b> kiếm từ việc xử lý sự cố. Dùng điểm mua đồ ở <b>Căn tin</b>: Bim Bim (hồi máu), Nước tăng lực, suất ăn khuya (hồi thể lực).<br><br>Căn tin chỉ <b>an toàn khi mở cửa</b> (01:00–02:00 và 04:00–05:00). Nán lại quá lâu bạn sẽ đói.` },
+  { title:'Túi đồ', sel:'#bagBtn',
+    html:`Xem và dùng vật phẩm của bạn tại đây (phím <b>B</b>). Mỗi món có mô tả công dụng riêng.` },
+  { title:'Phím tắt & lời cuối',
+    html:`<ul><li><b>ESC</b>: tạm dừng</li><li><b>M</b>: sơ đồ &nbsp;·&nbsp; <b>B</b>: túi đồ</li><li><b>J</b>: tiếp tục hội thoại &nbsp;·&nbsp; <b>Ctrl</b>: bỏ qua hội thoại</li></ul><br>Khuôn viên này còn nhiều bí mật chưa ai kể cho bạn. Chúc may mắn!` }
+];
+let TUT = null;
+
+function isTutorialDone(){ try{ return localStorage.getItem(TUTORIAL_KEY)==='1'; }catch(e){ return false; } }
+function markTutorialDone(){ try{ localStorage.setItem(TUTORIAL_KEY,'1'); }catch(e){} }
+
+function maybeAutoTutorial(n, chapter){
+  if(chapter!==1 || n!==1 || isTutorialDone()) return;
+  if(!S || !S.running) return;
+  startTutorial({});
+}
+function startTutorial(opts){
+  opts = opts || {};
+  TUT = { i:0, fromPause:!!opts.fromPause, live: !!(S && S.running) };
+  if(TUT.live) S.paused = true; // đóng băng thế giới trong lúc xem hướng dẫn
+  document.getElementById('tutorialLayer').classList.remove('hidden');
+  renderTutorialStep();
+}
+function endTutorial(){
+  if(!TUT) return;
+  const t = TUT; TUT = null;
+  markTutorialDone();
+  document.getElementById('tutorialLayer').classList.add('hidden');
+  if(t.fromPause){
+    document.getElementById('pauseMenu').classList.remove('hidden'); // quay lại menu tạm dừng (S.paused vẫn true)
+  } else if(t.live && S && S.running){
+    S.paused = false;
+    S.lastTick = performance.now();
+  }
+}
+function tutorialTargetEl(st){
+  if(!TUT || !TUT.live || !st.sel) return null;
+  let el = document.querySelector(st.sel);
+  if(el && st.block) el = el.closest('.hud-block') || el;
+  if(!el || !el.getClientRects().length) return null;
+  return el;
+}
+function renderTutorialStep(){
+  if(!TUT) return;
+  const st = TUTORIAL_STEPS[TUT.i];
+  const last = TUT.i===TUTORIAL_STEPS.length-1;
+  document.getElementById('tutStep').textContent = 'HƯỚNG DẪN '+(TUT.i+1)+'/'+TUTORIAL_STEPS.length;
+  document.getElementById('tutTitle').textContent = st.title;
+  document.getElementById('tutBody').innerHTML = st.html;
+  document.getElementById('tutPrevBtn').disabled = TUT.i===0;
+  document.getElementById('tutNextBtn').textContent = last ? (TUT.live && !TUT.fromPause ? 'BẮT ĐẦU CHƠI ▶' : 'XONG ▶') : 'TIẾP ▶';
+  document.getElementById('tutSkipBtn').style.display = last ? 'none' : '';
+  placeTutorial();
+}
+function placeTutorial(){
+  if(!TUT) return;
+  const st = TUTORIAL_STEPS[TUT.i];
+  const spot = document.getElementById('tutSpot');
+  const card = document.getElementById('tutCard');
+  const block = document.getElementById('tutBlock');
+  const el = tutorialTargetEl(st);
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const cw = card.offsetWidth, ch = card.offsetHeight;
+  block.classList.toggle('dim', !el);
+  spot.classList.toggle('hidden', !el);
+  let left, top;
+  if(el){
+    const r = el.getBoundingClientRect(), pad = 6;
+    spot.style.left = (r.left-pad)+'px'; spot.style.top = (r.top-pad)+'px';
+    spot.style.width = (r.width+pad*2)+'px'; spot.style.height = (r.height+pad*2)+'px';
+    left = r.left + r.width/2 - cw/2;
+    top = r.bottom + pad + 14;                           // ưu tiên đặt thẻ bên dưới vùng sáng
+    if(top + ch > vh - 10) top = r.top - pad - 14 - ch;  // hết chỗ -> đặt bên trên
+    if(top < 10) top = Math.max(10, (vh - ch)/2);        // vùng sáng quá lớn -> đặt giữa màn hình
+  } else {
+    left = (vw - cw)/2; top = (vh - ch)/2;
+  }
+  card.style.left = Math.max(10, Math.min(vw - cw - 10, left))+'px';
+  card.style.top = Math.max(10, Math.min(vh - ch - 10, top))+'px';
+}
+function tutorialNext(){
+  if(!TUT) return;
+  if(TUT.i >= TUTORIAL_STEPS.length-1){ endTutorial(); return; }
+  TUT.i++; renderTutorialStep();
+}
+function tutorialPrev(){
+  if(!TUT || TUT.i<=0) return;
+  TUT.i--; renderTutorialStep();
+}
+document.getElementById('tutNextBtn').onclick = tutorialNext;
+document.getElementById('tutPrevBtn').onclick = tutorialPrev;
+document.getElementById('tutSkipBtn').onclick = endTutorial;
+document.getElementById('tutorialBtn').onclick = ()=> startTutorial({});
+document.getElementById('pauseTutorialBtn').onclick = ()=>{
+  document.getElementById('pauseMenu').classList.add('hidden');
+  startTutorial({fromPause:true});
+};
+window.addEventListener('resize', placeTutorial);
+document.addEventListener('keydown', (e)=>{
+  if(!TUT || e.ctrlKey || e.metaKey || e.altKey) return;
+  if(e.key==='Enter' || e.key==='ArrowRight'){ e.preventDefault(); tutorialNext(); }
+  else if(e.key==='ArrowLeft'){ e.preventDefault(); tutorialPrev(); }
+  else if(e.key==='Escape'){ e.preventDefault(); endTutorial(); }
+});
 
 /* ============== LƯU GAME KHI RỜI TRANG ============== */
 window.addEventListener('beforeunload', ()=>{ persistSave(); });

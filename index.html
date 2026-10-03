@@ -104,6 +104,7 @@
       <button class="bigbtn" id="startBtn">BẮT ĐẦU</button>
       <button class="bigbtn secondary hidden" id="continueBtn">TIẾP TỤC (ĐÃ LƯU)</button>
       <button class="bigbtn secondary" id="chapterSelectBtn">CHỌN CHAPTER</button>
+      <button class="bigbtn neutral" id="tutorialBtn">HƯỚNG DẪN</button>
       <button class="bigbtn neutral" id="settingsBtn">CÀI ĐẶT</button>
     </div>
   </div>
@@ -219,6 +220,7 @@
   <div id="pauseMenuBox">
     <div id="pauseMenuTitle">TẠM DỪNG</div>
     <button class="bigbtn secondary" id="pauseResumeBtn">TIẾP TỤC CA ĐÊM</button>
+    <button class="bigbtn neutral" id="pauseTutorialBtn">HƯỚNG DẪN</button>
     <button class="bigbtn neutral" id="pauseSettingsBtn">CÀI ĐẶT</button>
     <button class="bigbtn" id="pauseMainMenuBtn">VỀ MÀN HÌNH CHÍNH</button>
   </div>
@@ -266,6 +268,22 @@
   <div id="battleVictoryText">✦ THANH TẨY THÀNH CÔNG — 15 LƯỢT ĐÃ QUA ✦</div>
 </div>
 <audio id="battleMusicAudio" preload="auto" loop></audio>
+
+<div id="tutorialLayer" class="hidden">
+  <div id="tutBlock"></div>
+  <div id="tutSpot" class="hidden"></div>
+  <div id="tutCard">
+    <div id="tutStep" class="hud-label"></div>
+    <div id="tutTitle"></div>
+    <div id="tutBody"></div>
+    <div id="tutBtns">
+      <button class="btn" id="tutSkipBtn">BỎ QUA</button>
+      <span style="flex:1"></span>
+      <button class="btn" id="tutPrevBtn">◀ TRƯỚC</button>
+      <button class="btn primary" id="tutNextBtn">TIẾP ▶</button>
+    </div>
+  </div>
+</div>
 
 <script src="dialogue.js"></script>
 <script src="script.js"></script>
