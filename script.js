@@ -874,15 +874,17 @@ function refreshActionPane(){
 
   const banner = document.getElementById('roomBanner');
   banner.classList.toggle('safebanner', safeNow);
+  const td = tdActive(); // chế độ top-down: tương tác trong phòng chuyển sang phím E (xem phần TOP-DOWN)
+  banner.classList.toggle('td-on', td);
   const imgUrl = ROOM_IMAGES[S.playerRoom];
-  banner.style.backgroundImage = imgUrl
+  banner.style.backgroundImage = td ? 'none' : (imgUrl
     ? `url('${imgUrl}')`
-    : ROOM_FALLBACK_GRADIENT[S.playerRoom];
+    : ROOM_FALLBACK_GRADIENT[S.playerRoom]);
 
   const resolveBtn = document.getElementById('resolveBtn');
   const curEvent = S.activeEvents[S.playerRoom];
   const hasEvent = !!curEvent;
-  resolveBtn.classList.toggle('show', hasEvent);
+  resolveBtn.classList.toggle('show', hasEvent && !td);
   if(hasEvent){
     resolveBtn.textContent = curEvent.mandatory ? '⚡ KHỞI ĐỘNG LẠI CẦU DAO TỔNG' : '⚠ XỬ LÝ: '+eventLabel(def.event);
     resolveBtn.onclick = ()=>startMinigame(S.playerRoom);
@@ -890,7 +892,7 @@ function refreshActionPane(){
 
   const npcMeta = getRoomNPCMeta(S.playerRoom);
   const npcSprite = document.getElementById('npcSprite');
-  npcSprite.classList.toggle('hidden', !npcMeta);
+  npcSprite.classList.toggle('hidden', !npcMeta || td);
   if(npcMeta){
     const av = document.getElementById('npcAvatar');
     const imgUrl = NPC_IMAGES[npcMeta.key];
@@ -939,7 +941,7 @@ function refreshActionPane(){
   /* ---- Nhóm 2: VẬT PHẨM ---- */
   const itemGroup = makeGroup('VẬT PHẨM');
 
-  if(def.safe){
+  if(def.safe && !td){
     const b=document.createElement('button');
     b.className='btn primary';
     b.textContent = safeNow ? 'Mở quầy Căn tin' : 'Căn tin đang đóng cửa';
@@ -1000,7 +1002,7 @@ function refreshActionPane(){
     itemGroup.row.appendChild(useNoise);
   }
 
-  if(S.laPeaceRoom===S.playerRoom && !S.laPeaceFound){
+  if(S.laPeaceRoom===S.playerRoom && !S.laPeaceFound && !td){
     const usePeace=document.createElement('button');
     usePeace.className='btn peace';
     usePeace.textContent='✦ Nhặt La Peace (mảnh năng lượng ôn hòa)';
@@ -1008,7 +1010,7 @@ function refreshActionPane(){
     itemGroup.row.appendChild(usePeace);
   }
 
-  if(canDepositLaPeace()){
+  if(canDepositLaPeace() && !td){
     const useDeposit=document.createElement('button');
     useDeposit.className='btn peace';
     useDeposit.textContent='⚡ Nạp La Peace vào bộ khuếch đại ('+S.laPeaceCarried+' đang mang theo)';
@@ -1016,7 +1018,7 @@ function refreshActionPane(){
     itemGroup.row.appendChild(useDeposit);
   }
 
-  if(S.scavenge[S.playerRoom]){
+  if(S.scavenge[S.playerRoom] && !td){
     const type = S.scavenge[S.playerRoom];
     const usePickup=document.createElement('button');
     usePickup.className='btn peace';
@@ -1025,7 +1027,7 @@ function refreshActionPane(){
     itemGroup.row.appendChild(usePickup);
   }
 
-  if(S.loreClues[S.playerRoom]){
+  if(S.loreClues[S.playerRoom] && !td){
     const useLore=document.createElement('button');
     useLore.className='btn peace';
     useLore.textContent='📖 Thu thập manh mối';
@@ -1044,7 +1046,7 @@ function refreshActionPane(){
   }
 
   /* ---- Nhóm 3: TƯƠNG TÁC ---- */
-  if(npcMeta && npcMeta.talkable){
+  if(npcMeta && npcMeta.talkable && !td){
     const interactGroup = makeGroup('TƯƠNG TÁC');
     const talkBtn=document.createElement('button');
     talkBtn.className='btn npc';
@@ -1707,7 +1709,9 @@ function movePlayer(dest){
   }
   S.stamina = Math.max(0, S.stamina - staminaCost);
   S.gameMinutes += cost;
+  const tdFrom = S.playerRoom;
   S.playerRoom = dest;
+  tdEnterRoom(dest, tdFrom);
   S.lastMoveAt = S.gameMinutes; // reset đồng hồ "đứng yên quá lâu" dùng cho mục 1 (tension liên tục)
   addLog('Bạn di chuyển đến '+ROOM_DEF[dest].name+'.', '');
   if(S.cameraMovesLeft>0) S.cameraMovesLeft--;
@@ -3137,6 +3141,12 @@ function updateBreakerFloatBtn(){
   const show = !!(S && S.running && !S.paused && !S.epilogue && S.gridDown && gridEv
     && S.playerRoom==='C' && !isBlockingOverlayOpen());
   btn.classList.toggle('show', show);
+  if(show){
+    const td = tdActive();
+    const sub = btn.querySelector('.breakerFloatSub');
+    if(sub) sub.textContent = td ? 'Chạy tới bảng điện đang nhấp nháy đỏ rồi bấm E' : 'Bấm để xử lý sự cố ngay tại Tòa C';
+    btn.style.pointerEvents = td ? 'none' : '';
+  }
 }
 let rafId=null;
 let lastActionRebuild = 0;
@@ -5964,7 +5974,7 @@ document.getElementById('closeMapBtn').onclick = closeMapModal;
 (function initBreakerFloatBtn(){
   const btn = document.getElementById('breakerFloatBtn');
   if(!btn) return;
-  btn.onclick = ()=>{ if(S && S.playerRoom==='C') startMinigame('C'); };
+  btn.onclick = ()=>{ if(tdActive()) return; if(S && S.playerRoom==='C') startMinigame('C'); };
 })();
 
 /* ============== TÚI ĐỒ ============== */
@@ -6032,12 +6042,14 @@ const TUTORIAL_STEPS = [
       <li>Chạm <span class="tutWarn">100%</span> → <b>Huyết Nguyệt</b>: không còn nơi nào an toàn.</li></ul>` },
   { title:'Thể lực', sel:'#staminaOuter',
     html:`Mỗi lần di chuyển tốn <b>15% thể lực</b>; đứng yên thì hồi dần. Cạn thể lực bạn sẽ <span class="tutWarn">không đi được</span> và bị đói mất máu. Đừng chạy loạn, cũng đừng trốn mãi một chỗ.` },
-  { title:'Di chuyển', sel:'#actionButtons .actionGroup',
-    html:`Bấm tên một <b>tòa liền kề</b> để đi tới đó. Chỉ đi được giữa các khu có đường nối với nhau.` },
+  { title:'Đi lại trong tòa', sel:'#roomBanner',
+    html:`Mỗi tòa là một khu vực riêng nhìn từ trên xuống. Dùng <b>WASD</b> hoặc <b>mũi tên</b> để đi lại. Muốn sang tòa khác, đi tới <b>cánh cửa viền xanh</b> trên tường rồi bấm <b>E</b>.` },
+  { title:'Phím E — tương tác', sel:'#roomBanner',
+    html:`Phím <b>E</b> dùng cho mọi thứ: nói chuyện, nhặt đồ, mua đồ ở quầy, mở cửa, xử lý sự cố. Lại gần một vật có thể tương tác, gợi ý <b>[E]</b> sẽ hiện lên. Hãy thăm dò các góc phòng.` },
   { title:'Sơ đồ', sel:'#miniMapWrap',
-    html:`Sơ đồ cho thấy vị trí của bạn, các khu vực và sự cố đang có. Bấm <b>Phóng to</b> hoặc phím <b>M</b> để xem rõ hơn và bấm thẳng vào khu liền kề để đi.` },
+    html:`Sơ đồ cho thấy vị trí của bạn và các khu vực. Bấm <b>Phóng to</b> hoặc phím <b>M</b>, rồi bấm vào khu liền kề để đi thẳng sang đó — tốn thời gian và thể lực giống như đi qua cửa.` },
   { title:'Xử lý sự cố', sel:'#roomBanner',
-    html:`Sự cố hay xuất hiện <b>gần The TIU</b>. Khi phòng bạn đứng có sự cố, nút đỏ <b>XỬ LÝ SỰ CỐ</b> sẽ hiện ở khung này.<ul>
+    html:`Sự cố hay xuất hiện <b>gần The TIU</b>. Tòa có sự cố sẽ có một <b>bảng điều khiển nhấp nháy đỏ</b>: đi tới gần và bấm <b>E</b> để bắt đầu mini-game.<ul>
       <li>Làm xong mini-game kịp giờ → <b>+điểm</b>, giảm mức hoạt động.</li>
       <li>Bỏ lỡ hoặc làm hỏng → The TIU bất ổn hơn.</li></ul>Hãy cân nhắc: sự cố đáng làm, nhưng cũng là chỗ nguy hiểm.` },
   { title:'Điểm & Căn tin', sel:'#pointsHud', block:true,
@@ -6045,7 +6057,7 @@ const TUTORIAL_STEPS = [
   { title:'Túi đồ', sel:'#bagBtn',
     html:`Xem và dùng vật phẩm của bạn tại đây (phím <b>B</b>). Mỗi món có mô tả công dụng riêng.` },
   { title:'Phím tắt & lời cuối',
-    html:`<ul><li><b>ESC</b>: tạm dừng</li><li><b>M</b>: sơ đồ &nbsp;·&nbsp; <b>B</b>: túi đồ</li><li><b>J</b>: tiếp tục hội thoại &nbsp;·&nbsp; <b>Ctrl</b>: bỏ qua hội thoại</li></ul><br>Khuôn viên này còn nhiều bí mật chưa ai kể cho bạn. Chúc may mắn!` }
+    html:`<ul><li><b>WASD / mũi tên</b>: đi lại &nbsp;·&nbsp; <b>E</b>: tương tác</li><li><b>ESC</b>: tạm dừng</li><li><b>M</b>: sơ đồ &nbsp;·&nbsp; <b>B</b>: túi đồ</li><li><b>J</b>: tiếp tục hội thoại &nbsp;·&nbsp; <b>Ctrl</b>: bỏ qua hội thoại</li></ul><br>Khuôn viên này còn nhiều bí mật chưa ai kể cho bạn. Chúc may mắn!` }
 ];
 let TUT = null;
 
@@ -6145,6 +6157,346 @@ document.addEventListener('keydown', (e)=>{
   else if(e.key==='ArrowLeft'){ e.preventDefault(); tutorialPrev(); }
   else if(e.key==='Escape'){ e.preventDefault(); endTutorial(); }
 });
+
+/* ============== TOP-DOWN: MỖI TÒA LÀ MỘT KHU VỰC ĐI LẠI ĐƯỢC ==============
+   Dữ liệu map nằm ở maps.js (window.TD_MAPS, mảng 2 chiều + bảng mã ô TD_TILE).
+   Engine này chỉ ĐỌC trạng thái game hiện có (S.activeEvents, S.scavenge, S.loreClues, S.laPeaceRoom,
+   getRoomNPCMeta, canDepositLaPeace...) và gắn mọi tương tác vào phím E — không tự giữ trạng thái riêng
+   ngoài vị trí người chơi (S.tdX/tdY/tdRoom) và hạt giống chia điểm giấu đồ (S.tdSeed), cả hai đều được lưu theo save game.
+   Va chạm với The TIU vẫn tính theo PHÒNG như cũ (cùng tòa = jumpscare) — chưa tính theo vị trí trong tòa.
+   Thiếu maps.js hoặc thiếu map của một phòng -> phòng đó tự dùng lại giao diện nút bấm cũ. */
+const TD_SPEED = 4.4;   // ô / giây
+const TD_RADIUS = 0.3;  // bán kính va chạm của người chơi (đơn vị ô)
+const TD_REACH = 1.7;   // khoảng cách tối đa (đơn vị ô) để bấm E tương tác
+const TD = { S:null, room:null, x:1.5, y:1.5, face:{x:0,y:1}, moving:false, keys:{}, lastTs:0,
+             canvas:null, ctx:null, W:0, H:0, dpr:1, imgs:{}, debug:false, npcMeta:null, near:null };
+
+function tdMap(room){
+  const m = window.TD_MAPS && window.TD_MAPS[room];
+  if(!m || !m.tiles || !m.tiles.length) return null;
+  if(!m._ix) tdIndex(m);
+  return m;
+}
+function tdIndex(m){
+  m.rows = m.tiles.length;
+  m.cols = Math.max.apply(null, m.tiles.map(r=>r.length));
+  const ix = { npc:null, event:null, shop:null, bench:null, amp:null, spawn:null, items:[], free:[], exitList:[] };
+  const exitTo = {};
+  (m.exits||[]).forEach(e=>{ exitTo[e.x+','+e.y] = e.to; });
+  for(let y=0;y<m.rows;y++){
+    for(let x=0;x<m.cols;x++){
+      const c = m.tiles[y][x];
+      if(c===2 && !ix.npc) ix.npc=[x,y];
+      else if(c===3 && !ix.event) ix.event=[x,y];
+      else if(c===5 && !ix.shop) ix.shop=[x,y];
+      else if(c===6 && !ix.bench) ix.bench=[x,y];
+      else if(c===7 && !ix.amp) ix.amp=[x,y];
+      else if(c===9 && !ix.spawn) ix.spawn=[x,y];
+      else if(c===4) ix.items.push([x,y]);
+      else if(c===10 && exitTo[x+','+y]) ix.exitList.push({pos:[x,y], to:exitTo[x+','+y]});
+      if(c===0) ix.free.push([x,y]);
+    }
+  }
+  const cx=m.cols/2, cy=m.rows/2;
+  ix.free.sort((a,b)=>Math.hypot(a[0]-cx,a[1]-cy)-Math.hypot(b[0]-cx,b[1]-cy));
+  if(!ix.spawn) ix.spawn = ix.free[0] || [1,1];
+  m._ix = ix;
+}
+function tdTile(m,x,y){
+  if(y<0 || x<0 || y>=m.rows) return 1;
+  const v = m.tiles[y][x];
+  return v===undefined ? 1 : v;
+}
+/* Nếu map thiếu ô đặc biệt cần thiết thì dùng 1 ô sàn trống làm chỗ thay thế để game không bị kẹt. */
+function tdSpot(m, kind, fi){
+  const ix = m._ix;
+  return ix[kind] || ix.free[(fi*5+2) % Math.max(1, ix.free.length)] || [1,1];
+}
+function tdActive(){
+  return !!(S && S.running && !S.epilogue && tdMap(S.playerRoom));
+}
+function tdSolidAt(m,x,y){
+  const c = tdTile(m,x,y);
+  if(c===0 || c===4 || c===9) return false;
+  if(c===2){ const n = m._ix.npc; return !!(TD.npcMeta && n && n[0]===x && n[1]===y); }
+  return true;
+}
+function tdCollides(m,px,py){
+  const r = TD_RADIUS;
+  return tdSolidAt(m,Math.floor(px-r),Math.floor(py-r)) || tdSolidAt(m,Math.floor(px+r),Math.floor(py-r))
+      || tdSolidAt(m,Math.floor(px-r),Math.floor(py+r)) || tdSolidAt(m,Math.floor(px+r),Math.floor(py+r));
+}
+function tdHash(str){ let h=2166136261; for(let i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
+function tdRng(seed){
+  let a = seed>>>0;
+  return ()=>{ a=(a+0x6D2B79F5)|0; let t=Math.imul(a^(a>>>15),1|a); t=(t+Math.imul(t^(t>>>7),61|t))^t; return ((t^(t>>>14))>>>0)/4294967296; };
+}
+/* Chia 3 "ô giấu đồ" ổn định cho từng phòng (linh kiện / manh mối / La Peace). Thứ tự cố định nên khi nhặt
+   xong 1 món, các món còn lại KHÔNG bị nhảy sang chỗ khác. */
+function tdItemSpots(m, room){
+  if(S.tdSeed==null) S.tdSeed = Math.floor(Math.random()*1e9);
+  let pool = m._ix.items.slice();
+  for(let i=0; pool.length<3 && i<m._ix.free.length; i++) pool.push(m._ix.free[(i*7+3) % m._ix.free.length]);
+  const rnd = tdRng(S.tdSeed ^ tdHash(room));
+  for(let i=pool.length-1;i>0;i--){ const j=Math.floor(rnd()*(i+1)); const t=pool[i]; pool[i]=pool[j]; pool[j]=t; }
+  return pool;
+}
+/* Danh sách mọi thứ có thể tương tác ở phòng hiện tại, dựng lại từ trạng thái game mỗi lần gọi. */
+function tdInteractables(m){
+  const room = S.playerRoom, def = ROOM_DEF[room], ix = m._ix, list = [];
+  const meta = TD.npcMeta;
+  if(meta){
+    const pos = tdSpot(m,'npc',0);
+    list.push({kind:'npc', pos, meta, label: meta.talkable ? '💬 Nói chuyện với '+meta.name : null,
+      act: meta.talkable ? ()=>talkToNPC(meta) : null});
+  }
+  const ev = S.activeEvents[room];
+  if(ev){
+    list.push({kind:'event', pos:tdSpot(m,'event',1), mandatory:!!ev.mandatory,
+      label: ev.mandatory ? '⚡ Khởi động lại cầu dao tổng' : '⚠ Xử lý sự cố: '+eventLabel(def.event),
+      act: ()=>startMinigame(room)});
+  }
+  if(def.safe){
+    const open = isRoomSafe(room);
+    list.push({kind:'shop', pos:tdSpot(m,'shop',2), icon:'🛒', label: open ? '🛒 Mở quầy Căn tin' : '🛒 Quầy Căn tin (đang đóng cửa)',
+      act: ()=>{ if(isRoomSafe(room)) openShop(); else addLog('Quầy Căn tin đang đóng cửa. Căn tin chỉ mở theo khung giờ cố định.','warn'); }});
+    if(isHardMode()) list.push({kind:'bench', pos:tdSpot(m,'bench',3), icon:'🛠', label:'🛠 Bàn chế tạo', act:openCraftBench});
+  }
+  if(canDepositLaPeace()){
+    list.push({kind:'amp', pos:tdSpot(m,'amp',4), icon:'⚡', label:'⚡ Nạp La Peace vào bộ khuếch đại ('+S.laPeaceCarried+' đang mang)', act:depositLaPeace});
+  }
+  const hasPickup = S.scavenge[room] || S.loreClues[room] || (S.laPeaceRoom===room && !S.laPeaceFound);
+  if(hasPickup){
+    const sp = tdItemSpots(m, room);
+    if(S.scavenge[room]) list.push({kind:'pickup', pos:sp[0], label:'🔧 Nhặt '+COMPONENT_NAMES[S.scavenge[room]], act:pickupScavenge});
+    if(S.loreClues[room]) list.push({kind:'pickup', pos:sp[1], label:'📖 Thu thập manh mối', act:pickupLore});
+    if(S.laPeaceRoom===room && !S.laPeaceFound) list.push({kind:'pickup', pos:sp[2], label:'✦ Nhặt La Peace (mảnh năng lượng ôn hòa)', act:pickupLaPeace});
+  }
+  const noisy = S.gameMinutes < S.speedBuffUntil;
+  ix.exitList.forEach(e=>{
+    const locked = isEdgeLocked(room, e.to);
+    list.push({kind:'exit', pos:e.pos, to:e.to, locked,
+      label: locked ? '🔒 Cửa đến '+ROOM_DEF[e.to].name+' bị khóa — giật khóa'
+                    : '➜ Đi tới '+ROOM_DEF[e.to].name+' ('+(noisy?BUFF_MOVE_COST_MIN:BASE_MOVE_COST_MIN)+' phút · −'+(noisy?MOVE_STAMINA_COST_BUFFED:MOVE_STAMINA_COST)+'% thể lực)',
+      act: ()=>{ if(isEdgeLocked(room,e.to)) attemptUnlockDoor(e.to); else movePlayer(e.to); }});
+  });
+  return list;
+}
+function tdNearest(m){
+  let best=null, bd=1e9;
+  tdInteractables(m).forEach(it=>{
+    if(!it.act) return;
+    const d = Math.hypot(TD.x-(it.pos[0]+0.5), TD.y-(it.pos[1]+0.5));
+    if(d<=TD_REACH && d<bd){ bd=d; best=it; }
+  });
+  return best;
+}
+function tdEnterRoom(room, from, restore){
+  TD.S = S; TD.room = room;
+  const m = tdMap(room);
+  if(!m) return;
+  TD.npcMeta = getRoomNPCMeta(room);
+  let sp = null;
+  if(restore && S.tdRoom===room && typeof S.tdX==='number' && !tdCollides(m,S.tdX,S.tdY)) sp = [S.tdX, S.tdY];
+  if(!sp && from){
+    const e = m._ix.exitList.find(x=>x.to===from);
+    if(e){
+      const around = [[0,1],[0,-1],[1,0],[-1,0]];
+      for(const d of around){
+        const nx=e.pos[0]+d[0], ny=e.pos[1]+d[1];
+        if(!tdSolidAt(m,nx,ny)){ sp=[nx+0.5, ny+0.5]; break; }
+      }
+    }
+  }
+  if(!sp) sp = [m._ix.spawn[0]+0.5, m._ix.spawn[1]+0.5];
+  TD.x = sp[0]; TD.y = sp[1]; TD.keys = {}; TD.near = null;
+  S.tdRoom = room; S.tdX = TD.x; S.tdY = TD.y;
+}
+function tdSync(){
+  if(TD.S!==S || TD.room!==S.playerRoom) tdEnterRoom(S.playerRoom, null, true);
+}
+function tdCanControl(){
+  return !!(S && S.running && !S.paused && !S.epilogue && !TUT && tdActive()
+    && !isBlockingOverlayOpen() && !(BS && !BS.over) && isPauseMenuClosed());
+}
+function isPauseMenuClosed(){ return document.getElementById('pauseMenu').classList.contains('hidden'); }
+function tdUpdate(m, dt){
+  const k = TD.keys;
+  let dx = 0, dy = 0;
+  if(k.a || k.arrowleft)  dx -= 1;
+  if(k.d || k.arrowright) dx += 1;
+  if(k.w || k.arrowup)    dy -= 1;
+  if(k.s || k.arrowdown)  dy += 1;
+  TD.moving = !!(dx || dy);
+  if(!TD.moving) return;
+  const len = Math.hypot(dx,dy); dx/=len; dy/=len;
+  TD.face = {x:dx, y:dy};
+  const step = TD_SPEED*dt;
+  const nx = TD.x + dx*step; if(!tdCollides(m,nx,TD.y)) TD.x = nx;
+  const ny = TD.y + dy*step; if(!tdCollides(m,TD.x,ny)) TD.y = ny;
+}
+function tdInteract(){
+  if(!tdCanControl()) return;
+  const m = tdMap(S.playerRoom); if(!m) return;
+  const it = tdNearest(m);
+  if(it && it.act){ TD.keys = {}; it.act(); }
+}
+function tdImage(m, room){
+  if(!m.image) return null;
+  let im = TD.imgs[room];
+  if(!im){ im = new Image(); im.src = m.image; TD.imgs[room] = im; return null; }
+  return (im.complete && im.naturalWidth>0) ? im : null;
+}
+function tdResize(){
+  const b = document.getElementById('roomBanner'), c = TD.canvas;
+  if(!b || !c) return;
+  const dpr = window.devicePixelRatio || 1, w = b.clientWidth, h = b.clientHeight;
+  if(c.width!==Math.round(w*dpr) || c.height!==Math.round(h*dpr)){ c.width=Math.round(w*dpr); c.height=Math.round(h*dpr); }
+  TD.W = w; TD.H = h; TD.dpr = dpr;
+}
+const TD_COLORS = { 1:['#2d2720','#4a3f33'], 8:['#2a2420','#3d332a'], 3:['#14201f','#2a4a48'], 5:['#5a4313','#8a6a22'],
+                    6:['#3a2f1a','#6a5530'], 7:['#1a2a3a','#2f5a7a'], 10:['#2d2720','#4a3f33'], 2:['#17140f','#17140f'] };
+function tdDrawTiles(ctx,m,tp,ox,oy,overImage){
+  ctx.save();
+  if(overImage) ctx.globalAlpha = 0.5;
+  for(let y=0;y<m.rows;y++){
+    for(let x=0;x<m.cols;x++){
+      const c = tdTile(m,x,y), px = ox+x*tp, py = oy+y*tp;
+      const col = TD_COLORS[c];
+      if(col){
+        ctx.fillStyle = col[0]; ctx.fillRect(px,py,tp,tp);
+        if(c!==2){ ctx.strokeStyle = col[1]; ctx.lineWidth = 2; ctx.strokeRect(px+2,py+2,tp-4,tp-4); }
+      } else {
+        ctx.fillStyle = ((x+y)&1) ? '#1b1812' : '#17140f'; ctx.fillRect(px,py,tp,tp);
+      }
+      if(TD.debug){
+        ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.font = '10px monospace'; ctx.textAlign='left'; ctx.textBaseline='top';
+        ctx.fillText(String(c), px+3, py+2);
+      }
+    }
+  }
+  ctx.restore();
+}
+function tdIcon(ctx,ch,cx,cy,size){
+  ctx.font = Math.round(size)+'px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(ch,cx,cy);
+}
+function tdDraw(m, ts){
+  const ctx = TD.ctx, W = TD.W, H = TD.H, t = ts/1000;
+  ctx.setTransform(TD.dpr,0,0,TD.dpr,0,0);
+  ctx.fillStyle = '#070707'; ctx.fillRect(0,0,W,H);
+  const tp = Math.max(8, Math.floor(Math.min(W/m.cols, H/m.rows)));
+  const ox = Math.floor((W-tp*m.cols)/2), oy = Math.floor((H-tp*m.rows)/2);
+  const img = tdImage(m, S.playerRoom);
+  if(img) ctx.drawImage(img, ox, oy, tp*m.cols, tp*m.rows);
+  if(!img || TD.debug) tdDrawTiles(ctx,m,tp,ox,oy,!!img);
+  const C = (p)=>[ox+(p[0]+0.5)*tp, oy+(p[1]+0.5)*tp];
+  const list = tdInteractables(m);
+  const near = tdNearest(m); TD.near = near;
+
+  list.forEach(it=>{
+    const [cx,cy] = C(it.pos);
+    if(it.kind==='exit'){
+      ctx.strokeStyle = it.locked ? '#e6293f' : '#3ddc84'; ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.55+0.35*Math.sin(t*3);
+      ctx.strokeRect(cx-tp/2+2, cy-tp/2+2, tp-4, tp-4);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = it.locked ? '#e6293f' : '#3ddc84'; tdIcon(ctx, it.locked?'🔒':'➜', cx, cy, tp*0.45);
+    } else if(it.kind==='event'){
+      const pulse = 0.5+0.5*Math.sin(t*5);
+      const g = ctx.createRadialGradient(cx,cy,2,cx,cy,tp*(1.1+0.4*pulse));
+      g.addColorStop(0,'rgba(230,41,63,0.85)'); g.addColorStop(1,'rgba(230,41,63,0)');
+      ctx.fillStyle = g; ctx.fillRect(cx-tp*2,cy-tp*2,tp*4,tp*4);
+      ctx.fillStyle = '#fff'; tdIcon(ctx, it.mandatory?'⚡':'⚠', cx, cy, tp*0.55);
+    } else if(it.kind==='pickup'){
+      ctx.fillStyle = 'rgba(242,226,160,'+(0.35+0.35*Math.sin(t*3+it.pos[0]))+')';
+      tdIcon(ctx,'✦',cx,cy,tp*0.5);
+    } else if(it.kind==='shop' || it.kind==='bench' || it.kind==='amp'){
+      ctx.fillStyle = '#fff'; tdIcon(ctx,it.icon,cx,cy-tp*0.05,tp*0.55);
+    } else if(it.kind==='npc'){
+      const mt = it.meta;
+      ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.beginPath(); ctx.ellipse(cx,cy+tp*0.28,tp*0.3,tp*0.12,0,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = mt.avatarBg || '#5a3a8a'; ctx.strokeStyle = '#c9962f'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(cx,cy,tp*0.36,0,Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#fff'; tdIcon(ctx, mt.avatarText||'?', cx, cy, tp*0.4);
+      ctx.fillStyle = '#c9962f'; ctx.font = 'bold 11px Roboto, sans-serif'; ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+      ctx.fillText(mt.name, cx, cy-tp*0.5);
+    }
+  });
+
+  // người chơi
+  const px = ox+TD.x*tp, py = oy+TD.y*tp, bob = TD.moving ? Math.sin(t*14)*tp*0.03 : 0;
+  ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.beginPath(); ctx.ellipse(px,py+tp*0.3,tp*0.28,tp*0.1,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#3ddc84'; ctx.strokeStyle = '#0b3d22'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(px,py+bob,tp*0.3,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#06210f'; ctx.beginPath(); ctx.arc(px+TD.face.x*tp*0.15, py+bob+TD.face.y*tp*0.15, tp*0.07, 0, Math.PI*2); ctx.fill();
+
+  // mất điện: bóng tối + đèn pin quanh người chơi, bảng điện vẫn nhấp nháy để dò đường
+  if(S.gameMinutes < S.breakerUntil || S.gridDown){
+    const g = ctx.createRadialGradient(px,py,tp*0.6,px,py,tp*3.4);
+    g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(0.55,'rgba(0,0,0,0.6)'); g.addColorStop(1,'rgba(0,0,0,0.96)');
+    ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+    list.filter(it=>it.kind==='event').forEach(it=>{
+      const [cx,cy] = C(it.pos), pulse = 0.5+0.5*Math.sin(t*5);
+      const g2 = ctx.createRadialGradient(cx,cy,2,cx,cy,tp*(1.2+0.5*pulse));
+      g2.addColorStop(0,'rgba(230,41,63,0.9)'); g2.addColorStop(1,'rgba(230,41,63,0)');
+      ctx.fillStyle = g2; ctx.fillRect(cx-tp*2,cy-tp*2,tp*4,tp*4);
+      ctx.fillStyle = '#fff'; tdIcon(ctx,'⚡',cx,cy,tp*0.55);
+    });
+  } else if(S.enraged){
+    ctx.fillStyle = 'rgba(140,0,14,0.14)'; ctx.fillRect(0,0,W,H);
+  }
+
+  // gợi ý [E]
+  if(near){
+    const [cx,cy] = C(near.pos);
+    ctx.strokeStyle = '#c9962f'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx,cy,tp*0.62,0,Math.PI*2); ctx.stroke();
+    const txt = '[E] '+near.label;
+    ctx.font = 'bold 13px Roboto, sans-serif';
+    const w = ctx.measureText(txt).width+20, h = 26;
+    let bx = Math.max(4, Math.min(W-w-4, cx-w/2)), by = cy-tp*0.95-h;
+    if(by<4) by = cy+tp*0.8;
+    ctx.fillStyle = 'rgba(19,16,14,0.96)'; ctx.strokeStyle = '#c9962f'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); if(ctx.roundRect) ctx.roundRect(bx,by,w,h,5); else ctx.rect(bx,by,w,h); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#f2e2a0'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(txt, bx+w/2, by+h/2+1);
+  }
+  ctx.fillStyle = 'rgba(217,210,196,0.5)'; ctx.font = '11px "Share Tech Mono", monospace'; ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+  ctx.fillText('WASD / ← ↑ ↓ → : di chuyển   ·   E : tương tác'+(TD.debug?'   ·   [F3] lưới: BẬT':''), W/2, H-8);
+}
+function tdLoop(ts){
+  requestAnimationFrame(tdLoop);
+  const dt = Math.min(0.05, Math.max(0, (ts-(TD.lastTs||ts))/1000)); TD.lastTs = ts;
+  if(!TD.ctx){
+    TD.canvas = document.getElementById('tdCanvas');
+    TD.ctx = TD.canvas && TD.canvas.getContext && TD.canvas.getContext('2d');
+    if(!TD.ctx) return;
+  }
+  const active = tdActive();
+  document.getElementById('roomBanner').classList.toggle('td-on', active);
+  document.body.classList.toggle('td-mode', active);
+  if(!active) return;
+  tdSync();
+  const m = tdMap(S.playerRoom);
+  TD.npcMeta = getRoomNPCMeta(S.playerRoom);
+  if(tdCanControl()) tdUpdate(m, dt); else { TD.keys = {}; TD.moving = false; }
+  S.tdX = Math.round(TD.x*100)/100; S.tdY = Math.round(TD.y*100)/100; S.tdRoom = S.playerRoom;
+  tdResize();
+  tdDraw(m, ts);
+}
+document.addEventListener('keydown', (e)=>{
+  if(isTypingTarget(e.target)) return;
+  if(e.key==='F3'){ e.preventDefault(); TD.debug = !TD.debug; return; }
+  if(e.ctrlKey || e.metaKey || e.altKey) return;
+  const k = (e.key||'').toLowerCase();
+  if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(k)){
+    if(tdCanControl()){ e.preventDefault(); TD.keys[k] = true; }
+  } else if(k==='e' && !e.repeat){
+    if(tdCanControl()){ e.preventDefault(); tdInteract(); }
+  }
+});
+document.addEventListener('keyup', (e)=>{ delete TD.keys[(e.key||'').toLowerCase()]; });
+window.addEventListener('blur', ()=>{ TD.keys = {}; });
+requestAnimationFrame(tdLoop);
 
 /* ============== LƯU GAME KHI RỜI TRANG ============== */
 window.addEventListener('beforeunload', ()=>{ persistSave(); });
