@@ -83,7 +83,7 @@ const NIGHT_CFG = [
   {name:"ĐÊM 3", eventEvery:[30,52], monsterMoveEvery:[11,19], meterMoveSpeedFactor:1.55, meterGainFail:20, meterGainIgnore:13, meterDecay:0.04, startMeter:20},
 ];
 
-/* ---- Chapter 2, Đêm 3: TRỌNG "The Curse One" thay thế The TIU làm kẻ đuổi bắt. Dùng để đổi
+/* ---- Chapter 2, Đêm 3: TRỌNG "The Grimoire" thay thế The TIU làm kẻ đuổi bắt. Dùng để đổi
    toàn bộ hình ảnh/nhạc/text jumpscare + nhãn HUD sang Trọng mà không phải nhân đôi engine né
    tránh. Xem PHẦN "ĐÊM 3 — TRỌNG ĐUỔI BẮT" bên dưới (jumpscare(), updateProximityAudio()...). ---- */
 function isTrongChaseNight(){ return !!(S && S.chapter===2 && S.night===3 && !S.epilogue); }
@@ -188,7 +188,10 @@ const LORE_CLUES = [
   {id:'safe1', title:'Mật mã két sắt phòng quản lý', text:'Một mảnh giấy nhàu nát ghi vội: "Mã két: 0 - 4 - 1 - 9."'},
   {id:'diary2', title:'Nhật ký cũ — Trang giấy thứ hai', text:'"...The TIU không phải lúc nào cũng như vậy. Có ai đó đã làm gì với nó, từ rất lâu rồi..."'},
   {id:'audio2', title:'Đoạn ghi âm cuối cùng', text:'"...nếu ai nghe được đoạn này, đừng xuống Tòa C một mình sau 1 giờ sáng. Đừng đi một mình..."'},
-  {id:'note1', title:'Mẩu giấy nhét trong sách thư viện', text:'"Ba mảnh La Peace có thể xoa dịu nó. Nhưng phải có đủ cả ba, không thể thiếu một."'}
+  {id:'note1', title:'Mẩu giấy nhét trong sách thư viện', text:'"Ba mảnh La Peace... có ai đó đang gom chúng. Chắc không phải để xoa dịu ai cả."'},
+  {id:'chat1', title:'Màn hình chat bỏ quên', text:'Một cửa sổ chat còn sáng: "Mika: Anh Trọng ơi, hôm nay em ra ngoài được chưa? — Sắp rồi em. Đợi anh thêm chút nữa."'},
+  {id:'chalk1', title:'Vòng phấn bị lau vội', text:'Một vòng ma pháp vẽ bằng phấn, lau dở. Ở giữa còn sót dòng chữ: "Nghi lễ triệu hồi — thiếu ma lực."'},
+  {id:'mark1', title:'Mảnh giấy ghi chép', text:'"Ấn chú dẫn lối: nhắm ngẫu nhiên, cho ngủ quên, đừng để chúng nhớ gì. Chủ nhân: dòng họ pháp sư. Ký tên: T."'}
 ];
 
 /* Những manh mối đã tìm thấy xuyên suốt lượt chơi thường (đêm 1 -> 3), reset khi bắt đầu
@@ -1633,7 +1636,7 @@ function showChapterEndScreen(){
   hideAllOverlays();
   const variant = S && S.epilogueVariant;
   document.getElementById('chapterEndSub').textContent = variant==='secret'
-    ? 'Ba mảnh La Peace, Wibu Việt Nhật, Chàng Lính Ngu Lắm và Trọng — tất cả đã cùng viết nên một cái kết khác cho đêm nay. Nhưng dấu vết trong Thư viện vẫn còn đó...'
+    ? 'Ba mảnh La Peace đã vào tay Trọng, và hắn bảo mọi chuyện đã xong. Nhưng cửa sổ chat bỏ quên trong Thư viện lại kể một câu chuyện khác...'
     : 'Bạn đã sống sót qua 3 đêm lẩn trốn The TIU. Nhưng những gì bạn vừa tìm thấy trong Thư viện sáng nay... có lẽ câu chuyện chưa thực sự kết thúc.';
   document.getElementById('chapterEndScreen').classList.remove('hidden');
 }
@@ -2251,7 +2254,7 @@ function npcTaskCompletionRatio(k, stage1Task){
    ở trên) — không có khu an toàn nào bảo vệ được người chơi/NPC trong suốt Đêm 2.
    Khi hoàn tất Giai đoạn Quá Tải, người chơi được CHỌN giữa route Normal (kết liễu ngay — TIU
    thanh tẩy, kết thúc câu chuyện ở Đêm 2) và route Secret (do dự -> Trọng tự nuốt lấy TIU,
-   biến thành "The Curse One", mở khóa Đêm 3: Trọng đuổi bắt nhân vật chính, xem
+   biến thành "The Grimoire", mở khóa Đêm 3: Trọng đuổi bắt nhân vật chính, xem
    triggerNight2Climax() / triggerLaPeaceAwakening()). */
 
 const NIGHT2_PHASE_NAMES = { luring:'LÙA ĐỊCH VÀO TRẬN ĐỊA', lockdown:'SẬP BẪY MA TRẬN', overload:'QUÁ TẢI CẦU DAO', resolved:'HOÀN TẤT' };
@@ -2498,14 +2501,14 @@ function trapBreakFailState(){
 
 /* ---- Trận đánh cuối cùng (tái dùng hệ thống battleOverlay của Chapter 1) ---- */
 function triggerNight2Climax(){
-  addLog('☀ 07:30 — Dòng điện quá tải đã tích đủ năng lượng La Peace. Đối đầu cuối cùng bắt đầu!', 'danger');
-  // Cho người chơi TỰ CHỌN giữa route Normal (kết liễu ngay — kết thúc câu chuyện ở Đêm 2) và
-  // route Secret (do dự -> Trọng tự nuốt lấy TIU, biến thành "The Curse One", mở khóa Đêm 3).
+  addLog('☀ 07:30 — Dòng điện quá tải đã tích đủ. Nhưng dòng La Peace đang chảy sai hướng — có điều gì đó không ổn!', 'danger');
+  // Cho người chơi TỰ CHỌN giữa route Normal (ngắt cầu dao, vạch mặt Trọng ngay -> đánh Trọng cùng đồng đội,
+  // kết thúc ở Đêm 2) và route Secret (do dự -> Trọng nuốt TIU, biến thành "The Grimoire", mở khóa Đêm 3).
   const promptLines = VN_CH2_CLIMAX_CHOICE.lines.slice();
   const lastIdx = promptLines.length-1;
   promptLines[lastIdx] = Object.assign({}, promptLines[lastIdx], {
     choices: promptLines[lastIdx].choices.map((c,i)=>Object.assign({}, c, {
-      insert: i===1 ? VN_CH2_SECRET_HESITATION_DIALOGUE.lines.concat(VN_CH2_SECRET_TRANSFORM_DIALOGUE.lines) : [],
+      insert: i===1 ? VN_CH2_SECRET_HESITATION_DIALOGUE.lines.concat(VN_CH2_SECRET_TRANSFORM_DIALOGUE.lines) : VN_CH2_NORMAL_CONFRONT.lines,
       onChoose: ()=>{ S.night2ClimaxRoute = (i===0) ? 'normal' : 'secret'; },
     })),
   });
@@ -2515,28 +2518,39 @@ function triggerNight2Climax(){
   });
 }
 function runNight2ClimaxBattleNormal(){
+  // Route Normal: Trọng bị vạch mặt ngay tại Trận Địa -> cả ba cùng đánh hắn (combat FF + QTE, boss CÓ THỂ bị hạ gục).
   startSecretBattle({
+    killable: true,
+    bossMaxHp: 650,
+    bossName: 'TRỌNG — NGƯỜI GIỮ SÁCH',
+    bossImage: (typeof TRONG_CURSE_IMAGE !== 'undefined') ? TRONG_CURSE_IMAGE : null,
+    patterns: BOSS_PATTERNS_TRONG,
+    patternPoolA: BOSS_PATTERNS_TRONG_DATHU,
+    patternPoolB: BOSS_PATTERNS_TRONG_THIETNGUU,
+    chainSelector: chooseTrongPatternChain,
+    sealThresholdRatio: 0,
+    maxTurn: Infinity,
     introLog: [
-      {msg:'Ma trận La Peace bùng cháy dữ dội trong dòng điện quá tải — TIU gầm rú, bị xích chặt nhưng chưa gục ngã!', cls:''},
-      {msg:'THE TIU vùng vẫy điên cuồng trước party!', cls:'danger'},
-      {msg:'Đòn đánh của party không thể hạ gục TIU — chỉ cần CẦM CỰ đủ '+BATTLE_MAX_TURN+' lượt để dòng điện tích đủ năng lượng!', cls:'warn'},
+      {msg:'Quyển sách của Trọng bật mở giữa Trận Địa — hắn không còn là người dẫn đường nữa!', cls:'danger'},
+      {msg:'Kim Kiếm La Peace của bạn vừa thức tỉnh, cùng Wibu Việt Nhật và Chàng Lính Ngu Lắm đối đầu hắn.', cls:''},
+      {msg:'Tấn công thường không cần QTE; KỸ NĂNG cần bấm chuỗi mũi tên (BẠN 5, WIBU 3, LÍNH 4). Khi bị đánh: bấm đúng hướng để ĐỠ, trong vùng sáng để PARRY. Hạ gục Trọng để chặn nghi lễ!', cls:'warn'},
     ],
-    victoryShatterMsg: 'Dòng điện quá tải chứa đầy La Peace phóng thẳng vào TIU dưới ánh bình minh — hình hài nó rạn nứt rồi vỡ tan thành từng mảnh!',
-    victoryLightMsg: 'Một luồng ánh sáng trắng ấm áp lan tỏa khắp Trận Địa, nuốt trọn những mảnh vỡ cuối cùng của TIU!',
+    victoryShatterMsg: 'Mũi kim xuyên qua trang sách cuối cùng — quyển sách của Trọng khép lại, chữ nghĩa tan thành dòng!',
+    victoryLightMsg: 'Những đốm La Peace bay vụt về khắp khuôn viên, trả lại cho từng chủ nhân.',
     onVictory: ()=>{ playVN(VN_CH2_VICTORY_DIALOGUE.lines, ()=>{ triggerChapter2NormalEnding(); }); },
-    defeatLogMsg: 'Cả party gục ngã... dòng điện quá tải phóng điện vô ích trước khi kịp tích đủ năng lượng.',
-    defeatScreenMsg: 'Trận chiến cuối thất bại — TIU đã áp đảo cả party trước khi dòng điện kịp phóng ra dưới ánh bình minh.',
+    defeatLogMsg: 'Cả party gục ngã... Trọng gom nốt La Peace, nghi lễ tiếp tục.',
+    defeatScreenMsg: 'Trọng đã áp đảo cả party — nghi lễ của hắn không bị chặn lại. Thử lại lần nữa.',
   });
 }
 
-/* Route Secret: Trọng tự nuốt lấy TIU và trở thành "The Curse One" — đêm 2 khép lại ở đây,
+/* Route Secret: Trọng tự nuốt lấy TIU và trở thành "The Grimoire" — đêm 2 khép lại ở đây,
    nhưng câu chuyện tiếp tục sang Đêm 3 (thay vì kết thúc game như route Normal). */
 function triggerChapter2SecretPathToNight3(){
   if(!S) return;
   S.running = false;
   S.endingRoute = 'secret_pending';
-  document.getElementById('winTitle').textContent = '✦ ĐÊM 2 KẾT THÚC — CÁI GIÁ PHẢI TRẢ ✦';
-  document.getElementById('winSub').textContent = 'TIU đã im lặng mãi mãi. Nhưng Trọng đã tự mình đánh đổi để làm được điều đó — người bạn từng dẫn đường cho cả ba người, giờ có thể sẽ là điều nguy hiểm nhất chờ đợi ở phía trước.';
+  document.getElementById('winTitle').textContent = '✦ ĐÊM 2 KẾT THÚC — QUYỂN SÁCH MỞ RA ✦';
+  document.getElementById('winSub').textContent = 'Trọng đã lộ mặt: hắn nuốt trọn TIU và Trận Địa, trở thành THE GRIMOIRE. Người từng dẫn đường cho cả ba, giờ là kẻ muốn rút La Peace ngủ quên trong bạn.';
   const nextBtn = document.getElementById('nextNightBtn');
   nextBtn.textContent = 'BẮT ĐẦU ĐÊM 3';
   nextBtn.onclick = ()=>{
@@ -2550,7 +2564,7 @@ function triggerChapter2SecretPathToNight3(){
 
 /* Chapter 2, Đêm 3 — chạy khi người chơi bị TRỌNG tóm đủ 3 lần (xem jumpscare()). Thay vì Game
    Over, đây là lúc La Peace bên trong nhân vật chính thức tỉnh, dẫn thẳng vào trận đánh cuối
-   cùng với TRỌNG — THE CURSE ONE (tái dùng đúng engine boss/bullet-hell đã có). */
+   cùng với TRỌNG — THE GRIMOIRE (tái dùng đúng engine boss/bullet-hell đã có). */
 function triggerLaPeaceAwakening(){
   if(!S) return;
   S.running = false; // trận đánh boss quản lý vòng lặp/nhạc riêng của nó, không cần tick thế giới nữa
@@ -2566,8 +2580,8 @@ function triggerChapter2NormalEnding(){
   if(!S) return;
   S.running = false;
   S.endingRoute = 'normal';
-  document.getElementById('winTitle').textContent = '✦ NORMAL ENDING — GÁNH NẶNG CÒN LẠI ✦';
-  document.getElementById('winSub').textContent = 'The TIU đã bị thanh tẩy hoàn toàn dưới ánh bình minh. Nhưng cái giá phải trả không hề nhẹ nhàng như ba người tưởng.';
+  document.getElementById('winTitle').textContent = '✦ NORMAL ENDING — QUYỂN SÁCH ĐÓNG LẠI ✦';
+  document.getElementById('winSub').textContent = 'Trọng bị đánh bại, nghi lễ bị chặn đứng. La Peace trở về với chủ cũ, và The TIU — mảnh ký ức méo mó của một cô gái chưa từng tồn tại — lặng lẽ tan vào ánh bình minh.';
   const nextBtn = document.getElementById('nextNightBtn');
   nextBtn.textContent = 'VỀ MÀN HÌNH CHÍNH';
   nextBtn.onclick = showTitle;
@@ -3767,7 +3781,7 @@ const BOSS_PATTERN_COMBO = {
   dmg:[6,10], bulletType:'combo', dodgeDuration:5600, combinedOnly:true
 };
 
-/* ============== ĐÊM 3 — BỘ CHIÊU THỨC CỦA TRỌNG "THE CURSE ONE" ==============
+/* ============== ĐÊM 3 — BỘ CHIÊU THỨC CỦA TRỌNG "THE GRIMOIRE" ==============
    7 pattern chia làm 2 nhóm theo Đặc Trưng Sức Mạnh mà Trọng đã hấp thụ:
 
    DẠ THỬ (Tý — nhanh nhẹn/xảo quyệt/số đông): PHI TIÊU ĐỘC, ĐU BÁM CỘT ĐÁ, BẦY DẠ THỬ,
@@ -3791,7 +3805,7 @@ const BOSS_PATTERNS_TRONG_THIETNGUU = [
   {name:'KHIÊN ĐẤT', desc:'Trọng dựng một lớp khiên đất dày, tạm ngừng tấn công để gồng mình phòng thủ.', dmg:[0,0], bulletType:'shield', dodgeDuration:3200, shieldSelf:true},
 ];
 /* ============== NÂNG CẤP UNDERTALE/DELTARUNE — 3 PATTERN MỚI CHO BOX COMBAT ==============
-   Dùng riêng cho trận Trọng "The Curse One" ở chế độ undertaleMode (xem freshBattleState /
+   Dùng riêng cho trận Trọng "The Grimoire" ở chế độ undertaleMode (xem freshBattleState /
    startTrongCurseOneBattle). 3 pattern đúng tinh thần thiết kế được yêu cầu:
    1) Tuyến Tính — đạn bay ngang/dọc tốc độ khác nhau (bulletType 'uxlinear').
    2) Gaster Blaster style — cột tia laser xuất hiện sau 1 giây cảnh báo TẠI vị trí người chơi
@@ -3831,7 +3845,7 @@ function freshBattleState(opts){
     boss:{hp:opts.bossMaxHp||BOSS_MAX_HP, maxHp:opts.bossMaxHp||BOSS_MAX_HP, stunned:false, shielded:false},
     party, order, pickIdx:0, log:[], over:false,
     dodgeSoften:0, // số lệnh "Tấn công" ở lượt vừa rồi -> làm chậm & giãn chuỗi đạn né tiếp theo
-    // ---- Các cờ mới hỗ trợ boss CÓ THỂ bị hạ gục thật (vd Trọng — The Curse One, Đêm 3) ----
+    // ---- Các cờ mới hỗ trợ boss CÓ THỂ bị hạ gục thật (vd Trọng — The Grimoire, Đêm 3) ----
     // Mặc định (killable=false) giữ NGUYÊN hành vi cũ: boss không bao giờ chết, thắng chỉ đến
     // khi cầm cự đủ maxTurn lượt (dùng cho trận bí mật Chapter 1 & màn Quá Tải Chapter 2).
     killable: !!opts.killable,
@@ -3845,15 +3859,15 @@ function freshBattleState(opts){
     sealChoiceShown: false,
     onSealChoice: opts.onSealChoice || null,        // callback khi HP chạm ngưỡng phong ấn (chỉ dùng nếu killable)
     poisonStacks: 0,                                // Dạ Thử: mỗi lần trúng "Phi Tiêu Độc" cộng dồn, gây thêm sát thương cuối lượt boss
-    souls: !!opts.souls,                            // true nếu MC đang chiến đấu dưới dạng "Souls of the Undying One" (đổi flavor text kỹ năng)
+    souls: !!opts.souls,                            // true nếu MC đang chiến đấu dưới dạng "Kim Kiếm La Peace" (đổi flavor text kỹ năng)
     musicSrc: opts.musicSrc || null,                 // null -> startBattleMusic() dùng BATTLE_MUSIC mặc định
     // ---- State Machine chuyển pha bắn theo %HP (xem applyHpStateMachine) — mặc định BẬT,
     // chỉ có tác dụng khi chainSelector đang dùng là chooseBossPatternChain (mặc định); trận
-    // Trọng — The Curse One dùng chainSelector riêng (chooseTrongPatternChain) nên không bị ảnh hưởng.
+    // Trọng — The Grimoire dùng chainSelector riêng (chooseTrongPatternChain) nên không bị ảnh hưởng.
     hpStateMachineEnabled: opts.hpStateMachineEnabled !== false,
     hpPhaseThreshold: opts.hpPhaseThreshold != null ? opts.hpPhaseThreshold : 0.5,
     hpPhase: 'SIMPLE',
-    // ---- NÂNG CẤP UNDERTALE/DELTARUNE (chỉ dùng cho trận Trọng "The Curse One") ----
+    // ---- NÂNG CẤP UNDERTALE/DELTARUNE (chỉ dùng cho trận Trọng "The Grimoire") ----
     undertaleMode: !!opts.undertaleMode,          // bật menu FIGHT/ACT/ITEM thay cho Tấn công/Phòng thủ/Kỹ năng
     tauntStacks: 0, reassureStacks: 0, tauntStackMax: 3, // ACT: Chế nhạo / Trấn an, tối đa 3 stack mỗi loại
     tauntUltCd: 0, reassureUltCd: 0,   // hồi chiêu của Sát Chiêu Hoàn Hảo / Ta Sẽ Không Bỏ Ai Ở Lại (mở khoá khi stack tương ứng đạt tối đa)
@@ -3956,7 +3970,9 @@ function renderBattle(){
   document.getElementById('bossHpBarFill').style.width = bossPct+'%';
   document.getElementById('bossHpText').textContent = Math.max(0,Math.round(BS.boss.hp))+' / '+BS.boss.maxHp;
   document.getElementById('battleTurnMax').textContent = isFinite(BS.maxTurn) ? BS.maxTurn : '∞';
-  document.getElementById('battleNoKillNote').textContent = BS.killable
+  document.getElementById('battleNoKillNote').textContent = (BS.killable && BS.sealThresholdRatio===0)
+    ? '✦ Hạ gục '+BS.bossName+' để chặn nghi lễ của hắn ✦'
+    : BS.killable
     ? '✦ '+BS.bossName+' CÓ THỂ bị hạ gục thật sự — nhưng khi HP xuống 20%, sẽ có lựa chọn khác ngoài việc kết liễu ✦'
     : '✦ '+BS.bossName+' không thể bị hạ gục bằng đòn đánh — chỉ có thể thắng bằng cách CẦM CỰ ĐỦ '+BS.maxTurn+' LƯỢT ✦';
   const bossSprite = document.getElementById('bossSprite');
@@ -4032,7 +4048,7 @@ function showBattleMenu(key){
   menu.appendChild(row);
   const hint = document.createElement('div');
   hint.className = 'battleMenuHint';
-  hint.textContent = def.skillDesc;
+  hint.textContent = def.skillDesc+' (QTE '+(SKILL_QTE_COUNT[key]||3)+' mũi tên — Tấn công/Phòng thủ thường không cần QTE)';
   menu.appendChild(hint);
 }
 
@@ -4089,7 +4105,7 @@ function showUndertaleMenu(key){
     menu.appendChild(ultRow);
     const ultHint = document.createElement('div');
     ultHint.className = 'battleMenuHint';
-    ultHint.textContent = 'Wibu Việt Nhật & Chàng Lính Ngu Lắm dồn hết niềm tin cho bạn — nâng cấp '+undertaleSkillLabel()+' thành LA PEACE CỦA BÔNG HOA, tăng 50% sức mạnh cho phần còn lại của trận. Chỉ dùng được 1 lần.';
+    ultHint.textContent = 'Wibu Việt Nhật & Chàng Lính Ngu Lắm dồn hết niềm tin cho bạn [QTE '+(SKILL_QTE_COUNT[key]||5)+' mũi tên] — nâng cấp '+undertaleSkillLabel()+' thành LA PEACE CỦA BÔNG HOA, tăng 50% sức mạnh cho phần còn lại của trận. Chỉ dùng được 1 lần.';
     menu.appendChild(ultHint);
   }
 
@@ -4145,7 +4161,7 @@ function showUndertaleActSubmenu(key){
   hint.className = 'battleMenuHint';
   hint.textContent = tauntMaxed || reassureMaxed
     ? 'Đủ 3/3 stack, Chế nhạo/Trấn an đã biến thành chiêu thức riêng — mỗi lần dùng xong sẽ mất 3 lượt để hồi lại.'
-    : 'Chế nhạo: mỗi stack (tối đa '+BS.tauntStackMax+') tăng sát thương của '+BS.bossName+' nhưng khiến hắn mất một phần HP vì mất kiểm soát. Trấn an: mỗi stack (tối đa '+BS.tauntStackMax+') giảm sát thương của '+BS.bossName+' — lần đầu dùng sẽ đánh thức "'+undertaleSkillLabel()+'" trong bạn.';
+    : '[QTE '+(SKILL_QTE_COUNT[key]||5)+' mũi tên] Chế nhạo: mỗi stack (tối đa '+BS.tauntStackMax+') tăng sát thương của '+BS.bossName+' nhưng khiến hắn mất một phần HP vì mất kiểm soát. Trấn an: mỗi stack (tối đa '+BS.tauntStackMax+') giảm sát thương của '+BS.bossName+' — lần đầu dùng sẽ đánh thức "'+undertaleSkillLabel()+'" trong bạn.';
   menu.appendChild(hint);
 }
 
@@ -4176,7 +4192,26 @@ function showUndertaleItemSubmenu(key){
   menu.appendChild(hint);
 }
 
+function skillLabelFor(key, action){
+  if(action==='act_taunt') return BS.tauntStacks>=BS.tauntStackMax ? 'Sát Chiêu Hoàn Hảo' : 'Chế nhạo';
+  if(action==='act_reassure') return BS.reassureStacks>=BS.tauntStackMax ? 'Ta Sẽ Không Bỏ Ai Ở Lại' : 'Trấn an';
+  if(action==='ultimate') return 'Lend Me Your Power';
+  return BS.undertaleMode ? undertaleSkillLabel() : PARTY_DEF[key].skillName;
+}
 function chooseAction(key, action){
+  // Đòn đánh thường: KHÔNG có QTE. Chỉ kỹ năng (skill / ACT / ultimate) mới qua QTE theo độ phức tạp từng nhân vật.
+  if(SKILL_ACTIONS.includes(action)){
+    document.getElementById('battleMenu').innerHTML = '<div class="battleMenuHint">Chuẩn bị niệm chú...</div>';
+    runSkillQte(key, skillLabelFor(key, action), (r)=>{
+      const st = BS.party[key];
+      st.action = action;
+      st.skillQ = {accuracy:r.accuracy, perfect:r.perfect, total:r.total};
+      addBattleLog(PARTY_DEF[key].name+' niệm "'+skillLabelFor(key, action)+'": '+r.perfect+' chính xác, '+r.blocked+' ổn, '+r.hits+' trật ('+Math.round(r.accuracy*100)+'%)'+(r.accuracy<0.4?' — THẤT BẠI!':'.'),'skill');
+      BS.pickIdx++;
+      promptNextAction();
+    });
+    return;
+  }
   BS.party[key].action = action;
   BS.pickIdx++;
   promptNextAction();
@@ -4243,10 +4278,11 @@ function resolveRound(){
     } else if(st.action==='ultimate'){
       BS.ultimateUsed = true;
       BS.willBuffActive = true;
-      BS.willBuffScale = 1.5;
+      if(skillFailed(st)){ addBattleLog(def.name+' mất nhịp — sợi dây La Peace chỉ truyền được một nửa sức mạnh!','warn'); }
+      BS.willBuffScale = skillFailed(st) ? Math.max(BS.willBuffScale||1, 1.25) : 1.25 + 0.25*Math.min(1, skillScale(st)/1.2);
       addBattleLog('✧ "LEND ME YOUR POWER" ✧ — Wibu Việt Nhật và Chàng Lính Ngu Lắm gửi trọn niềm tin qua sợi dây La Peace!','skill');
       addBattleLog(def.name+' cảm nhận ý chí gộp lại thành một — '+undertaleSkillLabel()+' bùng lên, sức mạnh tăng vọt 50%!','skill');
-      st.hp = Math.min(st.maxHp, st.hp + Math.round(st.maxHp*0.2));
+      st.hp = Math.min(st.maxHp, st.hp + Math.round(st.maxHp*0.2*skillScale(st)));
     }
   });
 
@@ -4260,6 +4296,11 @@ function resolveRound(){
 function resolveActTaunt(key, atkCount){
   const st = BS.party[key], def = PARTY_DEF[key];
   st.defending = false;
+  if(skillFailed(st)){
+    addBattleLog('Lời chế nhạo của '+def.name+' lạc nhịp, chẳng khiến '+BS.bossName+' bận tâm — ACT thất bại!','warn');
+    finishResolveRound(atkCount);
+    return;
+  }
 
   if(BS.tauntStacks >= BS.tauntStackMax){
     if(BS.tauntUltCd > 0){
@@ -4271,7 +4312,7 @@ function resolveActTaunt(key, atkCount){
       {spk:'BẠN', text:'"'+TRONG_TAUNT_ULTIMATE_LINE+'"'},
       {spk:'TRỌNG', text:TRONG_TAUNT_ULTIMATE_REPLY},
     ], ()=>{
-      const dmg = Math.round(BS.boss.maxHp*0.16) + Math.round(rand(10,18));
+      const dmg = Math.round((BS.boss.maxHp*0.16 + rand(10,18))*skillScale(st));
       if(BS.killable) BS.boss.hp = Math.max(0, BS.boss.hp - dmg);
       else BS.boss.hp = Math.max(Math.round(BS.boss.maxHp*0.015), BS.boss.hp - dmg);
       BS.tauntUltCd = 3;
@@ -4305,6 +4346,11 @@ function resolveActTaunt(key, atkCount){
 function resolveActReassure(key, atkCount){
   const st = BS.party[key], def = PARTY_DEF[key];
   st.defending = true; // trấn an cũng khiến bạn chuẩn bị tinh thần, giảm nhẹ sát thương lượt boss tới
+  if(skillFailed(st)){
+    addBattleLog('Lời trấn an của '+def.name+' nghẹn lại giữa chừng — ACT thất bại!','warn');
+    finishResolveRound(atkCount);
+    return;
+  }
 
   if(BS.reassureStacks >= BS.tauntStackMax){
     if(BS.reassureUltCd > 0){
@@ -4316,7 +4362,7 @@ function resolveActReassure(key, atkCount){
       {spk:'BẠN', text:'"'+TRONG_REASSURE_ULTIMATE_LINE+'"'},
       {spk:'TRỌNG', text:TRONG_REASSURE_ULTIMATE_REPLY},
     ], ()=>{
-      const gain = Math.round(st.maxHp*0.2);
+      const gain = Math.round(st.maxHp*0.2*skillScale(st));
       st.maxHp += gain;
       st.hp = Math.min(st.maxHp, st.hp + gain);
       BS.reassureUltCd = 3;
@@ -4355,7 +4401,7 @@ function resolveActReassure(key, atkCount){
 function finishResolveRound(atkCount){
   renderBattle();
 
-  // Boss THẬT SỰ có thể bị hạ gục (Đêm 3 — Trọng The Curse One): kiểm tra ngưỡng phong ấn
+  // Boss THẬT SỰ có thể bị hạ gục (Đêm 3 — Trọng The Grimoire): kiểm tra ngưỡng phong ấn
   // TRƯỚC khi kiểm tra tử vong — nếu không, một lượt sát thương lớn có thể "nhảy cóc" qua
   // thẳng mốc 15% mà người chơi không bao giờ thấy lựa chọn Phong Ấn/Kết Liễu.
   if(BS.killable){
@@ -4374,7 +4420,7 @@ function finishResolveRound(atkCount){
   // tiếp theo của boss — cho các lựa chọn JRPG giá trị thực tế thay vì chỉ là hình thức.
   BS.dodgeSoften = atkCount;
   if(atkCount>0){
-    addBattleLog('Party dồn '+atkCount+' đòn tấn công — chuỗi đạn né tiếp theo của '+BS.bossName+' sẽ CHẬM & THƯA hơn!','atk');
+    addBattleLog('Party dồn '+atkCount+' đòn tấn công — đòn phản công kế tiếp của '+BS.bossName+' sẽ ÍT NHỊP hơn & thời gian bấm RỘNG hơn!','atk');
   }
 
   const staggerChance = atkCount*0.10;
@@ -4388,12 +4434,15 @@ function finishResolveRound(atkCount){
 
 function applyBattleSkill(key){
   const st = BS.party[key], def = PARTY_DEF[key];
+  st.cd = def.skillCd;
+  if(skillFailed(st)){
+    addBattleLog(def.name+' niệm sai chú — "'+skillLabelFor(key,'skill')+'" thất bại, kỹ năng vẫn phải hồi '+def.skillCd+' lượt!','warn');
+    return;
+  }
+  const scale = skillScale(st);
   if(key==='YOU'){
-    st.cd = def.skillCd;
+    BS.boss.stunned = true;
     if(BS.undertaleMode){
-      // NÂNG CẤP: kỹ năng YOU giờ vừa gây choáng, vừa TỰ KÍCH HOẠT buff "Ý Chí Của Người Bông"
-      // (đổi tên hiển thị, tăng sát thương FIGHT + tự hồi máu mỗi đòn — xem resolveRound()).
-      BS.boss.stunned = true;
       if(!BS.willBuffActive){
         BS.willBuffActive = true;
         BS.willBuffScale = Math.max(BS.willBuffScale||1, 1.25);
@@ -4401,22 +4450,18 @@ function applyBattleSkill(key){
       } else {
         addBattleLog(undertaleSkillLabel()+' bùng lên lần nữa — '+BS.bossName+' khựng lại, choáng váng!','skill');
       }
-      const heal = Math.round(st.maxHp*0.12);
+      const heal = Math.round(st.maxHp*0.12*scale);
       st.hp = Math.min(st.maxHp, st.hp+heal);
       addBattleLog('BẠN hồi '+heal+' HP từ chính luồng ý chí vừa giải phóng.','good');
-    } else {
-      BS.boss.stunned = true;
-      if(BS.souls) addBattleLog('Ánh sáng La Peace bùng lên từ tay BẠN — '+BS.bossName+' khựng lại, choáng váng!','skill');
-      else addBattleLog('BẠN hét lên "Vì tao là người bông!!" — '+BS.bossName+' khựng lại, choáng váng!','skill');
-    }
+    } else if(BS.souls) addBattleLog('Ánh sáng La Peace bùng lên từ tay BẠN — '+BS.bossName+' khựng lại, choáng váng!','skill');
+    else addBattleLog('BẠN hét lên "Vì tao là người bông!!" — '+BS.bossName+' khựng lại, choáng váng!','skill');
   } else if(key==='WIBU'){
-    BS.order.forEach(k=>{ const p=BS.party[k]; if(p.hp>0) p.hp = Math.min(p.maxHp, p.hp+50); });
-    st.cd = def.skillCd;
-    addBattleLog('WIBU VIỆT NHẬT dùng Chúc Phúc Của Otaku — cả team hồi 50 HP!','skill');
+    const heal = Math.round(50*scale);
+    BS.order.forEach(k=>{ const p=BS.party[k]; if(p.hp>0) p.hp = Math.min(p.maxHp, p.hp+heal); });
+    addBattleLog('WIBU VIỆT NHẬT dùng Chúc Phúc Của Otaku — cả team hồi '+heal+' HP!','skill');
   } else if(key==='LINH'){
     st.taunting = true;
-    st.cd = def.skillCd;
-    addBattleLog('CHÀNG LÍNH NGU LẮM hét "Tới tao đây!!" — dựng khiên khiêu khích '+BS.bossName+'!','skill');
+    addBattleLog('CHÀNG LÍNH NGU LẮM hét "Tới tao đây!!" — dựng khiên khiêu khích '+BS.bossName+'!'+(scale>=1.2?' (Khiên hoàn hảo!)':''),'skill');
   }
 }
 
@@ -4460,7 +4505,7 @@ function chooseBossPatternChain(turn){
   return shuffle(all.slice()).slice(0, chainLen);
 }
 
-/* ---- Chọn chuỗi pattern riêng cho Trọng — The Curse One (Đêm 3) ----
+/* ---- Chọn chuỗi pattern riêng cho Trọng — The Grimoire (Đêm 3) ----
    Không dựa vào số lượt (boss có thể sống rất lâu hoặc chết rất nhanh tuỳ lối chơi) mà dựa
    vào TỈ LỆ HP CÒN LẠI: HP càng cao, Dạ Thử (nhanh/xảo quyệt) càng lấn át; HP càng thấp,
    Thiết Ngưu (nặng/huỷ diệt) càng chiếm quyền kiểm soát — đúng tinh thần "2 linh hồn giằng co
@@ -4531,7 +4576,7 @@ function runBossChain(chain, idx, totalDmg){
       // Thiết Ngưu — Khiên Đất: pattern không tấn công, chỉ dựng khiên -> không tính là "hits" gây thương thật
       if(pattern.shieldSelf){ BS.boss.shielded = true; segDmg = 0; }
     }
-    else addBattleLog((BS.souls ? 'Souls of the Undying One' : 'Linh hồn hợp nhất')+' né trọn chiêu "'+pattern.name+'"!', 'warn');
+    else addBattleLog((BS.souls ? 'Kim Kiếm La Peace' : 'Linh hồn hợp nhất')+' đỡ trọn chiêu "'+pattern.name+'"!', 'warn');
     const gap = chain.length>1 ? 260 : 0; // khoảng nghỉ ngắn giữa các đòn trong chuỗi
     setTimeout(()=>{ runBossChain(chain, idx+1, totalDmg+segDmg); }, gap);
   });
@@ -4557,7 +4602,7 @@ function applyBossChainDamage(totalDmg){
   }
 
   if(totalDmg<=0){
-    addBattleLog('Cả chuỗi đòn bị né trọn vẹn — không ai bị thương!','warn');
+    addBattleLog('Cả chuỗi đòn bị đỡ trọn vẹn — không ai bị thương!','warn');
   } else {
     targets.forEach(k=>{
       const st = BS.party[k], def = PARTY_DEF[k];
@@ -4572,6 +4617,268 @@ function applyBossChainDamage(totalDmg){
   endRound();
 }
 
+/* ==============================================================
+   COMBAT KIỂU FINAL FANTASY CỔ ĐIỂN + QTE MŨI TÊN
+   --------------------------------------------------------------
+   Thay thế hoàn toàn pha BULLET-HELL (runDodgePhaseLegacy bên dưới giữ lại để tham khảo, không
+   còn được gọi). Một engine QTE (runArrowQte) dùng cho 2 trường hợp:
+     1) KỸ NĂNG của party (Kỹ năng / ACT / Ultimate): Tấn công thường KHÔNG có QTE. Mỗi nhân vật
+        có số mũi tên theo độ phức tạp kỹ năng (SKILL_QTE_COUNT): BẠN 5, WIBU 3, LÍNH 4.
+        Độ chính xác (0-1) quyết định kỹ năng thành công/mạnh cỡ nào (xem skillScale()).
+     2) PHÒNG THỦ (lượt boss): mỗi chiêu của boss có độ phức tạp NGẪU NHIÊN 1-7 mũi tên.
+          - Bấm đúng hướng trong "CỬA SỔ PARRY" (đoạn sáng trên thanh thời gian) = PARRY
+          - Bấm đúng hướng ngoài cửa sổ nhưng còn kịp                              = ĐỠ ĐƯỢC
+          - Bấm sai / hết giờ                                                      = TRÚNG ĐÒN
+        Độ khó (0-1) tăng theo lượt và độ phức tạp chiêu, làm: cửa sổ parry HẸP dần, DỊCH CHUYỂN
+        ngẫu nhiên mỗi cú (và trôi dọc thanh ở độ khó cao), mũi tên RUNG LẮC mạnh hơn.
+        Một số chiêu còn có FEINT: mũi tên đổi hướng giữa chừng.
+   runDodgePhase(pattern, cb) giữ nguyên hợp đồng cũ: gọi cb(hits).
+   ============================================================== */
+const QTE_KEYMAP = {
+  ArrowUp:'ArrowUp', ArrowDown:'ArrowDown', ArrowLeft:'ArrowLeft', ArrowRight:'ArrowRight',
+  w:'ArrowUp', s:'ArrowDown', a:'ArrowLeft', d:'ArrowRight',
+  W:'ArrowUp', S:'ArrowDown', A:'ArrowLeft', D:'ArrowRight'
+};
+// Số mũi tên QTE của kỹ năng theo độ phức tạp từng nhân vật
+const SKILL_QTE_COUNT = { YOU:5, WIBU:3, LINH:4 };
+const SKILL_ACTIONS = ['skill','act_taunt','act_reassure','ultimate'];
+// Chiêu hay "lừa" bằng feint / chiêu nhanh (cửa sổ thời gian hẹp hơn)
+const QTE_FEINT_TYPES = ['acceldash','ambush','uxbounce','dart','swarm','combo','wave','orbit'];
+const QTE_FAST_TYPES = ['sweep','judgement','acceldash','dart','charge','uxblaster','uxlinear'];
+
+let QTE = null; // trạng thái QTE đang chạy (null = không có)
+
+/* Hệ số hiệu lực kỹ năng theo độ chính xác QTE: 0.4 (vừa đủ) -> 1.0 (hoàn hảo) -> 1.2 (toàn PARRY).
+   Dưới 40% chính xác = kỹ năng THẤT BẠI (xem skillFailed()). */
+function skillFailed(st){ return st.skillQ && st.skillQ.accuracy < 0.4; }
+function skillScale(st){
+  if(!st.skillQ) return 1;
+  const q = st.skillQ;
+  return 0.4 + 0.6*q.accuracy + (q.perfect===q.total ? 0.2 : 0);
+}
+
+function qteEnsureHost(){
+  const arena = document.getElementById('dodgeArena');
+  const box = document.getElementById('dodgeBox');
+  const soul = document.getElementById('soulCircle');
+  if(soul) soul.style.display = 'none';
+  box.querySelectorAll('.dbullet').forEach(b=>b.remove());
+  if(getComputedStyle(box).position === 'static') box.style.position = 'relative';
+  let host = document.getElementById('qteHost');
+  if(!host){
+    host = document.createElement('div');
+    host.id = 'qteHost';
+    host.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;font-family:inherit;color:#fff;user-select:none;';
+    box.appendChild(host);
+  }
+  arena.classList.remove('hidden');
+  return host;
+}
+function qteReleaseHost(){
+  const arena = document.getElementById('dodgeArena');
+  const host = document.getElementById('qteHost');
+  if(host) host.remove();
+  const soul = document.getElementById('soulCircle');
+  if(soul) soul.style.display = '';
+  arena.classList.add('hidden');
+}
+
+/* opts: { title, subtitle, count, windowMs, feintChance, mode:'attack'|'defend',
+           parryWidth (0-1, mặc định .5), shake (px, 0 = không rung), drift (0-1, độ trôi cửa sổ parry),
+           onStrike(res) optional, onDone({hits, perfect, blocked, total, accuracy, bestStreak}) } */
+function runArrowQte(opts){
+  const host = qteEnsureHost();
+  const total = Math.max(1, opts.count|0);
+  const parryWidth = clamp(opts.parryWidth!=null ? opts.parryWidth : 0.5, 0.08, 0.9);
+  const shake = opts.shake||0, drift = opts.drift||0;
+  const q = QTE = {
+    idx:0, total, windowMs: opts.windowMs, feintChance: opts.feintChance||0,
+    hits:0, perfect:0, blocked:0, streak:0, bestStreak:0,
+    target:null, shownAt:0, feinted:false, locked:false, timer:null, raf:null, done:false, opts,
+    zoneStart:0, zoneDrift:0
+  };
+
+  host.innerHTML = `
+    <div style="font-size:13px;letter-spacing:2px;color:#ffd27a;font-weight:700;">${opts.title||''}</div>
+    <div style="font-size:12px;color:#c9c9d6;max-width:86%;">${opts.subtitle||''}</div>
+    <div id="qteProgress" style="display:flex;gap:6px;"></div>
+    <div id="qteArrow" style="font-size:84px;line-height:1;font-weight:800;min-height:96px;transition:transform .08s;">·</div>
+    <div id="qteTrack" style="position:relative;width:min(70%,360px);height:14px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.35);border-radius:7px;overflow:hidden;">
+      <div id="qteZone" style="position:absolute;top:0;bottom:0;background:rgba(125,255,154,.55);border-left:2px solid #7dff9a;border-right:2px solid #7dff9a;"></div>
+      <div id="qteCursor" style="position:absolute;top:0;bottom:0;width:4px;background:#fff;box-shadow:0 0 6px #fff;left:0;"></div>
+    </div>
+    <div id="qteFeedback" style="font-size:18px;font-weight:800;min-height:24px;letter-spacing:2px;"></div>
+    <div style="font-size:11px;color:#aaa;">Phím mũi tên (hoặc W A S D) — bấm khi con trỏ nằm trong vùng sáng để ${opts.mode==='attack'?'tăng hiệu quả':'PARRY'}</div>`;
+
+  const elProg = host.querySelector('#qteProgress');
+  const elArrow = host.querySelector('#qteArrow');
+  const elZone = host.querySelector('#qteZone');
+  const elCursor = host.querySelector('#qteCursor');
+  const elFb = host.querySelector('#qteFeedback');
+  const dodgeHitNum = document.getElementById('dodgeHitNum');
+  if(dodgeHitNum) dodgeHitNum.textContent = '0';
+
+  const results = [];
+  function drawProgress(){
+    elProg.innerHTML = '';
+    for(let i=0;i<total;i++){
+      const dot = document.createElement('span');
+      const r = results[i];
+      const col = r==='perfect' ? '#7dff9a' : r==='block' ? '#8ecbff' : r==='hit' ? '#ff5a5a' : (i===q.idx ? '#ffd27a' : 'rgba(255,255,255,.25)');
+      dot.style.cssText = 'width:14px;height:14px;border-radius:50%;background:'+col+';border:1px solid rgba(255,255,255,.5);';
+      elProg.appendChild(dot);
+    }
+  }
+  drawProgress();
+
+  // Vị trí cửa sổ parry tại thời điểm t (0-1): xuất phát ngẫu nhiên, trôi dọc thanh nếu drift>0
+  function zoneAt(t){
+    const start = clamp(q.zoneStart + q.zoneDrift*t, 0.05, 1-parryWidth-0.02);
+    return [start, start+parryWidth];
+  }
+  function feedback(text, color){ elFb.textContent = text; elFb.style.color = color; }
+  function cleanup(){
+    q.done = true;
+    document.removeEventListener('keydown', onKey, true);
+    clearTimeout(q.timer);
+    cancelAnimationFrame(q.raf);
+  }
+  function endAll(){
+    cleanup();
+    const out = {hits:q.hits, perfect:q.perfect, blocked:q.blocked, total, accuracy:(q.perfect+q.blocked)/total, bestStreak:q.bestStreak};
+    setTimeout(()=>{ qteReleaseHost(); QTE = null; opts.onDone(out); }, 420);
+  }
+  function nextStrike(){
+    if(q.idx >= total){ endAll(); return; }
+    q.locked = false; q.feinted = false;
+    q.target = pick(ARROW_KEYS);
+    // cửa sổ parry DỊCH CHUYỂN: vị trí xuất phát ngẫu nhiên mỗi cú; ở độ khó cao còn trôi trái/phải
+    q.zoneStart = 0.08 + Math.random()*(0.9 - parryWidth - 0.08);
+    q.zoneDrift = drift ? (Math.random()<0.5?-1:1) * drift * (0.4+Math.random()*0.6) : 0;
+    elArrow.textContent = ARROW_GLYPHS[q.target];
+    elArrow.style.color = opts.mode==='attack' ? '#ffd27a' : '#ff8f8f';
+    elArrow.style.transform = 'scale(1.15)';
+    setTimeout(()=>{ if(!q.done) elArrow.style.transform = 'scale(1)'; }, 90);
+    feedback('', '#fff');
+    drawProgress();
+    { const [iz0,iz1] = zoneAt(0); elZone.style.left=(iz0*100)+'%'; elZone.style.width=((iz1-iz0)*100)+'%'; elCursor.style.left='0%'; }
+    q.shownAt = performance.now();
+    const feintAt = (Math.random() < q.feintChance) ? q.shownAt + q.windowMs*(0.38 + Math.random()*0.12) : null;
+    function frame(now){
+      if(q.done || q.locked) return;
+      const t = (now - q.shownAt) / q.windowMs;
+      const [z0,z1] = zoneAt(clamp(t,0,1));
+      elZone.style.left = (z0*100)+'%'; elZone.style.width = ((z1-z0)*100)+'%';
+      elCursor.style.left = (clamp(t,0,1)*98)+'%';
+      // RUNG LẮC mũi tên (chỉ khi shake>0)
+      if(shake>0){
+        const dx=(Math.random()-0.5)*2*shake, dy=(Math.random()-0.5)*2*shake, rot=(Math.random()-0.5)*shake*1.2;
+        elArrow.style.transform = 'translate('+dx.toFixed(1)+'px,'+dy.toFixed(1)+'px) rotate('+rot.toFixed(1)+'deg)';
+      }
+      if(feintAt && !q.feinted && now >= feintAt){
+        q.feinted = true;
+        let nt; do{ nt = pick(ARROW_KEYS); }while(nt===q.target);
+        q.target = nt;
+        elArrow.textContent = ARROW_GLYPHS[nt];
+        elArrow.style.color = '#ff4fd8';
+        feedback('ĐỔI HƯỚNG!', '#ff4fd8');
+      }
+      if(t >= 1){ resolveStrike('timeout'); return; }
+      q.raf = requestAnimationFrame(frame);
+    }
+    q.raf = requestAnimationFrame(frame);
+  }
+  function resolveStrike(kind){
+    if(q.locked || q.done) return;
+    q.locked = true;
+    cancelAnimationFrame(q.raf);
+    elArrow.style.transform = 'scale(1)';
+    let res;
+    if(kind==='ok'){
+      const t = (performance.now() - q.shownAt) / q.windowMs;
+      const [z0,z1] = zoneAt(clamp(t,0,1));
+      res = (t>=z0 && t<=z1) ? 'perfect' : 'block';
+    } else res = 'hit';
+    results[q.idx] = res;
+    if(res==='perfect'){ q.perfect++; q.streak++; }
+    else if(res==='block'){ q.blocked++; q.streak++; }
+    else { q.hits++; q.streak = 0; }
+    q.bestStreak = Math.max(q.bestStreak, q.streak);
+    if(dodgeHitNum) dodgeHitNum.textContent = q.hits;
+    if(opts.mode==='attack'){
+      if(res==='perfect') feedback('CHÍNH XÁC!', '#7dff9a');
+      else if(res==='block') feedback('ỔN', '#8ecbff');
+      else feedback(kind==='timeout' ? 'TRỄ!' : 'TRẬT!', '#ff5a5a');
+    } else {
+      if(res==='perfect') feedback('PARRY!', '#7dff9a');
+      else if(res==='block') feedback('ĐỠ ĐƯỢC', '#8ecbff');
+      else feedback(kind==='timeout' ? 'KHÔNG KỊP — TRÚNG ĐÒN!' : 'SAI HƯỚNG — TRÚNG ĐÒN!', '#ff5a5a');
+      if(res==='hit'){
+        const box = document.getElementById('dodgeBox');
+        if(box.animate) box.animate([{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'translateX(0)'}], {duration:160});
+      }
+    }
+    if(opts.onStrike) opts.onStrike(res);
+    drawProgress();
+    q.idx++;
+    q.timer = setTimeout(nextStrike, 380);
+  }
+  function onKey(e){
+    const k = QTE_KEYMAP[e.key];
+    if(!k) return;
+    e.preventDefault(); e.stopPropagation();
+    if(q.done || q.locked || !q.target) return;
+    resolveStrike(k === q.target ? 'ok' : 'wrong');
+  }
+  document.addEventListener('keydown', onKey, true);
+  q.timer = setTimeout(nextStrike, 650); // nhịp chuẩn bị ngắn trước cú đầu tiên
+}
+
+/* ---- PHÒNG THỦ: độ phức tạp chiêu của boss NGẪU NHIÊN 1-7 mũi tên. Giữ hợp đồng cb(hits). ---- */
+function runDodgePhase(pattern, cb){
+  const turn = BS ? BS.turn : 1;
+  const soften = BS ? (BS.dodgeSoften||0) : 0; // số đòn Tấn công ở lượt trước -> thời gian bấm rộng hơn
+  const complexity = 1 + Math.floor(Math.random()*7); // 1..7
+  // Độ khó 0-1: tăng theo lượt và theo độ phức tạp của chính chiêu này
+  const difficulty = clamp((turn-1)*0.05 + (complexity-1)*0.07, 0, 1);
+  let windowMs = 1500 - Math.round(difficulty*420);
+  windowMs *= (1 + Math.min(0.3, soften*0.1));
+  if(QTE_FAST_TYPES.includes(pattern.bulletType)) windowMs *= 0.82;
+  if(pattern.bulletType==='quake' || pattern.bulletType==='pillar') windowMs *= 1.12;
+  windowMs = clamp(windowMs, 620, 1900);
+  const parryWidth = 0.34 - difficulty*0.2;            // 0.34 -> 0.14: cửa sổ parry hẹp dần
+  const shake = Math.round(difficulty*11);             // 0 -> 11px: mũi tên rung lắc mạnh dần
+  const drift = difficulty > 0.35 ? (difficulty-0.35)*0.5 : 0; // cửa sổ parry bắt đầu trôi khi đủ khó
+  const feintChance = QTE_FEINT_TYPES.includes(pattern.bulletType) ? (0.25 + Math.min(0.2,(turn-1)*0.015)) : 0;
+  const who = BS && BS.souls ? 'Kim Kiếm La Peace' : (BS && BS.order.length>1 ? 'Cả đội' : 'Bạn');
+  runArrowQte({
+    mode:'defend',
+    title:'⚠ '+pattern.name+' — ĐỘ PHỨC TẠP '+complexity+'/7',
+    subtitle:pattern.desc+'<br><b>Bấm đúng hướng mũi tên để ĐỠ; bấm trong vùng sáng để PARRY!</b> ('+who+')',
+    count:complexity, windowMs, feintChance, parryWidth, shake, drift,
+    onDone:(r)=>{
+      if(r.perfect>0 && r.hits===0) addBattleLog('PARRY x'+r.perfect+' — '+who+' đỡ trọn chiêu "'+pattern.name+'" (độ phức tạp '+complexity+')!','good');
+      cb(r.hits);
+    }
+  });
+}
+
+/* ---- KỸ NĂNG: QTE số mũi tên theo nhân vật (BẠN 5 / WIBU 3 / LÍNH 4). Đòn đánh thường KHÔNG qua đây. ---- */
+function runSkillQte(key, label, cb){
+  const def = PARTY_DEF[key];
+  const count = SKILL_QTE_COUNT[key] || 3;
+  let windowMs = 1500 - (count-3)*60;
+  if(BS.willBuffActive) windowMs *= 1.12;
+  runArrowQte({
+    mode:'attack',
+    title:'✦ '+label.toUpperCase()+' — '+count+' MŨI TÊN',
+    subtitle:def.name+' niệm chú: bấm đúng chuỗi mũi tên! Dưới 40% chính xác, kỹ năng thất bại.',
+    count, windowMs, feintChance:0, parryWidth:0.5, shake:0, drift:0,
+    onDone:(r)=> cb(r)
+  });
+}
+
+
 /* ============== DODGE PHASE — né chuỗi đạn bằng "linh hồn hợp nhất" ==============
    Thay vì chỉ xem hiệu ứng rồi nhận sát thương cố định, người chơi điều khiển 1 hình tròn
    (đại diện cho linh hồn hợp nhất của cả 3 người: BẠN + WIBU VIỆT NHẬT + CHÀNG LÍNH NGU LẮM)
@@ -4583,7 +4890,7 @@ const DODGE_KEYS = {
 };
 let DZ = null; // trạng thái runtime của pha né đạn hiện tại
 
-function runDodgePhase(pattern, cb){
+function runDodgePhaseLegacy(pattern, cb){ // (bullet-hell cũ — không còn được gọi)
   const arena = document.getElementById('dodgeArena');
   const box = document.getElementById('dodgeBox');
   const soul = document.getElementById('soulCircle');
@@ -4842,7 +5149,7 @@ function genComboSpiralWaveQueue(rect, duration, density){
   return spiral.concat(wave).sort((a,b)=>a.t-b.t);
 }
 
-/* ============== ĐÊM 3 — CÁC LOẠI ĐẠN MỚI CHO TRỌNG "THE CURSE ONE" ==============
+/* ============== ĐÊM 3 — CÁC LOẠI ĐẠN MỚI CHO TRỌNG "THE GRIMOIRE" ==============
    Kế thừa Đặc Trưng Sức Mạnh của Tý (Dạ Thử — nhanh/xảo quyệt/số đông) và Sửu (Thiết Ngưu —
    sức mạnh tuyệt đối/điềm tĩnh/huỷ diệt) mà Trọng đã hấp thụ. Xem BOSS_PATTERNS_TRONG. */
 
@@ -5250,11 +5557,11 @@ function endRound(){
   BS.turn++;
   BS.boss.shielded = false; // Khiên Đất (Thiết Ngưu) chỉ có hiệu lực đúng 1 lượt tấn công của party
   // Mốc "cầm cự đủ N lượt để thắng" CHỈ áp dụng cho boss KHÔNG killable (TIU/Quá Tải Chapter 2).
-  // Với boss killable (Trọng — The Curse One), chiến thắng chỉ đến khi HP thật sự về 0 hoặc qua
+  // Với boss killable (Trọng — The Grimoire), chiến thắng chỉ đến khi HP thật sự về 0 hoặc qua
   // lựa chọn Phong Ấn — xem resolveRound(). Hết lượt mà chưa hạ được thì trận cứ tiếp diễn.
   if(!BS.killable && BS.turn > BS.maxTurn){ finishBattle(true); return; }
   BS.pickIdx = 0;
-  BS.order.forEach(k=>{ BS.party[k].action=null; });
+  BS.order.forEach(k=>{ BS.party[k].action=null; BS.party[k].skillQ=null; });
   document.getElementById('bossPatternTag').textContent='';
   renderBattle();
   promptNextAction();
@@ -5291,7 +5598,7 @@ function finishBattle(won){
   }
 }
 
-/* ============== ĐÊM 3 — TRẬN ĐÁNH TRỌNG "THE CURSE ONE" ==============
+/* ============== ĐÊM 3 — TRẬN ĐÁNH TRỌNG "THE GRIMOIRE" ==============
    Điểm vào duy nhất cho trận đấu này. Người chơi chiến đấu MỘT MÌNH dưới dạng "Souls of the
    Undying One" (order:['YOU'] — khác trận bí mật Chapter 1/màn Quá Tải Chapter 2 vốn dùng cả
    3 người), đúng tinh thần "nhân vật chính tự đánh thức La Peace của bản thân". HP nhân vật
@@ -5305,7 +5612,7 @@ function startTrongCurseOneBattle(){
     killable: true,
     undertaleMode: true,
     bossMaxHp: 700,
-    bossName: 'TRỌNG — THE CURSE ONE',
+    bossName: 'TRỌNG — THE GRIMOIRE',
     bossImage: (typeof TRONG_CURSE_IMAGE !== 'undefined') ? TRONG_CURSE_IMAGE : null,
     musicSrc: (typeof TRONG_CURSE_MUSIC !== 'undefined') ? TRONG_CURSE_MUSIC : null,
     patterns: BOSS_PATTERNS_TRONG,
@@ -5315,15 +5622,15 @@ function startTrongCurseOneBattle(){
     sealThresholdRatio: 0.15,
     onSealChoice: triggerTrongSealChoice,
     introLog: [
-      {msg:'Souls of the Undying One trỗi dậy trong bạn — sức mạnh của La Peace hoà cùng ý chí sinh tồn!', cls:''},
-      {msg:'TRỌNG — THE CURSE ONE hiện ra trước mặt, không còn chút gì của người bạn cũ.', cls:'danger'},
+      {msg:'Kim Kiếm La Peace trỗi dậy trong bạn — sức mạnh của La Peace hoà cùng ý chí sinh tồn!', cls:''},
+      {msg:'TRỌNG — THE GRIMOIRE hiện ra trước mặt, không còn chút gì của người bạn cũ.', cls:'danger'},
       {msg:'Lần này trận chiến có thể thực sự phân thắng bại — nhưng khi dồn được hắn tới đường cùng, hãy cân nhắc thật kỹ trước khi ra đòn cuối.', cls:'warn'},
     ],
-    victoryShatterMsg: 'Nhát đánh cuối cùng xuyên qua lớp giáp tà thuật — TRỌNG THE CURSE ONE gục xuống, ánh sáng đen kịt vụt tắt.',
+    victoryShatterMsg: 'Nhát đánh cuối cùng xuyên qua lớp giáp tà thuật — TRỌNG THE GRIMOIRE gục xuống, ánh sáng đen kịt vụt tắt.',
     victoryLightMsg: 'Không có luồng sáng ấm áp nào cả lần này — chỉ có một khoảng lặng nặng nề bao trùm lấy cả ba.',
     onVictory: ()=>{ playVN(VN_TRONG_BAD_ENDING_DIALOGUE.lines, ()=>{ triggerChapter2BadEnding(); }); },
-    defeatLogMsg: 'Souls of the Undying One vụn vỡ... sức mạnh vừa thức tỉnh đã lụi tàn ngay trong trận chiến đầu tiên.',
-    defeatScreenMsg: 'TRỌNG — THE CURSE ONE đã áp đảo hoàn toàn. Có lẽ ý chí thức tỉnh của bạn vẫn chưa đủ mạnh — thử lại lần nữa.',
+    defeatLogMsg: 'Kim Kiếm La Peace vụn vỡ... sức mạnh vừa thức tỉnh đã lụi tàn ngay trong trận chiến đầu tiên.',
+    defeatScreenMsg: 'TRỌNG — THE GRIMOIRE đã áp đảo hoàn toàn. Có lẽ ý chí thức tỉnh của bạn vẫn chưa đủ mạnh — thử lại lần nữa.',
   });
 }
 
@@ -5369,7 +5676,7 @@ function triggerChapter2SealedEnding(){
   S.running = false;
   S.endingRoute = 'secret_sealed';
   document.getElementById('winTitle').textContent = '✦ SECRET ENDING — PHONG ẤN ✦';
-  document.getElementById('winSub').textContent = 'Tý và Sửu đã được phong ấn, tách khỏi Trọng. Trọng đã trở lại là chính mình — nhưng câu chuyện của bốn người họ vẫn còn dang dở.';
+  document.getElementById('winSub').textContent = 'Mũi kim đã khâu lại những gì bị xé toạc. Tý và Sửu được giải thoát, Trọng trở lại là chính mình — và bắt đầu hành trình đi xin lỗi những người hắn đã gieo ấn chú.';
   const nextBtn = document.getElementById('nextNightBtn');
   nextBtn.textContent = 'VỀ MÀN HÌNH CHÍNH';
   nextBtn.onclick = showTitle;
@@ -5381,7 +5688,7 @@ function triggerChapter2BadEnding(){
   S.running = false;
   S.endingRoute = 'secret_bad';
   document.getElementById('winTitle').textContent = '☠ BAD ENDING — CÁI GIÁ CỦA CHIẾN THẮNG ☠';
-  document.getElementById('winSub').textContent = 'The TIU, rồi Tý, và giờ là Trọng. Các bạn đã sống sót — nhưng để lại phía sau nhiều hơn những gì các bạn tưởng.';
+  document.getElementById('winSub').textContent = 'Trọng gục xuống, nhưng La Peace của hắn bị giết bằng ma thuật nên không tan biến — nó nằm trong tay bạn, nặng hơn bạn nghĩ. Cuốn sách trắng đang chờ ai đó viết tiếp.';
   const nextBtn = document.getElementById('nextNightBtn');
   nextBtn.textContent = 'VỀ MÀN HÌNH CHÍNH';
   nextBtn.onclick = showTitle;
@@ -5455,8 +5762,8 @@ function triggerSecretEnding(){
   showSecretEndScreen();
 }
 function showSecretEndScreen(){
-  document.getElementById('winTitle').textContent = '✦ SECRET ENDING — HÒA GIẢI ✦';
-  document.getElementById('winSub').textContent = 'Ba mảnh La Peace hợp nhất thành một luồng sáng ấm áp. TIU và Trọng cùng tan vào ánh sáng ấy — có lẽ, đây mới là câu trả lời thật sự cho việc "đừng ngủ quên ở UIT".';
+  document.getElementById('winTitle').textContent = '✦ ĐÊM CUỐI — TẾ LỄ "HOÀN TẤT" ✦';
+  document.getElementById('winSub').textContent = 'TIU im bặt, ba mảnh La Peace biến mất trong tay Trọng, và hắn mỉm cười. Chỉ có điều... nụ cười ấy khiến bạn thấy lạnh sống lưng.';
   const nextBtn = document.getElementById('nextNightBtn');
   nextBtn.textContent = 'TIẾP TỤC';
   nextBtn.onclick = ()=>{ document.getElementById('winScreen').classList.add('hidden'); startEpilogue('secret'); };
@@ -5565,7 +5872,8 @@ const CHAPTER_INTRO = {
     subtitle:'???',
     html:`<p>Chapter 2 dùng lại đúng bản đồ của Chapter 1 nhưng ở <b>độ khó cao</b>: đêm sẽ có thêm <b>biến cố trung tâm</b> — mất điện toàn trường, buộc bạn phải chạy đến <b>Tòa C</b> khởi động lại cầu dao tổng trước khi The TIU lợi dụng bóng tối. Về cuối đêm, một số cửa nối giữa các tòa còn bị <b>khóa ngẫu nhiên</b>.
     Bạn cũng có thể nhặt <b>linh kiện</b> (pin cũ, dây điện, băng keo, ống thép) rải trong các góc tối rồi ghé <b>Bàn chế tạo</b> ở Căn tin để tự chế Camera, Bộ Sập Cầu Dao, Đèn UV hay Bẫy gây nhiễu — những vật phẩm này chỉ có ở Chapter 2.</p>
-    <p><b style="color:var(--blood-bright)">Đêm 3</b> đổi hẳn không khí: nếu Trọng phải tự mình hy sinh để dập tắt TIU ở Đêm 2, cậu ấy sẽ trở thành <b>TRỌNG — THE CURSE ONE</b> — kẻ đuổi bắt mới của Đêm 3. Bị tóm đủ 3 lần, La Peace ngủ quên trong chính bạn sẽ thức tỉnh, dẫn thẳng vào trận đối đầu cuối cùng.</p>`
+    <p><b style="color:var(--blood-bright)">Đêm 3</b> đổi hẳn không khí: nếu bạn do dự khi Trọng lộ mặt ở Đêm 2, hắn sẽ nuốt TIU và trở thành <b>TRỌNG — THE GRIMOIRE</b> — kẻ đuổi bắt mới của Đêm 3. Bị tóm đủ 3 lần, La Peace ngủ quên trong chính bạn sẽ thức tỉnh, dẫn thẳng vào trận đối đầu cuối cùng.</p>
+    <p><b>Chiến đấu</b> theo lượt kiểu Final Fantasy cổ điển, kết hợp QTE: <b>đòn đánh thường</b> không cần QTE, còn <b>kỹ năng</b> yêu cầu bấm chuỗi mũi tên (Bạn 5, Wibu 3, Lính Ngu Lắm 4; dưới 40% chính xác = thất bại). Khi <b>bị đánh</b>, mỗi chiêu của boss có độ phức tạp ngẫu nhiên 1–7 mũi tên: bấm đúng hướng để ĐỠ, bấm trong <b>vùng sáng</b> để PARRY. Vùng này hẹp dần, dịch chuyển, mũi tên rung lắc mạnh dần — và có mũi tên <b>đổi hướng</b> giữa chừng.</p>`
   }
 };
 
@@ -5621,7 +5929,7 @@ const NIGHT_DESCR = {
 const NIGHT_DESCR_CH2 = {
   1: NIGHT_DESCR[1],
   2: NIGHT_DESCR[2],
-  3: "Không còn Wibu, không còn Chàng Lính — chỉ có TRỌNG, THE CURSE ONE, và La Peace ngủ quên bên trong bạn."
+  3: "Không còn Wibu, không còn Chàng Lính — chỉ có TRỌNG, THE GRIMOIRE, kẻ muốn rút La Peace ngủ quên bên trong bạn."
 };
 function buildNightSelect(chapter){
   chapter = chapter || 1;
@@ -5831,7 +6139,7 @@ document.addEventListener('keydown', (e)=>{
   if(isBlockingOverlayOpen()) return;
   if(BS && !BS.over) return;
   // Phím tắt debug: nhảy thẳng tới boss fight của secret ending — hoạt động cho cả
-  // Chapter 1 (trận bí mật Trọng mặc định) LẪN Chapter 2 (trận Trọng "The Curse One").
+  // Chapter 1 (trận bí mật Trọng mặc định) LẪN Chapter 2 (trận Trọng "The Grimoire").
   if(S.chapter === 2){
     startTrongCurseOneBattle();
   } else {
@@ -6212,7 +6520,9 @@ function tdSpot(m, kind, fi){
   const ix = m._ix;
   return ix[kind] || ix.free[(fi*5+2) % Math.max(1, ix.free.length)] || [1,1];
 }
+const TD_ENABLED = true; /* WASD chỉ đi lại TRONG phòng; chuyển tòa chỉ bằng sơ đồ (mini map / phóng to) */
 function tdActive(){
+  if(!TD_ENABLED) return false;
   return !!(S && S.running && !S.epilogue && tdMap(S.playerRoom));
 }
 function tdSolidAt(m,x,y){
@@ -6272,14 +6582,7 @@ function tdInteractables(m){
     if(S.loreClues[room]) list.push({kind:'pickup', pos:sp[1], label:'📖 Thu thập manh mối', act:pickupLore});
     if(S.laPeaceRoom===room && !S.laPeaceFound) list.push({kind:'pickup', pos:sp[2], label:'✦ Nhặt La Peace (mảnh năng lượng ôn hòa)', act:pickupLaPeace});
   }
-  const noisy = S.gameMinutes < S.speedBuffUntil;
-  ix.exitList.forEach(e=>{
-    const locked = isEdgeLocked(room, e.to);
-    list.push({kind:'exit', pos:e.pos, to:e.to, locked,
-      label: locked ? '🔒 Cửa đến '+ROOM_DEF[e.to].name+' bị khóa — giật khóa'
-                    : '➜ Đi tới '+ROOM_DEF[e.to].name+' ('+(noisy?BUFF_MOVE_COST_MIN:BASE_MOVE_COST_MIN)+' phút · −'+(noisy?MOVE_STAMINA_COST_BUFFED:MOVE_STAMINA_COST)+'% thể lực)',
-      act: ()=>{ if(isEdgeLocked(room,e.to)) attemptUnlockDoor(e.to); else movePlayer(e.to); }});
-  });
+  /* Cửa ra (ô 10) KHÔNG còn tương tác bằng E: muốn sang tòa khác phải dùng sơ đồ. */
   return list;
 }
 function tdNearest(m){
@@ -6356,7 +6659,45 @@ function tdResize(){
 }
 const TD_COLORS = { 1:['#2d2720','#4a3f33'], 8:['#2a2420','#3d332a'], 3:['#14201f','#2a4a48'], 5:['#5a4313','#8a6a22'],
                     6:['#3a2f1a','#6a5530'], 7:['#1a2a3a','#2f5a7a'], 10:['#2d2720','#4a3f33'], 2:['#17140f','#17140f'] };
+/* ===== CHẾ ĐỘ MÀU TEST (bấm F4 để bật/tắt) — mỗi mã ô một màu riêng để kiểm tra cơ chế ===== */
+const TD_TEST_COLORS = {
+  0:['#7a7a80','#6a6a70','' ], 1:['#0b0b0d','#222226',''],  2:['#a050c8','#d08cf0','NPC'], 3:['#dc3232','#ff8080','!'],
+  4:['#f0d23c','#fff0a0','?'], 5:['#f08c28','#ffc080','$'], 6:['#8c5f37','#c89a6a','CT'], 7:['#3cc8dc','#a0f0ff','AMP'],
+  8:['#463228','#6a4e3c',''],  9:['#3cc85a','#a0f0b0','S'], 10:['#326ef0','#90b4ff','E']
+};
+const TD_TEST_NAMES = {0:'0 sàn',1:'1 tường',2:'2 NPC',3:'3 sự cố',4:'4 vật phẩm',5:'5 căn tin',6:'6 bàn chế',7:'7 AMP',8:'8 vật cản',9:'9 spawn',10:'10 cửa'};
+TD.testColors = true;
+function tdDrawTestTiles(ctx,m,tp,ox,oy){
+  const exitTo = {};
+  ((m._ix && m._ix.exitList) || []).forEach(e=>{ exitTo[e.pos[0]+','+e.pos[1]] = e.to; });
+  ctx.save();
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.font = 'bold '+Math.max(9,Math.round(tp*0.32))+'px monospace';
+  for(let y=0;y<m.rows;y++){
+    for(let x=0;x<m.cols;x++){
+      const c = tdTile(m,x,y), px = ox+x*tp, py = oy+y*tp, col = TD_TEST_COLORS[c] || TD_TEST_COLORS[0];
+      ctx.fillStyle = col[0]; ctx.fillRect(px,py,tp,tp);
+      ctx.strokeStyle = col[1]; ctx.globalAlpha = 0.35; ctx.lineWidth = 1; ctx.strokeRect(px+0.5,py+0.5,tp-1,tp-1); ctx.globalAlpha = 1;
+      let t = col[2];
+      if(c===10) t = exitTo[x+','+y] || 'E?';
+      if(t){ ctx.fillStyle = (c===4||c===7||c===9) ? '#000' : '#fff'; ctx.fillText(t, px+tp/2, py+tp/2); }
+    }
+  }
+  // chú thích
+  const keys = Object.keys(TD_TEST_NAMES), lh = 16, bw = 108, bh = keys.length*lh+22, bx = TD.W-bw-8, by = 8;
+  ctx.fillStyle = 'rgba(0,0,0,0.78)'; ctx.fillRect(bx,by,bw,bh);
+  ctx.font = '11px monospace'; ctx.textAlign='left';
+  keys.forEach((k,i)=>{
+    const yy = by+8+i*lh;
+    ctx.fillStyle = TD_TEST_COLORS[k][0]; ctx.fillRect(bx+6,yy,12,12);
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.strokeRect(bx+6.5,yy+0.5,11,11);
+    ctx.fillStyle = '#fff'; ctx.textBaseline='top'; ctx.fillText(TD_TEST_NAMES[k], bx+24, yy);
+  });
+  ctx.fillStyle = '#f2e2a0'; ctx.textBaseline='top'; ctx.fillText('[F4] màu test', bx+6, by+bh-14);
+  ctx.restore();
+}
 function tdDrawTiles(ctx,m,tp,ox,oy,overImage){
+  if(TD.testColors && !overImage){ tdDrawTestTiles(ctx,m,tp,ox,oy); return; }
   ctx.save();
   if(overImage) ctx.globalAlpha = 0.5;
   for(let y=0;y<m.rows;y++){
@@ -6486,6 +6827,7 @@ function tdLoop(ts){
 document.addEventListener('keydown', (e)=>{
   if(isTypingTarget(e.target)) return;
   if(e.key==='F3'){ e.preventDefault(); TD.debug = !TD.debug; return; }
+  if(e.key==='F4'){ e.preventDefault(); TD.testColors = !TD.testColors; return; }
   if(e.ctrlKey || e.metaKey || e.altKey) return;
   const k = (e.key||'').toLowerCase();
   if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(k)){
