@@ -2533,7 +2533,7 @@ function runNight2ClimaxBattleNormal(){
     introLog: [
       {msg:'Quyển sách của Trọng bật mở giữa Trận Địa — hắn không còn là người dẫn đường nữa!', cls:'danger'},
       {msg:'Kim Kiếm La Peace của bạn vừa thức tỉnh, cùng Wibu Việt Nhật và Chàng Lính Ngu Lắm đối đầu hắn.', cls:''},
-      {msg:'Tấn công thường không cần QTE; KỸ NĂNG cần bấm chuỗi mũi tên (BẠN 5, WIBU 3, LÍNH 4). Khi bị đánh: bấm đúng hướng để ĐỠ, trong vùng sáng để PARRY. Hạ gục Trọng để chặn nghi lễ!', cls:'warn'},
+      {msg:'Tấn công thường không cần QTE; KỸ NĂNG cần bấm chuỗi mũi tên (BẠN 5, WIBU 3, LÍNH 4). Khi bị đánh: bấm đúng hướng để ĐỠ (giảm 50% sát thương), trong vùng sáng để PARRY (đỡ 100%). Hạ gục Trọng để chặn nghi lễ!', cls:'warn'},
     ],
     victoryShatterMsg: 'Mũi kim xuyên qua trang sách cuối cùng — quyển sách của Trọng khép lại, chữ nghĩa tan thành dòng!',
     victoryLightMsg: 'Những đốm La Peace bay vụt về khắp khuôn viên, trả lại cho từng chủ nhân.',
@@ -4559,6 +4559,10 @@ function bossTurn(staggered){
   runBossChain(chain, 0, 0);
 }
 
+/* Tỉ lệ sát thương PHẢI NHẬN khi chỉ "ĐỠ ĐƯỢC" (bấm đúng hướng nhưng ngoài vùng sáng): đỡ 50%.
+   PARRY (trong vùng sáng) = đỡ 100% (nhận 0). TRÚNG ĐÒN = nhận 100%. */
+const BLOCK_DAMAGE_RATIO = 0.5;
+
 /* Chạy từng pattern trong chuỗi nối tiếp nhau, cộng dồn sát thương của cả chuỗi lại
    rồi mới áp dụng 1 lần lên party khi chuỗi kết thúc. */
 function runBossChain(chain, idx, totalDmg){
@@ -4569,8 +4573,13 @@ function runBossChain(chain, idx, totalDmg){
   const pattern = chain[idx];
   document.getElementById('bossPatternTag').textContent = '⚠ '+pattern.name + (chain.length>1 ? ' ('+(idx+1)+'/'+chain.length+')' : '');
   addBattleLog((idx===0 ? BS.bossName+' tung chiêu: ' : '...nối liền chiêu tiếp theo: ')+pattern.name+' — '+pattern.desc, 'danger');
-  runDodgePhase(pattern, (hits)=>{
+  runDodgePhase(pattern, (res)=>{
+    // res = {hits, blocked, perfect} từ QTE phòng thủ (vẫn chấp nhận số nguyên cũ = chỉ có hits).
+    // PARRY = đỡ 100% (0 sát thương) | ĐỠ ĐƯỢC = chỉ đỡ 50% | TRÚNG ĐÒN = nhận đủ 100%.
+    const hits = (typeof res==='number') ? res : (res.hits||0);
+    const blocked = (typeof res==='number') ? 0 : (res.blocked||0);
     let segDmg = 0;
+    for(let i=0;i<blocked;i++) segDmg += Math.round(rand(pattern.dmg[0], pattern.dmg[1]) * BLOCK_DAMAGE_RATIO);
     if(hits>0){
       for(let i=0;i<hits;i++) segDmg += Math.round(rand(pattern.dmg[0], pattern.dmg[1]));
       // Phi Tiêu Độc: mỗi lần trúng đòn thuộc pattern có tag "poison" cộng dồn 1 stack,
@@ -4579,7 +4588,7 @@ function runBossChain(chain, idx, totalDmg){
       // Khiên Đất: pattern không tấn công, chỉ dựng khiên -> không tính là "hits" gây thương thật
       if(pattern.shieldSelf){ BS.boss.shielded = true; segDmg = 0; }
     }
-    else addBattleLog((BS.souls ? 'Kim Kiếm La Peace' : 'Linh hồn hợp nhất')+' đỡ trọn chiêu "'+pattern.name+'"!', 'warn');
+    else if(blocked===0) addBattleLog((BS.souls ? 'Kim Kiếm La Peace' : 'Linh hồn hợp nhất')+' đỡ trọn chiêu "'+pattern.name+'"!', 'warn');
     const gap = chain.length>1 ? 260 : 0; // khoảng nghỉ ngắn giữa các đòn trong chuỗi
     setTimeout(()=>{ runBossChain(chain, idx+1, totalDmg+segDmg); }, gap);
   });
@@ -4629,13 +4638,14 @@ function applyBossChainDamage(totalDmg){
         có số mũi tên theo độ phức tạp kỹ năng (SKILL_QTE_COUNT): BẠN 5, WIBU 3, LÍNH 4.
         Độ chính xác (0-1) quyết định kỹ năng thành công/mạnh cỡ nào (xem skillScale()).
      2) PHÒNG THỦ (lượt boss): mỗi chiêu của boss có độ phức tạp NGẪU NHIÊN 1-7 mũi tên.
-          - Bấm đúng hướng trong "CỬA SỔ PARRY" (đoạn sáng trên thanh thời gian) = PARRY
-          - Bấm đúng hướng ngoài cửa sổ nhưng còn kịp                              = ĐỠ ĐƯỢC
+          - Bấm đúng hướng trong "CỬA SỔ PARRY" (đoạn sáng trên thanh thời gian) = PARRY (đỡ 100%)
+          - Bấm đúng hướng ngoài cửa sổ nhưng còn kịp                              = ĐỠ ĐƯỢC (chỉ đỡ 50%)
           - Bấm sai / hết giờ                                                      = TRÚNG ĐÒN
         Độ khó (0-1) tăng theo lượt và độ phức tạp chiêu, làm: cửa sổ parry HẸP dần, DỊCH CHUYỂN
         ngẫu nhiên mỗi cú (và trôi dọc thanh ở độ khó cao), mũi tên RUNG LẮC mạnh hơn.
         Một số chiêu còn có FEINT: mũi tên đổi hướng giữa chừng.
-   runDodgePhase(pattern, cb) giữ nguyên hợp đồng cũ: gọi cb(hits).
+   runDodgePhase(pattern, cb) gọi cb({hits, blocked, perfect}) — runBossChain tính sát thương:
+         parry 0%, đỡ được 50%, trúng đòn 100% (xem BLOCK_DAMAGE_RATIO).
    ============================================================== */
 const QTE_KEYMAP = {
   ArrowUp:'ArrowUp', ArrowDown:'ArrowDown', ArrowLeft:'ArrowLeft', ArrowRight:'ArrowRight',
@@ -4711,7 +4721,7 @@ function runArrowQte(opts){
       <div id="qteCursor" style="position:absolute;top:0;bottom:0;width:4px;background:#fff;box-shadow:0 0 6px #fff;left:0;"></div>
     </div>
     <div id="qteFeedback" style="font-size:18px;font-weight:800;min-height:24px;letter-spacing:2px;"></div>
-    <div style="font-size:11px;color:#aaa;">Phím mũi tên (hoặc W A S D) — bấm khi con trỏ nằm trong vùng sáng để ${opts.mode==='attack'?'tăng hiệu quả':'PARRY'}</div>`;
+    <div style="font-size:11px;color:#aaa;">Phím mũi tên (hoặc W A S D) — bấm khi con trỏ nằm trong vùng sáng để ${opts.mode==='attack'?'tăng hiệu quả':'PARRY (đỡ 100%) — ngoài vùng sáng chỉ đỡ 50%'}</div>`;
 
   const elProg = host.querySelector('#qteProgress');
   const elArrow = host.querySelector('#qteArrow');
@@ -4813,8 +4823,8 @@ function runArrowQte(opts){
       else if(res==='block') feedback('ỔN', '#8ecbff');
       else feedback(kind==='timeout' ? 'TRỄ!' : 'TRẬT!', '#ff5a5a');
     } else {
-      if(res==='perfect') feedback('PARRY!', '#7dff9a');
-      else if(res==='block') feedback('ĐỠ ĐƯỢC', '#8ecbff');
+      if(res==='perfect') feedback('PARRY! (ĐỠ 100%)', '#7dff9a');
+      else if(res==='block') feedback('ĐỠ 50%', '#8ecbff');
       else feedback(kind==='timeout' ? 'KHÔNG KỊP — TRÚNG ĐÒN!' : 'SAI HƯỚNG — TRÚNG ĐÒN!', '#ff5a5a');
       if(res==='hit'){
         const box = document.getElementById('dodgeBox');
@@ -4857,11 +4867,12 @@ function runDodgePhase(pattern, cb){
   runArrowQte({
     mode:'defend',
     title:'⚠ '+pattern.name+' — ĐỘ PHỨC TẠP '+complexity+'/7',
-    subtitle:pattern.desc+'<br><b>Bấm đúng hướng mũi tên để ĐỠ; bấm trong vùng sáng để PARRY!</b> ('+who+')',
+    subtitle:pattern.desc+'<br><b>Bấm đúng hướng để ĐỠ (chỉ giảm 50% sát thương); bấm trong vùng sáng để PARRY (đỡ 100%)!</b> ('+who+')',
     count:complexity, windowMs, feintChance, parryWidth, shake, drift,
     onDone:(r)=>{
-      if(r.perfect>0 && r.hits===0) addBattleLog('PARRY x'+r.perfect+' — '+who+' đỡ trọn chiêu "'+pattern.name+'" (độ phức tạp '+complexity+')!','good');
-      cb(r.hits);
+      if(r.hits===0 && r.blocked===0 && r.perfect>0) addBattleLog('PARRY x'+r.perfect+' — '+who+' đỡ 100% chiêu "'+pattern.name+'" (độ phức tạp '+complexity+')!','good');
+      else if(r.blocked>0) addBattleLog('Chỉ ĐỠ ĐƯỢC '+r.blocked+' mũi tên (không parry kịp) — chỉ giảm 50% sát thương của chúng'+(r.perfect>0 ? ', '+r.perfect+' mũi tên PARRY hoàn toàn' : '')+'.','warn');
+      cb({hits:r.hits, blocked:r.blocked, perfect:r.perfect});
     }
   });
 }
@@ -5876,7 +5887,7 @@ const CHAPTER_INTRO = {
     html:`<p>Chapter 2 dùng lại đúng bản đồ của Chapter 1 nhưng ở <b>độ khó cao</b>: đêm sẽ có thêm <b>biến cố trung tâm</b> — mất điện toàn trường, buộc bạn phải chạy đến <b>Tòa C</b> khởi động lại cầu dao tổng trước khi The TIU lợi dụng bóng tối. Về cuối đêm, một số cửa nối giữa các tòa còn bị <b>khóa ngẫu nhiên</b>.
     Bạn cũng có thể nhặt <b>linh kiện</b> (pin cũ, dây điện, băng keo, ống thép) rải trong các góc tối rồi ghé <b>Bàn chế tạo</b> ở Căn tin để tự chế Camera, Bộ Sập Cầu Dao, Đèn UV hay Bẫy gây nhiễu — những vật phẩm này chỉ có ở Chapter 2.</p>
     <p><b style="color:var(--blood-bright)">Đêm 3</b> đổi hẳn không khí: nếu bạn do dự khi Trọng lộ mặt ở Đêm 2, hắn sẽ nuốt TIU và trở thành <b>TRỌNG — THE GRIMOIRE</b> — kẻ đuổi bắt mới của Đêm 3. Bị tóm đủ 3 lần, có thứ gì đó trong chính bạn sẽ bắt đầu thức dậy, dẫn thẳng vào trận đối đầu cuối cùng.</p>
-    <p><b>Chiến đấu</b> theo lượt kiểu Final Fantasy cổ điển, kết hợp QTE: <b>đòn đánh thường</b> không cần QTE, còn <b>kỹ năng</b> yêu cầu bấm chuỗi mũi tên (Bạn 5, Wibu 3, Lính Ngu Lắm 4; dưới 40% chính xác = thất bại). Khi <b>bị đánh</b>, mỗi chiêu của boss có độ phức tạp ngẫu nhiên 1–7 mũi tên: bấm đúng hướng để ĐỠ, bấm trong <b>vùng sáng</b> để PARRY. Vùng này hẹp dần, dịch chuyển, mũi tên rung lắc mạnh dần — và có mũi tên <b>đổi hướng</b> giữa chừng.</p>`
+    <p><b>Chiến đấu</b> theo lượt kiểu Final Fantasy cổ điển, kết hợp QTE: <b>đòn đánh thường</b> không cần QTE, còn <b>kỹ năng</b> yêu cầu bấm chuỗi mũi tên (Bạn 5, Wibu 3, Lính Ngu Lắm 4; dưới 40% chính xác = thất bại). Khi <b>bị đánh</b>, mỗi chiêu của boss có độ phức tạp ngẫu nhiên 1–7 mũi tên: bấm đúng hướng để ĐỠ (chỉ giảm 50% sát thương), bấm trong <b>vùng sáng</b> để PARRY (đỡ 100%). Vùng này hẹp dần, dịch chuyển, mũi tên rung lắc mạnh dần — và có mũi tên <b>đổi hướng</b> giữa chừng.</p>`
   }
 };
 
