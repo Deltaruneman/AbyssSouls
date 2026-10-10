@@ -528,7 +528,7 @@ function shuffle(arr){
    {spk,text,choices:[{label, insert:[...dòng thoại kế tiếp...]}]} — khi gặp
    dòng có `choices`, nút TIẾP TỤC được thay bằng các nút lựa chọn; bấm vào
    một lựa chọn sẽ chèn `insert` (nếu có) ngay sau dòng hiện tại rồi tiếp tục
-   như bình thường. Dùng cho đoạn Trọng hỏi về con giáp của TIU (xem
+   như bình thường. Dùng cho các đoạn thoại có nhánh lựa chọn (xem
    CHAPTER2_OPEN_SECRET trong dialogue.js). */
 /* Bộ điều khiển của đoạn hội thoại ĐANG PHÁT (null nếu không có) — phục vụ phím tắt J / Ctrl
    (xem mục "PHÍM TẮT" ở cuối file). Mỗi lần gọi playVN() sẽ tạo bộ điều khiển mới và ghi đè. */
@@ -1646,7 +1646,7 @@ function showChapterEndScreen(){
    Kích hoạt từ nút "TIẾP TỤC SANG CHAPTER 2" trên chapterEndScreen.
    Chọn đoạn hội thoại phù hợp dựa trên:
    - S.epilogueVariant: 'secret' -> Trọng xuất hiện, giải thích sự thật
-     và hỏi con giáp của TIU (playVN xử lý nhánh rẽ, xem ở trên).
+     (playVN xử lý nhánh rẽ nếu có, xem ở trên).
    - 'normal': tùy mức tin tưởng đã tích lũy với 2 NPC
      (campaignNpcTalks.E / .B, size > 0 nghĩa là đã từng nói chuyện /
      tin tưởng) mà gộp nhóm khác nhau trước khi ra Tòa A.
@@ -2525,8 +2525,8 @@ function runNight2ClimaxBattleNormal(){
     bossName: 'TRỌNG — NGƯỜI GIỮ SÁCH',
     bossImage: (typeof TRONG_CURSE_IMAGE !== 'undefined') ? TRONG_CURSE_IMAGE : null,
     patterns: BOSS_PATTERNS_TRONG,
-    patternPoolA: BOSS_PATTERNS_TRONG_DATHU,
-    patternPoolB: BOSS_PATTERNS_TRONG_THIETNGUU,
+    patternPoolA: BOSS_PATTERNS_TRONG_SWIFT,
+    patternPoolB: BOSS_PATTERNS_TRONG_HEAVY,
     chainSelector: chooseTrongPatternChain,
     sealThresholdRatio: 0,
     maxTurn: Infinity,
@@ -2550,7 +2550,7 @@ function triggerChapter2SecretPathToNight3(){
   S.running = false;
   S.endingRoute = 'secret_pending';
   document.getElementById('winTitle').textContent = '✦ ĐÊM 2 KẾT THÚC — QUYỂN SÁCH MỞ RA ✦';
-  document.getElementById('winSub').textContent = 'Trọng đã lộ mặt: hắn nuốt trọn TIU và Trận Địa, trở thành THE GRIMOIRE. Người từng dẫn đường cho cả ba, giờ là kẻ muốn rút La Peace ngủ quên trong bạn.';
+  document.getElementById('winSub').textContent = 'Trọng đã lộ mặt: hắn nuốt trọn TIU và Trận Địa, trở thành THE GRIMOIRE. Người từng dẫn đường cho cả ba, giờ là kẻ muốn lấy đi thứ gì đó đang ngủ yên trong bạn.';
   const nextBtn = document.getElementById('nextNightBtn');
   nextBtn.textContent = 'BẮT ĐẦU ĐÊM 3';
   nextBtn.onclick = ()=>{
@@ -3782,26 +3782,25 @@ const BOSS_PATTERN_COMBO = {
 };
 
 /* ============== ĐÊM 3 — BỘ CHIÊU THỨC CỦA TRỌNG "THE GRIMOIRE" ==============
-   7 pattern chia làm 2 nhóm theo Đặc Trưng Sức Mạnh mà Trọng đã hấp thụ:
+   Các pattern chia làm 2 nhóm theo phong cách:
 
-   DẠ THỬ (Tý — nhanh nhẹn/xảo quyệt/số đông): PHI TIÊU ĐỘC, ĐU BÁM CỘT ĐÁ, BẦY DẠ THỬ,
-   TÀNG HÌNH ĐÁNH LÉN — sát thương mỗi đòn thấp-vừa nhưng dồn dập, khó đoán, cộng dồn độc.
+   SWIFT (nhanh, dồn dập, khó đoán): PHI TIÊU ĐỘC, BẮN TỈA TỨ GÓC, BÓNG ĐEN TẢN LOẠN,
+   TÀNG HÌNH ĐÁNH LÉN — sát thương mỗi đòn thấp-vừa nhưng liên tục, có cộng dồn độc.
 
-   THIẾT NGƯU (Sửu — sức mạnh tuyệt đối/điềm tĩnh/huỷ diệt): ĐẬP BÚA ĐỊA CHẤN, HÚC THẲNG,
-   KHIÊN ĐẤT — hiếm đòn nhưng CỰC NẶNG, cảnh báo dài (chậm) bù lại rất khó né nếu phản xạ trễ.
+   HEAVY (ít đòn nhưng cực nặng): ĐẬP BÚA ĐỊA CHẤN, XÔNG THẲNG, KHIÊN ĐẤT — cảnh báo dài,
+   bù lại rất khó né nếu phản xạ trễ.
 
-   Xem chooseTrongPatternChain() để biết cách 2 "phe" bên trong Trọng thay nhau chiếm quyền
-   kiểm soát theo % HP còn lại (Dạ Thử áp đảo đầu trận -> giằng co giữa trận -> Thiết Ngưu
-   cuồng nộ dồn dập cuối trận, sau mốc phong ấn 20%). */
-const BOSS_PATTERNS_TRONG_DATHU = [
+   Xem chooseTrongPatternChain() để biết cách 2 nhóm này được chọn theo % HP còn lại
+   (đầu trận ưu tiên SWIFT -> giữa trận xen kẽ -> cuối trận, sau mốc phong ấn, HEAVY dồn dập hơn). */
+const BOSS_PATTERNS_TRONG_SWIFT = [
   {name:'PHI TIÊU ĐỘC', desc:'Trọng ném liên tiếp những mũi phi tiêu tẩm độc, nhắm thẳng vào vị trí của bạn.', dmg:[4,7], bulletType:'dart', dodgeDuration:4200, poison:true},
-  {name:'ĐU BÁM CỘT ĐÁ', desc:'Trọng thoắt ẩn thoắt hiện trên 4 góc trận địa, bắn tỉa liên hồi từ xa.', dmg:[5,9], bulletType:'pillar', dodgeDuration:4800},
-  {name:'BẦY DẠ THỬ', desc:'Hàng chục bóng chuột nhỏ lao ra từ mọi phía, hỗn loạn và khó đoán.', dmg:[3,6], bulletType:'swarm', dodgeDuration:5000},
+  {name:'BẮN TỈA TỨ GÓC', desc:'Trọng thoắt ẩn thoắt hiện trên 4 góc trận địa, bắn tỉa liên hồi từ xa.', dmg:[5,9], bulletType:'pillar', dodgeDuration:4800},
+  {name:'BÓNG ĐEN TẢN LOẠN', desc:'Hàng chục mảnh bóng đen nhỏ lao ra từ mọi phía, hỗn loạn và khó đoán.', dmg:[3,6], bulletType:'swarm', dodgeDuration:5000},
   {name:'TÀNG HÌNH ĐÁNH LÉN', desc:'Trọng biến mất khỏi tầm mắt — một vòng vây bất ngờ bung ra ngay quanh bạn.', dmg:[6,10], bulletType:'ambush', dodgeDuration:3800},
 ];
-const BOSS_PATTERNS_TRONG_THIETNGUU = [
+const BOSS_PATTERNS_TRONG_HEAVY = [
   {name:'ĐẬP BÚA ĐỊA CHẤN', desc:'Trọng giáng một cú đấm rung chuyển toàn bộ trận địa — chỉ còn đúng 1 điểm an toàn.', dmg:[10,16], bulletType:'quake', dodgeDuration:5200},
-  {name:'HÚC THẲNG', desc:'Trọng lùi lại rồi lao thẳng qua trận địa như một cơn lốc sắt thép.', dmg:[12,18], bulletType:'charge', dodgeDuration:4400},
+  {name:'XÔNG THẲNG', desc:'Trọng lùi lại rồi lao thẳng qua trận địa như một cơn lốc sắt thép.', dmg:[12,18], bulletType:'charge', dodgeDuration:4400},
   {name:'KHIÊN ĐẤT', desc:'Trọng dựng một lớp khiên đất dày, tạm ngừng tấn công để gồng mình phòng thủ.', dmg:[0,0], bulletType:'shield', dodgeDuration:3200, shieldSelf:true},
 ];
 /* ============== NÂNG CẤP UNDERTALE/DELTARUNE — 3 PATTERN MỚI CHO BOX COMBAT ==============
@@ -3819,14 +3818,13 @@ const BOSS_PATTERNS_TRONG_UNDERTALE = [
   {name:'LƯỠI KIẾM XOAY TÍT', desc:'Từng chùm lưỡi kiếm xoay tít quanh tâm rồi văng dần ra ngoài — style The Knight.', dmg:[6,9], bulletType:'orbit', dodgeDuration:4800},
   {name:'BÚA CÔNG LÝ GIÁNG XUỐNG', desc:'Hàng loạt giáo phán xét dựng lên dồn dập liên tiếp khắp trận địa — style Hammer of Justice.', dmg:[6,10], bulletType:'judgement', dodgeDuration:4800},
 ];
-// Dạ Thử (Tý — nhanh nhẹn/xảo quyệt) hấp thụ thêm Tuyến Tính + Hỗn Mang + Xoay Tít
-// (dồn dập, khó đoán); Thiết Ngưu (Sửu — sức mạnh tuyệt đối) hấp thụ Nòng Súng Phán Xét + Búa
-// Công Lý (đòn nặng, mang chất "cực nặng, dồn ép không gian").
+// Nhóm SWIFT nhận thêm Tuyến Tính + Hỗn Mang + Xoay Tít (dồn dập, khó đoán); nhóm HEAVY nhận
+// thêm Nòng Súng Phán Xét + Búa Công Lý (đòn nặng, dồn ép không gian).
 // Chỉ số trong BOSS_PATTERNS_TRONG_UNDERTALE: 0 Tuyến Tính | 1 Nòng Súng | 2 Hỗn Mang | 3 Xoay Tít | 4 Búa Công Lý
-BOSS_PATTERNS_TRONG_DATHU.push(BOSS_PATTERNS_TRONG_UNDERTALE[0], BOSS_PATTERNS_TRONG_UNDERTALE[2], BOSS_PATTERNS_TRONG_UNDERTALE[3]);
-BOSS_PATTERNS_TRONG_THIETNGUU.push(BOSS_PATTERNS_TRONG_UNDERTALE[1], BOSS_PATTERNS_TRONG_UNDERTALE[4]);
+BOSS_PATTERNS_TRONG_SWIFT.push(BOSS_PATTERNS_TRONG_UNDERTALE[0], BOSS_PATTERNS_TRONG_UNDERTALE[2], BOSS_PATTERNS_TRONG_UNDERTALE[3]);
+BOSS_PATTERNS_TRONG_HEAVY.push(BOSS_PATTERNS_TRONG_UNDERTALE[1], BOSS_PATTERNS_TRONG_UNDERTALE[4]);
 
-const BOSS_PATTERNS_TRONG = [...BOSS_PATTERNS_TRONG_DATHU, ...BOSS_PATTERNS_TRONG_THIETNGUU];
+const BOSS_PATTERNS_TRONG = [...BOSS_PATTERNS_TRONG_SWIFT, ...BOSS_PATTERNS_TRONG_HEAVY];
 
 let BS = null;          // trạng thái trận đấu hiện tại
 let battleMusicEl = null;
@@ -3858,7 +3856,7 @@ function freshBattleState(opts){
     sealThresholdRatio: opts.sealThresholdRatio!=null ? opts.sealThresholdRatio : 0.2,
     sealChoiceShown: false,
     onSealChoice: opts.onSealChoice || null,        // callback khi HP chạm ngưỡng phong ấn (chỉ dùng nếu killable)
-    poisonStacks: 0,                                // Dạ Thử: mỗi lần trúng "Phi Tiêu Độc" cộng dồn, gây thêm sát thương cuối lượt boss
+    poisonStacks: 0,                                // mỗi lần trúng "Phi Tiêu Độc" cộng dồn, gây thêm sát thương cuối lượt boss
     souls: !!opts.souls,                            // true nếu MC đang chiến đấu dưới dạng "Kim Kiếm La Peace" (đổi flavor text kỹ năng)
     musicSrc: opts.musicSrc || null,                 // null -> startBattleMusic() dùng BATTLE_MUSIC mặc định
     // ---- State Machine chuyển pha bắn theo %HP (xem applyHpStateMachine) — mặc định BẬT,
@@ -4247,7 +4245,7 @@ function resolveRound(){
       atkCount++;
       let dmg = Math.round(rand(12,20));
       if(BS.willBuffActive) dmg = Math.round(dmg * (BS.willBuffScale||1)); // Ý Chí Của Người Bông / La Peace Của Bông Hoa
-      if(BS.boss.shielded) dmg = Math.round(dmg*0.5); // Khiên Đất của Thiết Ngưu — giảm nửa sát thương lượt này
+      if(BS.boss.shielded) dmg = Math.round(dmg*0.5); // Khiên Đất của Trọng — giảm nửa sát thương lượt này
       if(BS.killable){
         BS.boss.hp = Math.max(0, BS.boss.hp - dmg);
         addBattleLog(def.name+' tấn công '+BS.bossName+', gây '+dmg+' sát thương.'+(BS.boss.shielded?' (Khiên Đất giảm bớt tác động!)':''),'atk');
@@ -4289,6 +4287,30 @@ function resolveRound(){
   finishResolveRound(atkCount);
 }
 
+/* ============== ACT — PHÁT HỘI THOẠI BẠN <-> TRỌNG ==============
+   Nội dung nằm trong TRONG_ACT_DIALOGUE (dialogue.js): mỗi lượt là MỘT CẶP {you, trong} nên
+   luôn khớp nhau, và leo thang theo số stack hiện có (tier 0 -> 1 -> 2). */
+/* Chọn 1 cặp thoại theo loại ACT ('taunt' | 'reassure') và số stack hiện có; tránh lặp lại
+   đúng cặp vừa dùng ở tier đó nếu còn cặp khác để chọn. */
+function pickActExchange(kind, stackCount){
+  const tiers = TRONG_ACT_DIALOGUE[kind].tiers;
+  const tierIdx = Math.min(Math.max(stackCount, 0), tiers.length-1);
+  const pool = tiers[tierIdx];
+  BS.actDialogueLast = BS.actDialogueLast || {};
+  const key = kind+':'+tierIdx;
+  let candidates = pool.map((_, i)=>i);
+  if(candidates.length > 1) candidates = candidates.filter(i=> i !== BS.actDialogueLast[key]);
+  const idx = candidates[Math.floor(Math.random()*candidates.length)];
+  BS.actDialogueLast[key] = idx;
+  return pool[idx];
+}
+function buildActLines(ex){
+  return [
+    {spk:'BẠN',   text:'"'+ex.you+'"'},
+    {spk:'TRỌNG', text:'"'+ex.trong+'"'},
+  ];
+}
+
 /* ============== NÂNG CẤP UNDERTALE/DELTARUNE — ACT: CHẾ NHẠO ==============
    Dưới 3/3 stack: phát 1 câu BẠN + 1 câu TRỌNG đáp trả qua playVN() (y hệt hội thoại thường
    trong game), rồi mới tăng stack + tăng bossDmgMult + chip HP TRỌNG. Đủ 3/3 stack: biến
@@ -4308,10 +4330,7 @@ function resolveActTaunt(key, atkCount){
       finishResolveRound(atkCount);
       return;
     }
-    playVN([
-      {spk:'BẠN', text:'"'+TRONG_TAUNT_ULTIMATE_LINE+'"'},
-      {spk:'TRỌNG', text:TRONG_TAUNT_ULTIMATE_REPLY},
-    ], ()=>{
+    playVN(buildActLines(TRONG_ACT_DIALOGUE.taunt.ultimate), ()=>{
       const dmg = Math.round((BS.boss.maxHp*0.16 + rand(10,18))*skillScale(st));
       if(BS.killable) BS.boss.hp = Math.max(0, BS.boss.hp - dmg);
       else BS.boss.hp = Math.max(Math.round(BS.boss.maxHp*0.015), BS.boss.hp - dmg);
@@ -4322,14 +4341,8 @@ function resolveActTaunt(key, atkCount){
     return;
   }
 
-  // Câu nói & câu đáp trả được viết theo từng cặp (cùng vị trí trong mảng) -> phải lấy CÙNG index.
-  const tIdx = Math.floor(Math.random()*Math.min(TRONG_TAUNT_LINES.length, TRONG_TAUNT_REPLY_LINES.length));
-  const line = TRONG_TAUNT_LINES[tIdx];
-  const reply = TRONG_TAUNT_REPLY_LINES[tIdx];
-  playVN([
-    {spk:'BẠN', text:'"'+line+'"'},
-    {spk:'TRỌNG', text:reply},
-  ], ()=>{
+  // Cặp thoại BẠN + TRỌNG lấy từ CÙNG một object (xem TRONG_ACT_DIALOGUE) -> luôn khớp nhau.
+  playVN(buildActLines(pickActExchange('taunt', BS.tauntStacks)), ()=>{
     BS.tauntStacks++;
     const chip = Math.round(BS.boss.maxHp*0.04);
     BS.boss.hp = Math.max(1, BS.boss.hp - chip); // Trọng mất kiểm soát vì cơn giận -> tự hao HP, nhưng không bao giờ về 0 do lệnh này
@@ -4358,10 +4371,7 @@ function resolveActReassure(key, atkCount){
       finishResolveRound(atkCount);
       return;
     }
-    playVN([
-      {spk:'BẠN', text:'"'+TRONG_REASSURE_ULTIMATE_LINE+'"'},
-      {spk:'TRỌNG', text:TRONG_REASSURE_ULTIMATE_REPLY},
-    ], ()=>{
+    playVN(buildActLines(TRONG_ACT_DIALOGUE.reassure.ultimate), ()=>{
       const gain = Math.round(st.maxHp*0.2*skillScale(st));
       st.maxHp += gain;
       st.hp = Math.min(st.maxHp, st.hp + gain);
@@ -4372,13 +4382,7 @@ function resolveActReassure(key, atkCount){
     return;
   }
 
-  const rIdx = Math.floor(Math.random()*Math.min(TRONG_REASSURE_LINES.length, TRONG_REASSURE_REPLY_LINES.length));
-  const line = TRONG_REASSURE_LINES[rIdx];
-  const reply = TRONG_REASSURE_REPLY_LINES[rIdx];
-  playVN([
-    {spk:'BẠN', text:'"'+line+'"'},
-    {spk:'TRỌNG', text:reply},
-  ], ()=>{
+  playVN(buildActLines(pickActExchange('reassure', BS.reassureStacks)), ()=>{
     BS.reassureStacks++;
     BS.bossDmgMult = clamp(1 + BS.tauntStacks*0.15 - BS.reassureStacks*0.15, 0.25, 2.2);
     addBattleLog(BS.bossName+' dịu lại đôi chút — sức tấn công của hắn giảm xuống. (Trấn an '+BS.reassureStacks+'/'+BS.tauntStackMax+')','good');
@@ -4507,17 +4511,16 @@ function chooseBossPatternChain(turn){
 
 /* ---- Chọn chuỗi pattern riêng cho Trọng — The Grimoire (Đêm 3) ----
    Không dựa vào số lượt (boss có thể sống rất lâu hoặc chết rất nhanh tuỳ lối chơi) mà dựa
-   vào TỈ LỆ HP CÒN LẠI: HP càng cao, Dạ Thử (nhanh/xảo quyệt) càng lấn át; HP càng thấp,
-   Thiết Ngưu (nặng/huỷ diệt) càng chiếm quyền kiểm soát — đúng tinh thần "2 linh hồn giằng co
-   bên trong Trọng". Chuỗi cũng dài & dồn dập hơn khi HP thấp (Trọng càng lúc càng liều lĩnh). */
+   vào TỈ LỆ HP CÒN LẠI: HP càng cao, nhóm SWIFT (nhanh/dồn dập) càng chiếm ưu thế; HP càng
+   thấp, nhóm HEAVY (nặng/huỷ diệt) càng áp đảo. Chuỗi cũng dài & dồn dập hơn khi HP thấp (Trọng càng lúc càng liều lĩnh). */
 function chooseTrongPatternChain(){
   const ratio = clamp(BS.boss.hp / BS.boss.maxHp, 0, 1);
-  const poolA = BS.patternPoolA || BS.patterns; // Dạ Thử
-  const poolB = BS.patternPoolB || BS.patterns; // Thiết Ngưu
+  const poolA = BS.patternPoolA || BS.patterns; // SWIFT
+  const poolB = BS.patternPoolB || BS.patterns; // HEAVY
   let weightA;
   if(ratio > 0.6) weightA = 0.8;
   else if(ratio > 0.2) weightA = 0.5;
-  else weightA = 0.2; // dưới mốc phong ấn (nếu người chơi chọn KHÔNG phong ấn) -> Thiết Ngưu cuồng nộ áp đảo
+  else weightA = 0.2; // dưới mốc phong ấn (nếu người chơi chọn KHÔNG phong ấn) -> nhóm HEAVY cuồng nộ áp đảo
 
   const hpUrgency = 1 - ratio; // 0 (đầy máu) -> 1 (gần chết)
   let chainLen = 1;
@@ -4570,10 +4573,10 @@ function runBossChain(chain, idx, totalDmg){
     let segDmg = 0;
     if(hits>0){
       for(let i=0;i<hits;i++) segDmg += Math.round(rand(pattern.dmg[0], pattern.dmg[1]));
-      // Dạ Thử — Phi Tiêu Độc: mỗi lần trúng đòn thuộc pattern có tag "poison" cộng dồn 1 stack,
+      // Phi Tiêu Độc: mỗi lần trúng đòn thuộc pattern có tag "poison" cộng dồn 1 stack,
       // gây thêm sát thương DoT vào cuối lượt boss (xem applyBossChainDamage()).
       if(pattern.poison) BS.poisonStacks = (BS.poisonStacks||0) + hits;
-      // Thiết Ngưu — Khiên Đất: pattern không tấn công, chỉ dựng khiên -> không tính là "hits" gây thương thật
+      // Khiên Đất: pattern không tấn công, chỉ dựng khiên -> không tính là "hits" gây thương thật
       if(pattern.shieldSelf){ BS.boss.shielded = true; segDmg = 0; }
     }
     else addBattleLog((BS.souls ? 'Kim Kiếm La Peace' : 'Linh hồn hợp nhất')+' đỡ trọn chiêu "'+pattern.name+'"!', 'warn');
@@ -4586,7 +4589,7 @@ function applyBossChainDamage(totalDmg){
   const tauntKey = BS.order.find(k=>BS.party[k].taunting && BS.party[k].hp>0);
   const targets = tauntKey ? [tauntKey] : BS.order.filter(k=>BS.party[k].hp>0);
 
-  // Dạ Thử — Phi Tiêu Độc: DoT cộng dồn từ các stack trúng độc, cộng thêm vào tổng sát thương
+  // Phi Tiêu Độc: DoT cộng dồn từ các stack trúng độc, cộng thêm vào tổng sát thương
   // của lượt này rồi RESET stack (độc phát tác dồn một lần, không kéo dài vô hạn).
   if(BS.poisonStacks>0){
     const poisonDmg = BS.poisonStacks*4;
@@ -5150,10 +5153,10 @@ function genComboSpiralWaveQueue(rect, duration, density){
 }
 
 /* ============== ĐÊM 3 — CÁC LOẠI ĐẠN MỚI CHO TRỌNG "THE GRIMOIRE" ==============
-   Kế thừa Đặc Trưng Sức Mạnh của Tý (Dạ Thử — nhanh/xảo quyệt/số đông) và Sửu (Thiết Ngưu —
-   sức mạnh tuyệt đối/điềm tĩnh/huỷ diệt) mà Trọng đã hấp thụ. Xem BOSS_PATTERNS_TRONG. */
+   Các loại đạn riêng của Trọng: nhóm nhanh/dồn dập (SWIFT) và nhóm chậm/cực nặng (HEAVY).
+   Xem BOSS_PATTERNS_TRONG. */
 
-/* Dạ Thử — PHI TIÊU ĐỘC: đạn bay thẳng từ mép màn hình, nhắm về ĐÚNG vị trí linh hồn tại
+/* PHI TIÊU ĐỘC: đạn bay thẳng từ mép màn hình, nhắm về ĐÚNG vị trí linh hồn tại
    thời điểm phóng ra (không tự bám đuổi sau đó) — một cú ném có chủ đích, vẫn né được nếu
    phản xạ kịp. Gắn cờ 'poison' ở cấp pattern (xem BOSS_PATTERNS_TRONG) để cộng dồn DoT. */
 function genDartQueue(rect, duration, density){
@@ -5167,7 +5170,7 @@ function genDartQueue(rect, duration, density){
   }
   return q;
 }
-/* Dạ Thử — ĐU BÁM CỘT ĐÁ: bắn từ 4 góc cố định (tượng trưng 4 cột đá) hướng về tâm, đều đặn
+/* BẮN TỈA TỨ GÓC: bắn từ 4 góc cố định hướng về tâm, đều đặn
    và có thể đoán trước hơn hẳn Phi Tiêu — bù lại bắn theo nhịp dồn dập từ nhiều cột cùng lúc. */
 function genPillarQueue(rect, duration, density){
   const q=[]; let t=300;
@@ -5182,7 +5185,7 @@ function genPillarQueue(rect, duration, density){
   }
   return q;
 }
-/* Dạ Thử — BẦY DẠ THỬ: rất nhiều đạn nhỏ, yếu nhưng hỗn loạn (di chuyển lắc nhẹ ngẫu nhiên
+/* BÓNG ĐEN TẢN LOẠN: rất nhiều đạn nhỏ, yếu nhưng hỗn loạn (di chuyển lắc nhẹ ngẫu nhiên
    mỗi khung hình — xem cờ jitter trong updateDodgeBullet) từ khắp các cạnh màn hình. */
 function genSwarmQueue(rect, duration, density){
   const q=[]; let t=300;
@@ -5197,7 +5200,7 @@ function genSwarmQueue(rect, duration, density){
   }
   return q;
 }
-/* Dạ Thử — TÀNG HÌNH ĐÁNH LÉN: một vòng đạn bất ngờ bung ra NGAY QUANH vị trí linh hồn hiện
+/* TÀNG HÌNH ĐÁNH LÉN: một vòng đạn bất ngờ bung ra NGAY QUANH vị trí linh hồn hiện
    tại (bắt sống toạ độ lúc phóng), hội tụ vào tâm — đứng yên là dính chắc, phải NHÚC NHÍCH
    ngay khi thấy "báo động" xuất hiện quanh mình. Tần suất thưa nhưng luôn bất ngờ. */
 function genAmbushQueue(rect, duration, density){
@@ -5209,7 +5212,7 @@ function genAmbushQueue(rect, duration, density){
   }
   return q;
 }
-/* Thiết Ngưu — ĐẬP BÚA ĐỊA CHẤN: cảnh báo dài (Sửu chậm nhưng cực nặng đòn) rồi phủ gần hết
+/* ĐẬP BÚA ĐỊA CHẤN: cảnh báo dài (chậm nhưng cực nặng đòn) rồi phủ gần hết
    khung né, chỉ chừa lại 1 vùng an toàn nhỏ — buộc phải áp sát đúng 1 điểm duy nhất. */
 function genQuakeQueue(rect, duration, density){
   const q=[]; let t=350;
@@ -5221,8 +5224,8 @@ function genQuakeQueue(rect, duration, density){
   }
   return q;
 }
-/* Thiết Ngưu — HÚC THẲNG: tái dùng cơ chế "laser" sẵn có nhưng bản RỘNG hơn nhiều + cảnh báo
-   dài hơn (đúng kiểu chuẩn bị húc thẳng của một con trâu sắt) — sát thương/lần trúng cao hơn. */
+/* XÔNG THẲNG: tái dùng cơ chế "laser" sẵn có nhưng bản RỘNG hơn nhiều + cảnh báo
+   dài hơn (chuẩn bị lao thẳng đầy áp lực) — sát thương/lần trúng cao hơn. */
 function genChargeQueue(rect, duration, density){
   const q=[]; let t=400;
   while(t < duration-800){
@@ -5232,7 +5235,7 @@ function genChargeQueue(rect, duration, density){
   }
   return q;
 }
-/* Thiết Ngưu — KHIÊN ĐẤT: KHÔNG tấn công thật (dmg:[0,0] ở cấp pattern) — chỉ vài đạn thưa,
+/* KHIÊN ĐẤT: KHÔNG tấn công thật (dmg:[0,0] ở cấp pattern) — chỉ vài đạn thưa,
    chậm, mang tính hình ảnh "Trọng đang gồng mình dựng khiên" thay vì đe doạ thực sự. Cờ
    shieldSelf được applyBossChainDamage/runBossChain xử lý để giảm sát thương lượt sau. */
 function genShieldQueue(rect, duration, density){
@@ -5378,7 +5381,7 @@ function spawnDodgeBullet(ev, box){
     if(ev.jitter){ el.classList.add('swarm'); b.jitter = true; }
     if(ev.accelAfter!=null){ b.accelAfter = ev.accelAfter; b.accelMul = ev.accelMul||2; }
   } else if(ev.kind==='aimed'){
-    // Dạ Thử — Phi Tiêu Độc: nhắm thẳng vào vị trí linh hồn NGAY LÚC PHÓNG ra khỏi tay.
+    // Phi Tiêu Độc: nhắm thẳng vào vị trí linh hồn NGAY LÚC PHÓNG ra khỏi tay.
     el.className = 'dbullet t-dart';
     const dx = DZ.x - ev.cx, dy = DZ.y - ev.cy;
     const dist = Math.hypot(dx,dy) || 1;
@@ -5422,7 +5425,7 @@ function spawnDodgeBullet(ev, box){
     b.x = originX; b.y = originY;
     b.vx = -Math.cos(rad)*ev.speed*sf; b.vy = -Math.sin(rad)*ev.speed*sf; b.r=6;
   } else if(ev.kind==='quake'){
-    // Thiết Ngưu — Đập Búa Địa Chấn: hazard phủ toàn bộ khung né trừ 1 vùng an toàn nhỏ.
+    // Đập Búa Địa Chấn: hazard phủ toàn bộ khung né trừ 1 vùng an toàn nhỏ.
     el.className = 'dbullet t-quake telegraph';
     el.style.setProperty('--safe-x', ev.safeX+'px');
     el.style.setProperty('--safe-y', ev.safeY+'px');
@@ -5508,7 +5511,7 @@ function updateDodgeBullet(b, dt){
     return;
   }
   if(b.jitter){
-    // Bầy Dạ Thử: lắc nhẹ ngẫu nhiên mỗi khung hình, tạo cảm giác di chuyển hỗn loạn/khó đoán.
+    // Bóng Đen Tản Loạn: lắc nhẹ ngẫu nhiên mỗi khung hình, tạo cảm giác di chuyển hỗn loạn/khó đoán.
     b.vx += (Math.random()-0.5)*0.01;
     b.vy += (Math.random()-0.5)*0.01;
   }
@@ -5555,7 +5558,7 @@ function dodgeHitTest(b, dz){
 /* ---- Kết thúc 1 lượt (round) và kiểm tra điều kiện thắng theo mốc 10 lượt ---- */
 function endRound(){
   BS.turn++;
-  BS.boss.shielded = false; // Khiên Đất (Thiết Ngưu) chỉ có hiệu lực đúng 1 lượt tấn công của party
+  BS.boss.shielded = false; // Khiên Đất chỉ có hiệu lực đúng 1 lượt tấn công của party
   // Mốc "cầm cự đủ N lượt để thắng" CHỈ áp dụng cho boss KHÔNG killable (TIU/Quá Tải Chapter 2).
   // Với boss killable (Trọng — The Grimoire), chiến thắng chỉ đến khi HP thật sự về 0 hoặc qua
   // lựa chọn Phong Ấn — xem resolveRound(). Hết lượt mà chưa hạ được thì trận cứ tiếp diễn.
@@ -5616,8 +5619,8 @@ function startTrongCurseOneBattle(){
     bossImage: (typeof TRONG_CURSE_IMAGE !== 'undefined') ? TRONG_CURSE_IMAGE : null,
     musicSrc: (typeof TRONG_CURSE_MUSIC !== 'undefined') ? TRONG_CURSE_MUSIC : null,
     patterns: BOSS_PATTERNS_TRONG,
-    patternPoolA: BOSS_PATTERNS_TRONG_DATHU,   // Dạ Thử (Tý) — áp đảo lúc HP còn cao
-    patternPoolB: BOSS_PATTERNS_TRONG_THIETNGUU, // Thiết Ngưu (Sửu) — áp đảo lúc HP thấp/sau mốc phong ấn
+    patternPoolA: BOSS_PATTERNS_TRONG_SWIFT,   // nhóm SWIFT — áp đảo lúc HP còn cao
+    patternPoolB: BOSS_PATTERNS_TRONG_HEAVY, // nhóm HEAVY — áp đảo lúc HP thấp/sau mốc phong ấn
     chainSelector: chooseTrongPatternChain,
     sealThresholdRatio: 0.15,
     onSealChoice: triggerTrongSealChoice,
@@ -5658,7 +5661,7 @@ function triggerTrongSealChoice(){
 
 function resumeTrongBattleAfterKillChoice(){
   document.getElementById('battleOverlay').classList.remove('hidden');
-  addBattleLog('Phần Thiết Ngưu trong Trọng hoàn toàn chiếm quyền kiểm soát — hắn gầm lên trong tuyệt vọng!', 'danger');
+  addBattleLog('Trọng hoàn toàn mất kiểm soát — hắn gầm lên trong tuyệt vọng!', 'danger');
   renderBattle();
   setTimeout(()=>{ bossTurn(false); }, 700);
 }
@@ -5676,7 +5679,7 @@ function triggerChapter2SealedEnding(){
   S.running = false;
   S.endingRoute = 'secret_sealed';
   document.getElementById('winTitle').textContent = '✦ SECRET ENDING — PHONG ẤN ✦';
-  document.getElementById('winSub').textContent = 'Mũi kim đã khâu lại những gì bị xé toạc. Tý và Sửu được giải thoát, Trọng trở lại là chính mình — và bắt đầu hành trình đi xin lỗi những người hắn đã gieo ấn chú.';
+  document.getElementById('winSub').textContent = 'Mũi kim đã khâu lại những gì bị xé toạc. Quyển sách khép lại, Trọng trở lại là chính mình — và bắt đầu hành trình đi xin lỗi những người hắn đã gieo ấn chú.';
   const nextBtn = document.getElementById('nextNightBtn');
   nextBtn.textContent = 'VỀ MÀN HÌNH CHÍNH';
   nextBtn.onclick = showTitle;
@@ -5688,7 +5691,7 @@ function triggerChapter2BadEnding(){
   S.running = false;
   S.endingRoute = 'secret_bad';
   document.getElementById('winTitle').textContent = '☠ BAD ENDING — CÁI GIÁ CỦA CHIẾN THẮNG ☠';
-  document.getElementById('winSub').textContent = 'Trọng gục xuống, nhưng La Peace của hắn bị giết bằng ma thuật nên không tan biến — nó nằm trong tay bạn, nặng hơn bạn nghĩ. Cuốn sách trắng đang chờ ai đó viết tiếp.';
+  document.getElementById('winSub').textContent = 'Trọng gục xuống, nhưng thứ ánh sáng cuối cùng của hắn không chịu tan đi — nó vẫn đọng lại trong lòng bàn tay bạn, nặng hơn bạn nghĩ. Cuốn sách trắng đang chờ ai đó viết tiếp.';
   const nextBtn = document.getElementById('nextNightBtn');
   nextBtn.textContent = 'VỀ MÀN HÌNH CHÍNH';
   nextBtn.onclick = showTitle;
@@ -5872,7 +5875,7 @@ const CHAPTER_INTRO = {
     subtitle:'???',
     html:`<p>Chapter 2 dùng lại đúng bản đồ của Chapter 1 nhưng ở <b>độ khó cao</b>: đêm sẽ có thêm <b>biến cố trung tâm</b> — mất điện toàn trường, buộc bạn phải chạy đến <b>Tòa C</b> khởi động lại cầu dao tổng trước khi The TIU lợi dụng bóng tối. Về cuối đêm, một số cửa nối giữa các tòa còn bị <b>khóa ngẫu nhiên</b>.
     Bạn cũng có thể nhặt <b>linh kiện</b> (pin cũ, dây điện, băng keo, ống thép) rải trong các góc tối rồi ghé <b>Bàn chế tạo</b> ở Căn tin để tự chế Camera, Bộ Sập Cầu Dao, Đèn UV hay Bẫy gây nhiễu — những vật phẩm này chỉ có ở Chapter 2.</p>
-    <p><b style="color:var(--blood-bright)">Đêm 3</b> đổi hẳn không khí: nếu bạn do dự khi Trọng lộ mặt ở Đêm 2, hắn sẽ nuốt TIU và trở thành <b>TRỌNG — THE GRIMOIRE</b> — kẻ đuổi bắt mới của Đêm 3. Bị tóm đủ 3 lần, La Peace ngủ quên trong chính bạn sẽ thức tỉnh, dẫn thẳng vào trận đối đầu cuối cùng.</p>
+    <p><b style="color:var(--blood-bright)">Đêm 3</b> đổi hẳn không khí: nếu bạn do dự khi Trọng lộ mặt ở Đêm 2, hắn sẽ nuốt TIU và trở thành <b>TRỌNG — THE GRIMOIRE</b> — kẻ đuổi bắt mới của Đêm 3. Bị tóm đủ 3 lần, có thứ gì đó trong chính bạn sẽ bắt đầu thức dậy, dẫn thẳng vào trận đối đầu cuối cùng.</p>
     <p><b>Chiến đấu</b> theo lượt kiểu Final Fantasy cổ điển, kết hợp QTE: <b>đòn đánh thường</b> không cần QTE, còn <b>kỹ năng</b> yêu cầu bấm chuỗi mũi tên (Bạn 5, Wibu 3, Lính Ngu Lắm 4; dưới 40% chính xác = thất bại). Khi <b>bị đánh</b>, mỗi chiêu của boss có độ phức tạp ngẫu nhiên 1–7 mũi tên: bấm đúng hướng để ĐỠ, bấm trong <b>vùng sáng</b> để PARRY. Vùng này hẹp dần, dịch chuyển, mũi tên rung lắc mạnh dần — và có mũi tên <b>đổi hướng</b> giữa chừng.</p>`
   }
 };
@@ -5929,7 +5932,7 @@ const NIGHT_DESCR = {
 const NIGHT_DESCR_CH2 = {
   1: NIGHT_DESCR[1],
   2: NIGHT_DESCR[2],
-  3: "Không còn Wibu, không còn Chàng Lính — chỉ có TRỌNG, THE GRIMOIRE, kẻ muốn rút La Peace ngủ quên bên trong bạn."
+  3: "Không còn Wibu, không còn Chàng Lính — chỉ có TRỌNG, THE GRIMOIRE, kẻ đang muốn lấy đi thứ gì đó bên trong bạn."
 };
 function buildNightSelect(chapter){
   chapter = chapter || 1;
