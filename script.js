@@ -961,49 +961,7 @@ function refreshActionPane(){
     }
   }
 
-  const useBim=document.createElement('button');
-  useBim.className='btn danger';
-  useBim.textContent='Dùng Bim Bim (+1 HP)';
-  useBim.disabled = !canUseBimBim();
-  useBim.onclick=()=>{ useBimBim(); refreshActionPane(); };
-  itemGroup.row.appendChild(useBim);
-
-  const useWater=document.createElement('button');
-  useWater.className='btn';
-  useWater.textContent='Uống Nước tăng lực (buff tốc độ, đỡ hao thể lực, gây tiếng ồn)';
-  useWater.disabled = !canUseWater();
-  useWater.onclick=()=>{ useWaterBoost(); refreshActionPane(); };
-  itemGroup.row.appendChild(useWater);
-
-  const useCam=document.createElement('button');
-  useCam.className='btn';
-  useCam.textContent='Dùng Camera Sinh viên (định vị TIU 3 lượt)';
-  useCam.disabled = !canUseCamera();
-  useCam.onclick=()=>{ useCameraItem(); refreshActionPane(); };
-  itemGroup.row.appendChild(useCam);
-
-  if(isHardMode()){
-    const useBreaker=document.createElement('button');
-    useBreaker.className='btn danger';
-    useBreaker.textContent='Sập Cầu Dao (vô hiệu hóa TIU 60p, tối màn hình)';
-    useBreaker.disabled = !canUseBreakerItem();
-    useBreaker.onclick=()=>{ useBreakerItem(); refreshActionPane(); };
-    itemGroup.row.appendChild(useBreaker);
-
-    const useUV=document.createElement('button');
-    useUV.className='btn';
-    useUV.textContent='💡 Dùng Đèn UV (làm choáng TIU nếu ở gần)';
-    useUV.disabled = S.inventory.uvlight<=0;
-    useUV.onclick=useUVLight;
-    itemGroup.row.appendChild(useUV);
-
-    const useNoise=document.createElement('button');
-    useNoise.className='btn';
-    useNoise.textContent='📢 Đặt Bẫy gây nhiễu tại đây';
-    useNoise.disabled = S.inventory.noisetrap<=0;
-    useNoise.onclick=useNoiseTrap;
-    itemGroup.row.appendChild(useNoise);
-  }
+  /* Các nút dùng vật phẩm (Bim Bim, Nước tăng lực, Camera, Cầu dao, Đèn UV, Bẫy nhiễu) đã chuyển hết vào 🎒 Túi đồ (phím B). */
 
   if(S.laPeaceRoom===S.playerRoom && !S.laPeaceFound && !td){
     const usePeace=document.createElement('button');
@@ -1037,7 +995,7 @@ function refreshActionPane(){
     useLore.onclick=pickupLore;
     itemGroup.row.appendChild(useLore);
   }
-  btnWrap.appendChild(itemGroup.g);
+  if(itemGroup.row.children.length) btnWrap.appendChild(itemGroup.g); // nhóm rỗng thì không hiện tiêu đề "VẬT PHẨM"
 
   /* ---- Nhóm mới: BỘ ĐÀM (Chapter 2, Đêm 1) — điều phối Chàng Lính (B) & Wibu (E) ---- */
   if(radioTeamActive() && S.night===1){
@@ -1698,7 +1656,19 @@ function onRoomClick(k){
 }
 
 /* ============== MOVEMENT ============== */
+/* Điểm vào duy nhất để đổi phòng (nút, sơ đồ, cửa trong top-down): hiện màn hình loading bằng ảnh phòng sắp tới
+   rồi mới thực sự chuyển (xem phần LOADING KHI ĐỔI PHÒNG ở cuối file). */
 function movePlayer(dest){
+  if(!S || !S.running || S.paused) return false;
+  if(S.epilogue) return movePlayerNow(dest);
+  if(TRAVEL.busy) return false;
+  const noisy = S.gameMinutes < S.speedBuffUntil;
+  const staminaCost = noisy ? MOVE_STAMINA_COST_BUFFED : MOVE_STAMINA_COST;
+  if(S.stamina < staminaCost) return movePlayerNow(dest); // kiệt sức: báo lỗi ngay, không loading
+  startTravel(dest);
+  return true;
+}
+function movePlayerNow(dest){
   if(!S.running || S.paused) return false;
   if(S.epilogue){ epilogueMove(dest); return true; }
   const noisy = S.gameMinutes < S.speedBuffUntil; // buff Nước tăng lực: nhanh nhưng ồn
@@ -6489,6 +6459,7 @@ document.addEventListener('keydown', (e)=>{
    Thiếu maps.js hoặc thiếu map của một phòng -> phòng đó tự dùng lại giao diện nút bấm cũ. */
 const TD_SPEED = 4.4;   // ô / giây
 const TD_RADIUS = 0.3;  // bán kính va chạm của người chơi (đơn vị ô)
+const TD_BG_ALPHA = 0.38; // độ rõ của ảnh nền dưới lưới tile (0 = ẩn, 1 = rõ hết)
 const TD_REACH = 1.7;   // khoảng cách tối đa (đơn vị ô) để bấm E tương tác
 const TD = { S:null, room:null, x:1.5, y:1.5, face:{x:0,y:1}, moving:false, keys:{}, lastTs:0,
              canvas:null, ctx:null, W:0, H:0, dpr:1, imgs:{}, debug:false, npcMeta:null, near:null };
@@ -6534,7 +6505,7 @@ function tdSpot(m, kind, fi){
   const ix = m._ix;
   return ix[kind] || ix.free[(fi*5+2) % Math.max(1, ix.free.length)] || [1,1];
 }
-const TD_ENABLED = true; /* WASD chỉ đi lại TRONG phòng; chuyển tòa chỉ bằng sơ đồ (mini map / phóng to) */
+const TD_ENABLED = true; /* Đi lại bằng WASD; chạm cửa (ô 10) + E để sang phòng khác; sơ đồ vẫn dùng được */
 function tdActive(){
   if(!TD_ENABLED) return false;
   return !!(S && S.running && !S.epilogue && tdMap(S.playerRoom));
@@ -6596,7 +6567,14 @@ function tdInteractables(m){
     if(S.loreClues[room]) list.push({kind:'pickup', pos:sp[1], label:'📖 Thu thập manh mối', act:pickupLore});
     if(S.laPeaceRoom===room && !S.laPeaceFound) list.push({kind:'pickup', pos:sp[2], label:'✦ Nhặt La Peace (mảnh năng lượng ôn hòa)', act:pickupLaPeace});
   }
-  /* Cửa ra (ô 10) KHÔNG còn tương tác bằng E: muốn sang tòa khác phải dùng sơ đồ. */
+  /* Cửa ra (ô 10): đứng gần bấm E để sang phòng kế bên (có màn hình loading). Vẫn có thể dùng sơ đồ. */
+  ix.exitList.forEach(ex=>{
+    if(!def.connects.includes(ex.to)) return;
+    const locked = isEdgeLocked(room, ex.to);
+    list.push({kind:'exit', pos:ex.pos, locked, to:ex.to,
+      label: (locked ? '🔒 Cửa khóa — gỡ khóa đi tới ' : '➜ Đi tới ') + ROOM_DEF[ex.to].name,
+      act: ()=> locked ? attemptUnlockDoor(ex.to) : movePlayer(ex.to)});
+  });
   return list;
 }
 function tdNearest(m){
@@ -6634,7 +6612,7 @@ function tdSync(){
 }
 function tdCanControl(){
   return !!(S && S.running && !S.paused && !S.epilogue && !TUT && tdActive()
-    && !isBlockingOverlayOpen() && !(BS && !BS.over) && isPauseMenuClosed());
+    && !isBlockingOverlayOpen() && !(BS && !BS.over) && isPauseMenuClosed() && !TRAVEL.busy);
 }
 function isPauseMenuClosed(){ return document.getElementById('pauseMenu').classList.contains('hidden'); }
 function tdUpdate(m, dt){
@@ -6680,8 +6658,8 @@ const TD_TEST_COLORS = {
   8:['#463228','#6a4e3c',''],  9:['#3cc85a','#a0f0b0','S'], 10:['#326ef0','#90b4ff','E']
 };
 const TD_TEST_NAMES = {0:'0 sàn',1:'1 tường',2:'2 NPC',3:'3 sự cố',4:'4 vật phẩm',5:'5 căn tin',6:'6 bàn chế',7:'7 AMP',8:'8 vật cản',9:'9 spawn',10:'10 cửa'};
-TD.testColors = true;
-function tdDrawTestTiles(ctx,m,tp,ox,oy){
+TD.testColors = false; // mặc định TẮT: vào game thấy giao diện thường, bấm F4 mới hiện màu kiểm tra cho dev
+function tdDrawTestTiles(ctx,m,tp,ox,oy,overImage){
   const exitTo = {};
   ((m._ix && m._ix.exitList) || []).forEach(e=>{ exitTo[e.pos[0]+','+e.pos[1]] = e.to; });
   ctx.save();
@@ -6690,6 +6668,7 @@ function tdDrawTestTiles(ctx,m,tp,ox,oy){
   for(let y=0;y<m.rows;y++){
     for(let x=0;x<m.cols;x++){
       const c = tdTile(m,x,y), px = ox+x*tp, py = oy+y*tp, col = TD_TEST_COLORS[c] || TD_TEST_COLORS[0];
+      ctx.globalAlpha = overImage ? 0.55 : 1;
       ctx.fillStyle = col[0]; ctx.fillRect(px,py,tp,tp);
       ctx.strokeStyle = col[1]; ctx.globalAlpha = 0.35; ctx.lineWidth = 1; ctx.strokeRect(px+0.5,py+0.5,tp-1,tp-1); ctx.globalAlpha = 1;
       let t = col[2];
@@ -6711,20 +6690,26 @@ function tdDrawTestTiles(ctx,m,tp,ox,oy){
   ctx.restore();
 }
 function tdDrawTiles(ctx,m,tp,ox,oy,overImage){
-  if(TD.testColors && !overImage){ tdDrawTestTiles(ctx,m,tp,ox,oy); return; }
+  if(TD.testColors){ tdDrawTestTiles(ctx,m,tp,ox,oy,overImage); return; }
   ctx.save();
-  if(overImage) ctx.globalAlpha = 0.5;
   for(let y=0;y<m.rows;y++){
     for(let x=0;x<m.cols;x++){
       const c = tdTile(m,x,y), px = ox+x*tp, py = oy+y*tp;
       const col = TD_COLORS[c];
-      if(col){
+      if(overImage){
+        /* Có ảnh nền: sàn để trống cho ảnh lộ ra, chỉ phủ mờ tường / vật cản / cửa để người chơi nhìn thấy ranh giới. */
+        if(col && c!==2){
+          ctx.globalAlpha = 0.42; ctx.fillStyle = col[0]; ctx.fillRect(px,py,tp,tp);
+          ctx.globalAlpha = 0.7;  ctx.strokeStyle = col[1]; ctx.lineWidth = 1.5; ctx.strokeRect(px+1.5,py+1.5,tp-3,tp-3);
+        }
+      } else if(col){
         ctx.fillStyle = col[0]; ctx.fillRect(px,py,tp,tp);
         if(c!==2){ ctx.strokeStyle = col[1]; ctx.lineWidth = 2; ctx.strokeRect(px+2,py+2,tp-4,tp-4); }
       } else {
         ctx.fillStyle = ((x+y)&1) ? '#1b1812' : '#17140f'; ctx.fillRect(px,py,tp,tp);
       }
       if(TD.debug){
+        ctx.globalAlpha = 1;
         ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.font = '10px monospace'; ctx.textAlign='left'; ctx.textBaseline='top';
         ctx.fillText(String(c), px+3, py+2);
       }
@@ -6743,8 +6728,8 @@ function tdDraw(m, ts){
   const tp = Math.max(8, Math.floor(Math.min(W/m.cols, H/m.rows)));
   const ox = Math.floor((W-tp*m.cols)/2), oy = Math.floor((H-tp*m.rows)/2);
   const img = tdImage(m, S.playerRoom);
-  if(img) ctx.drawImage(img, ox, oy, tp*m.cols, tp*m.rows);
-  if(!img || TD.debug) tdDrawTiles(ctx,m,tp,ox,oy,!!img);
+  if(img){ ctx.save(); ctx.globalAlpha = TD_BG_ALPHA; ctx.drawImage(img, ox, oy, tp*m.cols, tp*m.rows); ctx.restore(); } // ảnh tòa làm nền mờ
+  tdDrawTiles(ctx,m,tp,ox,oy,!!img); // tile luôn nằm TRÊN ảnh nền
   const C = (p)=>[ox+(p[0]+0.5)*tp, oy+(p[1]+0.5)*tp];
   const list = tdInteractables(m);
   const near = tdNearest(m); TD.near = near;
@@ -6853,6 +6838,91 @@ document.addEventListener('keydown', (e)=>{
 document.addEventListener('keyup', (e)=>{ delete TD.keys[(e.key||'').toLowerCase()]; });
 window.addEventListener('blur', ()=>{ TD.keys = {}; });
 requestAnimationFrame(tdLoop);
+
+/* ============== LOADING KHI ĐỔI PHÒNG ==============
+   Phủ ảnh của phòng SẮP ĐẾN lên toàn màn hình, tới lúc đã kín mới chuyển phòng, rồi mờ dần.
+   SFX tiếng bước chân: điền đường dẫn vào TD_TRAVEL_SFX (vd 'assets/audio/footsteps.mp3'), để '' = chưa có. */
+const TD_TRAVEL_SFX = '';
+const TD_TRAVEL_SWAP_MS = 650;  // thời điểm thực sự đổi phòng (màn đã kín)
+const TD_TRAVEL_TOTAL_MS = 1350; // tổng thời gian loading
+const TRAVEL = { busy:false, el:null, sfx:null };
+
+function ensureTravelDom(){
+  if(TRAVEL.el) return TRAVEL.el;
+  const st = document.createElement('style');
+  st.textContent = `
+  #travelLoading{position:fixed;inset:0;z-index:70;background:#030304;opacity:0;pointer-events:none;transition:opacity .28s ease;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  #travelLoading.on{opacity:1;pointer-events:auto}
+  #travelLoading .tlBg{position:absolute;inset:-4%;background-size:cover;background-position:center;filter:brightness(.5) saturate(.8) blur(1.5px);transform:scale(1.04)}
+  #travelLoading.on .tlBg{animation:tlDrift ${TD_TRAVEL_TOTAL_MS}ms linear forwards}
+  #travelLoading::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(0,0,0,0) 30%,rgba(0,0,0,.88) 100%)}
+  #travelLoading .tlBox{position:relative;z-index:1;text-align:center;font-family:var(--font-disp,'Roboto Condensed',sans-serif)}
+  #travelLoading .tlSmall{font-size:12px;letter-spacing:6px;color:var(--text-dim,#a89f8c);margin-bottom:6px}
+  #travelLoading .tlName{font-size:40px;letter-spacing:5px;color:var(--amber,#e0a63a);text-shadow:0 2px 14px #000}
+  #travelLoading .tlBar{width:220px;height:2px;margin:16px auto 0;background:rgba(255,255,255,.12);overflow:hidden}
+  #travelLoading .tlBar i{display:block;height:100%;width:0;background:var(--amber,#e0a63a)}
+  #travelLoading.on .tlBar i{animation:tlFill ${TD_TRAVEL_TOTAL_MS}ms linear forwards}
+  @keyframes tlFill{to{width:100%}}
+  @keyframes tlDrift{from{transform:scale(1.04) translateX(0)}to{transform:scale(1.1) translateX(-1.5%)}}`;
+  document.head.appendChild(st);
+  const el = document.createElement('div');
+  el.id = 'travelLoading';
+  el.innerHTML = '<div class="tlBg"></div><div class="tlBox"><div class="tlSmall">ĐANG ĐI TỚI</div><div class="tlName"></div><div class="tlBar"><i></i></div></div>';
+  document.body.appendChild(el);
+  TRAVEL.el = el;
+  return el;
+}
+function travelImageFor(dest){
+  const m = window.TD_MAPS && window.TD_MAPS[dest];
+  return (m && m.image) || ROOM_IMAGES[dest] || '';
+}
+function playTravelSfx(){
+  if(!TD_TRAVEL_SFX) return;
+  try{
+    const a = new Audio(TD_TRAVEL_SFX);
+    a.loop = true;
+    a.volume = (window.UIT_SOUND_MUTED ? 0 : 1) * ((typeof SETTINGS!=='undefined' && SETTINGS.masterVolume!=null ? SETTINGS.masterVolume : 100) / 100);
+    a.play().catch(()=>{});
+    TRAVEL.sfx = a;
+  }catch(e){}
+}
+function stopTravelSfx(){
+  if(TRAVEL.sfx){ try{ TRAVEL.sfx.pause(); }catch(e){} TRAVEL.sfx = null; }
+}
+function endTravel(){
+  TRAVEL.busy = false;
+  stopTravelSfx();
+  if(TRAVEL.el) TRAVEL.el.classList.remove('on');
+}
+function startTravel(dest){
+  const el = ensureTravelDom();
+  const s0 = S;
+  TRAVEL.busy = true;
+  if(TD && TD.keys) TD.keys = {};
+  const img = travelImageFor(dest);
+  const bg = el.querySelector('.tlBg');
+  bg.style.backgroundImage = img ? `url('${img}')` : '';
+  bg.style.background = img ? '' : (ROOM_FALLBACK_GRADIENT[dest] || '#111');
+  if(img) bg.style.backgroundImage = `url('${img}')`;
+  el.querySelector('.tlName').textContent = ROOM_DEF[dest].name;
+  // khởi động lại animation thanh tiến trình mỗi lần
+  el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
+  playTravelSfx();
+
+  const doSwap = ()=>{
+    if(S!==s0 || !S.running){ endTravel(); return; }
+    if(S.paused){ setTimeout(doSwap, 200); return; }       // đang tạm dừng: chờ rồi mới chuyển
+    if(isBlockingOverlayOpen()){ endTravel(); return; }    // bị jumpscare / game over chen vào: hủy
+    movePlayerNow(dest);
+    const rest = Math.max(0, TD_TRAVEL_TOTAL_MS - TD_TRAVEL_SWAP_MS);
+    const t0 = performance.now();
+    (function wait(){
+      if(S!==s0 || !S.running || isBlockingOverlayOpen()){ endTravel(); return; } // jumpscare sau khi tới nơi: bỏ loading ngay
+      if(performance.now()-t0 >= rest) endTravel(); else setTimeout(wait, 80);
+    })();
+  };
+  setTimeout(doSwap, TD_TRAVEL_SWAP_MS);
+}
 
 /* ============== LƯU GAME KHI RỜI TRANG ============== */
 window.addEventListener('beforeunload', ()=>{ persistSave(); });
