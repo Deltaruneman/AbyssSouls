@@ -90,16 +90,23 @@ function isTrongChaseNight(){ return !!(S && S.chapter===2 && S.night===3 && !S.
 function chaseMonsterLabel(){ return isTrongChaseNight() ? 'TRỌNG' : 'THE TIU'; }
 
 const GAME_MINUTES_TOTAL = 7.5*60; // 00:00 -> 07:30 — MẶC ĐỊNH cho Chapter 1 (không đổi)
-const REAL_MS_PER_GAME_MIN = (15*60*1000) / GAME_MINUTES_TOTAL; // 1 màn ~ 15 phút thực tế (Chapter 1)
+const NIGHT_REAL_MS = 10*60*1000; // Chapter 1: 1 đêm = 10 phút thực tế
+const NIGHT_REAL_MS_CH2 = 15*60*1000; // Chapter 2: 1 đêm = 15 phút thực tế (dài hơn vì nội dung nhiều hơn)
+const REAL_MS_PER_GAME_MIN = NIGHT_REAL_MS / GAME_MINUTES_TOTAL; // mặc định (Chapter 1: 450 phút game)
+/* Số ms thực cho 1 phút game — co giãn theo tổng thời lượng đêm để mỗi chapter có độ dài thực tế cố định. */
+function realMsPerGameMin(){
+  const total = (S && S.nightTotalMin) || GAME_MINUTES_TOTAL;
+  const realMs = (S && S.chapter===2) ? NIGHT_REAL_MS_CH2 : NIGHT_REAL_MS;
+  return realMs / total;
+}
 
 /* ---- Chapter 2: đêm chạy 21:00 -> 07:30 (630 phút game), KHÁC với Chapter 1 (00:00 -> 07:30,
    450 phút). S.gameMinutes vẫn luôn bắt đầu từ 0 ở đầu mỗi đêm (duration kể từ lúc bắt đầu ca
    trực) — S.nightStartClockMin là GIỜ THỰC (tính bằng phút kể từ 00:00) mà mốc gameMinutes=0
    tương ứng, dùng để quy đổi ra giờ hiển thị HUD + khung giờ mở Căn Tin (xem formatClock,
    isCanteenOpen). S.nightTotalMin thay thế GAME_MINUTES_TOTAL làm mốc kết thúc đêm.
-   REAL_MS_PER_GAME_MIN KHÔNG đổi theo chapter -> đêm Chapter 2 dài hơn (630 vs 450 phút game)
-   nên sẽ tốn nhiều thời gian thực hơn tương ứng (~21 phút thay vì ~15 phút) — hợp lý vì nội
-   dung Chapter 2 (đội hình 3 người, 3 giai đoạn/đêm) nhiều hơn hẳn. */
+   Tốc độ thời gian được tính bằng realMsPerGameMin() = thời lượng thực của chapter / S.nightTotalMin:
+   Chapter 1 (450 phút game) = 10 phút thực, Chapter 2 (630 phút game) = 15 phút thực mỗi đêm. */
 function nightClockCfg(chapter){
   return chapter===2
     ? { startClockMin: 21*60, totalMin: 10.5*60 } // 21:00 -> 07:30
@@ -3138,7 +3145,7 @@ function tick(now){
   if(S && S.running && !S.paused && !S.epilogue){
     const dtReal = now - S.lastTick;
     S.lastTick = now;
-    const dGameMin = dtReal / REAL_MS_PER_GAME_MIN;
+    const dGameMin = dtReal / realMsPerGameMin();
     if(dGameMin>0){
       S.gameMinutes += dGameMin;
       advanceWorld(dGameMin);
