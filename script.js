@@ -53,7 +53,9 @@ try{
   const _v = localStorage.getItem('uit_master_volume');
   if(_v!==null){ const n = parseInt(_v,10); if(!isNaN(n)) _storedVol = Math.max(0,Math.min(100,n)); }
 }catch(e){}
-const SETTINGS = { masterVolume:_storedVol };
+const SETTINGS = { masterVolume:_storedVol, shake:true, flash:true };
+const TIU_IMAGE = "assets/images/TIU.png";
+const TIU_JUMPSCARE_SFX = "assets/sfx/TIUAttack.mp3";
 
 /* ---- Thời gian: 1 đêm = 00:00 -> 07:30 (450 phút game) = 10 phút thực ---- */
 const GAME_MINUTES_TOTAL = 7.5*60;
@@ -81,6 +83,7 @@ const NIGHT_NAMES = {
 };
 function nightName(ch, n){ return (NIGHT_NAMES[ch] || NIGHT_NAMES[1])[n] || ('ĐÊM '+n); }
 const TIU_MOVE_EVERY = { 1:[22,34], 2:[16,26], 3:[11,19] };
+const EVENT_EVERY = { 1:[55,85], 2:[42,68], 3:[30,52] };   // sự cố do The TIU gây ra (chỉ Chapter 1)
 const TIU_INVULN_MIN = 40;      // sau khi bị bắt, TIU bị đẩy đi và không bắt lại trong khoảng này
 const TIU_CHASE_CHANCE = 0.35;  // xác suất mỗi bước TIU tiến thẳng về phía người chơi
 const NPC_MOVE_EVERY = [45,75]; // các NPC đi lang thang theo chu kỳ này (phút game)
@@ -146,6 +149,7 @@ function freshState(night, chapter, opts){
     monsterRoom, lastSeenRoom:null, lastSeenAt:0, invulnUntil:0,
     nextMonsterMoveAt: rand(...(TIU_MOVE_EVERY[night] || TIU_MOVE_EVERY[1])),
     nextNpcMoveAt: rand(...NPC_MOVE_EVERY),
+    activeEvents:{}, nextEventAt: rand(...(EVENT_EVERY[night] || EVENT_EVERY[1])),
     scavenge, npcRoom,
     talked:{}, duelDone:{}, scouted:{}, traps:{}, npcDebuff:{},
     log:[], tdSeed:null, tdRoom:null, tdX:null, tdY:null, final:false
@@ -318,6 +322,9 @@ function formatClock(gmin){
   return String(h).padStart(2,'0')+":"+String(m).padStart(2,'0');
 }
 
+function eventLabel(ev){
+  return {stage:'Kiểm tra sân khấu', floors:'Bật/tắt các tầng', wire:'Nối dây điện', quiz:'Trả lời câu hỏi', wibu:'Bắt Wibu Việt Nhật', books:'Sắp xếp lại sách', bikes:'Dắt xe về đúng hàng', ball:'Tìm quả bóng lạc'}[ev]||ev;
+}
 /* ============== MODAL DÙNG CHUNG (tái dùng #mgModal) ============== */
 function showModal(title, html, buttons){
   const modal = $('mgModal');
@@ -411,7 +418,12 @@ function refreshMapInto(prefix){
     if(badge) badge.remove();
     if(k===S.playerRoom) node.classList.add('current-marker');
     else if(ROOM_DEF[S.playerRoom].connects.includes(k)) node.classList.add('reachable');
-    if(npcRooms[k]){
+    if(S.activeEvents[k]){
+      const b = document.createElement('div');
+      b.className = 'event-badge';
+      b.textContent = '!';
+      node.appendChild(b);
+    } else if(npcRooms[k]){
       const b = document.createElement('div');
       b.className = 'event-badge';
       b.textContent = '👤';
@@ -501,7 +513,13 @@ function refreshActionPane(){
   banner.classList.toggle('td-on', td);
   const imgUrl = ROOM_IMAGES[S.playerRoom];
   banner.style.backgroundImage = td ? 'none' : (imgUrl ? `url('${imgUrl}')` : ROOM_FALLBACK_GRADIENT[S.playerRoom]);
-  $('resolveBtn').classList.remove('show');
+  const resolveBtn = $('resolveBtn');
+  const curEvent = S.activeEvents[S.playerRoom];
+  resolveBtn.classList.toggle('show', !!curEvent && !td);
+  if(curEvent){
+    resolveBtn.textContent = '⚠ XỬ LÝ: '+eventLabel(def.event);
+    resolveBtn.onclick = ()=>startMinigame(S.playerRoom);
+  }
 
   const npcs = getRoomNPCs(S.playerRoom);
   const npcSprite = $('npcSprite');
@@ -712,6 +730,13 @@ function movePlayerNow(dest){
 /* ============== THẾ GIỚI: THỜI GIAN, NPC, THE TIU ============== */
 function advanceWorld(minutesPassed){
   if(S.tiuOn){
+    expireEvents();
+    S.nextEventAt -= minutesPassed;
+    if(S.nextEventAt<=0){
+      spawnEvent();
+      S.nextEventAt = rand(...(EVENT_EVERY[S.night] || EVENT_EVERY[1]));
+      markActionDirty();
+    }
     S.nextMonsterMoveAt -= minutesPassed;
     let guard = 0;
     while(S.nextMonsterMoveAt<=0 && guard<6){
@@ -809,17 +834,55 @@ function checkEncounter(){
   if(isRoomSafe(S.playerRoom)) return;
   if(S.playerRoom === S.monsterRoom) caughtByTIU();
 }
-function caughtByTIU(){
-  const me = RPG.player();
-  const lost = RPG.tiuPenalty(me);
-  S.invulnUntil = S.gameMinutes + TIU_INVULN_MIN;
-  // Đẩy TIU sang phòng xa nhất để người chơi có thời gian đi tiếp
-  const far = ROOM_KEYS.filter(r=>!ROOM_DEF[r].safe && r!==S.playerRoom)
-    .sort((a,b)=>roomDistance(b,S.playerRoom)-roomDistance(a,S.playerRoom))[0];
-  if(far) S.monsterRoom = far;
-  addLog('🚨 The TIU bắt gặp bạn lang thang! Bị trừ '+lost+' ĐRL.', 'danger');
-  showModal('🚨 THE TIU BẮT GẶP', `<p>Bạn bị phát hiện lang thang ngoài giờ quy định.</p><p><b>−${lost} ĐRL</b> (còn ${me.drl}).</p><p style="font-size:12px;color:var(--text-dim);">The TIU sẽ không bắt lại bạn trong một lúc.</p>`, [{label:'Tiếp tục', primary:true, onClick:()=>closeModal()}]);
-  refreshAll();
+function caughtByTIU(){ jumpscare(); }
+
+/* ---- SỰ CỐ do The TIU gây ra: giải minigame kịp giờ để kiếm điểm ---- */
+function lureTIUNear(room){
+  const adj = ROOM_DEF[room].connects.filter(r=>!isRoomSafe(r));
+  S.monsterRoom = adj.length ? pick(adj) : room;
+  S.lastSeenRoom = room;
+  S.lastSeenAt = S.gameMinutes;
+  addLog('The TIU bị thu hút bởi sự hỗn loạn và nhảy cóc đến gần '+ROOM_DEF[room].name+'!','tiu');
+}
+function spawnEvent(){
+  // Sự cố luôn phát sinh ngay tại phòng The TIU đang đứng (hoặc phòng liền kề). PARK/FIELD (noEvent) không có sự cố.
+  let room = (!ROOM_DEF[S.monsterRoom].safe && !ROOM_DEF[S.monsterRoom].noEvent && !S.activeEvents[S.monsterRoom]) ? S.monsterRoom : null;
+  if(!room){
+    const near = ROOM_DEF[S.monsterRoom].connects.filter(k=>!ROOM_DEF[k].safe && !ROOM_DEF[k].noEvent && !S.activeEvents[k]);
+    room = near.length ? pick(near) : null;
+  }
+  if(!room) return;
+  S.activeEvents[room] = {deadline: S.gameMinutes + rand(70,110), start: S.gameMinutes};
+  addLog('⚠ The TIU gây ra sự cố tại '+ROOM_DEF[room].name+': '+eventLabel(ROOM_DEF[room].event)+'!','warn');
+}
+function expireEvents(){
+  for(const room in S.activeEvents){
+    const ev = S.activeEvents[room];
+    if(S.gameMinutes >= ev.deadline){
+      delete S.activeEvents[room];
+      addLog('Sự cố tại '+ROOM_DEF[room].name+' đã bị bỏ lỡ!','warn');
+      if(Math.random()<0.5) lureTIUNear(room);
+      markActionDirty();
+    }
+  }
+  // Sự cố dây chuyền: để quá nửa thời hạn có thể lan sang phòng liền kề
+  for(const room in S.activeEvents){
+    const ev = S.activeEvents[room];
+    if(ev.chainChecked) continue;
+    const total = ev.deadline - ev.start, elapsed = S.gameMinutes - ev.start;
+    if(total>0 && elapsed/total >= 0.5){
+      ev.chainChecked = true;
+      if(Math.random() < 0.45){
+        const cand = ROOM_DEF[room].connects.filter(r=>!ROOM_DEF[r].safe && !ROOM_DEF[r].noEvent && !S.activeEvents[r]);
+        if(cand.length){
+          const spread = pick(cand);
+          S.activeEvents[spread] = {deadline: S.gameMinutes + rand(45,70), start: S.gameMinutes, chainedFrom: room};
+          addLog('🔥 Sự cố dây chuyền! '+ROOM_DEF[room].name+' quá tải và lan sự cố sang '+ROOM_DEF[spread].name+'!', 'danger');
+          markActionDirty();
+        }
+      }
+    }
+  }
 }
 
 /* ============== NPC: GẶP GỠ & TƯƠNG TÁC ============== */
@@ -908,6 +971,69 @@ function tick(now){
     S.lastTick = now;
   }
   rafId = requestAnimationFrame(tick);
+}
+
+/* ============== JUMPSCARE: THE TIU TÓM ĐƯỢC BẠN (-ĐRL) ============== */
+function jumpscare(){
+  const me = RPG.player();
+  const lost = RPG.tiuPenalty(me);
+  markActionDirty();
+  S.paused = true; // đóng băng thế giới trong lúc màn jumpscare đang hiện
+  S.invulnUntil = S.gameMinutes + rand(15,20);
+  const caughtRoom = S.playerRoom;
+  const others = ROOM_KEYS.filter(r=>r!==S.playerRoom && !isRoomSafe(r));
+  S.monsterRoom = pick(others.length ? others : ROOM_KEYS.filter(r=>r!==S.playerRoom));
+
+  if(SETTINGS.flash){
+    const fl = $('flash'); fl.classList.remove('flash-on'); void fl.offsetWidth; fl.classList.add('flash-on');
+  }
+  if(SETTINGS.shake){
+    const ap = $('app'); ap.classList.remove('shake'); void ap.offsetWidth; ap.classList.add('shake');
+  }
+  addLog('JUMPSCARE! The TIU đã tóm được bạn tại '+ROOM_DEF[caughtRoom].name+'! −'+lost+' ĐRL.','danger');
+
+  const js = $('jumpscareOverlay'), jsMonster = $('jsMonster'), jsPanel = $('jsPanel');
+  const jsContinueBtn = $('jsContinueBtn'), jsGiveUpBtn = $('jsGiveUpBtn'), sfx = $('jumpscareSfxAudio');
+  jsMonster.style.backgroundImage = TIU_IMAGE ? `url('${TIU_IMAGE}')` : '';
+  jsMonster.classList.toggle('no-img', !TIU_IMAGE);
+  jsPanel.classList.remove('show');
+  $('jsPanelText').innerHTML = 'THE TIU ĐÃ TÓM ĐƯỢC BẠN!<span class="jsPanelSub">−'+lost+' ĐRL (còn '+me.drl+') — vừa xảy ra tại '+ROOM_DEF[caughtRoom].name+'</span>';
+  jsContinueBtn.textContent = 'TIẾP TỤC';
+  jsGiveUpBtn.classList.remove('hidden');
+
+  js.classList.remove('hidden');
+  js.classList.remove('active','lunge'); void js.offsetWidth;
+  js.classList.add('active','lunge'); // TIU phóng to rồi lao ra khỏi màn hình
+
+  if(TIU_JUMPSCARE_SFX){
+    try{
+      sfx.src = TIU_JUMPSCARE_SFX;
+      sfx.volume = (window.UIT_SOUND_MUTED?0:1) * (SETTINGS.masterVolume/100);
+      sfx.currentTime = 0;
+      sfx.play().catch(()=>{});
+    }catch(e){}
+  }
+  setTimeout(()=>{ jsPanel.classList.add('show'); }, 900);
+
+  function closeJumpscare(){
+    js.classList.add('hidden');
+    js.classList.remove('active','lunge');
+    jsPanel.classList.remove('show');
+    jsContinueBtn.onclick = null;
+    jsGiveUpBtn.onclick = null;
+  }
+  jsContinueBtn.onclick = ()=>{
+    closeJumpscare();
+    S.paused = false;
+    S.lastTick = performance.now();
+    refreshAll();
+  };
+  jsGiveUpBtn.onclick = ()=>{
+    closeJumpscare();
+    persistSave();
+    S.running = false;
+    showTitle();
+  };
 }
 
 /* ============== BATTLE UI (dùng RPGCombat) ============== */
@@ -1320,6 +1446,20 @@ function buildSettings(){
     volVal.textContent = v+'%';
     try{ localStorage.setItem('uit_master_volume', String(v)); }catch(e){}
   };
+  [
+    {key:'shake', label:'Rung màn hình', desc:'Rung khi bị The TIU jumpscare.'},
+    {key:'flash', label:'Hiệu ứng chớp đỏ', desc:'Chớp đỏ toàn màn hình khi bị bắt.'}
+  ].forEach(r=>{
+    const row = document.createElement('div');
+    row.className = 'settingRow';
+    row.innerHTML = `<div><div class="slabel">${r.label}</div><div class="sdesc">${r.desc}</div></div>
+      <div class="toggle ${SETTINGS[r.key]?'on':''}"><div class="knob"></div></div>`;
+    wrap.appendChild(row);
+    row.querySelector('.toggle').onclick = ()=>{
+      SETTINGS[r.key] = !SETTINGS[r.key];
+      row.querySelector('.toggle').classList.toggle('on', SETTINGS[r.key]);
+    };
+  });
   buildSaveGameSection(wrap);
 }
 
@@ -1386,7 +1526,7 @@ $('menuFromWin').onclick = showTitle;
 
 /* ============== PAUSE MENU (ESC) ============== */
 function isBlockingOverlayOpen(){
-  return ['mgModal','mapModal','vnOverlay','gameOverScreen','winScreen','settingsScreen','battleOverlay','titleScreen']
+  return ['mgModal','mapModal','vnOverlay','jumpscareOverlay','gameOverScreen','winScreen','settingsScreen','battleOverlay','titleScreen']
     .some(id=>{ const el=$(id); return el && !el.classList.contains('hidden'); });
 }
 function openPauseMenu(){
@@ -1585,6 +1725,385 @@ document.getElementById('closeMapBtn').onclick = closeMapModal;
     }
   });
 })();
+
+/* ============== MINIGAME SỰ CỐ ============== */
+/* ============== MINIGAMES ============== */
+
+/* ---- Áp lực thời gian thực trong lúc giải đố: hiệu ứng nhiễu sóng (glitch) hình ảnh +
+   SFX dọa nạt xuất hiện bất chợt và ngẫu nhiên trong khi bộ đếm giờ đang chạy, dồn dập
+   hơn ở các đêm sau. Chỉ là hiệu ứng — không trực tiếp trừ điểm/thời gian — nhưng khiến
+   người chơi giật mình và dễ bấm nhầm hơn dưới áp lực. ---- */
+let mgPressureHandle = null;
+function startMinigamePressureFx(box){
+  stopMinigamePressureFx();
+  const nightFactor = Math.max(0, (S ? S.night-1 : 0)); // 0,1,2
+  const minGap = Math.max(2000, 5200 - nightFactor*900);
+  const maxGap = Math.max(minGap+700, 8000 - nightFactor*1100);
+  const fire = ()=>{
+    if(box.closest('#mgModal') && !document.getElementById('mgModal').classList.contains('hidden')){
+      box.classList.remove('pressureGlitch'); void box.offsetWidth; box.classList.add('pressureGlitch');
+      let staticEl = document.getElementById('mgStaticOverlay');
+      if(!staticEl){
+        staticEl = document.createElement('div');
+        staticEl.id = 'mgStaticOverlay';
+        box.appendChild(staticEl);
+      }
+      staticEl.classList.remove('show'); void staticEl.offsetWidth; staticEl.classList.add('show');
+      if(TIU_JUMPSCARE_SFX){
+        try{
+          const sfx = document.getElementById('jumpscareSfxAudio');
+          sfx.src = TIU_JUMPSCARE_SFX;
+          sfx.currentTime = 0;
+          sfx.volume = (window.UIT_SOUND_MUTED?0:1) * (SETTINGS.masterVolume/100) * 0.32;
+          sfx.play().catch(()=>{});
+        }catch(e){}
+      }
+    }
+    mgPressureHandle = setTimeout(fire, rand(minGap, maxGap));
+  };
+  mgPressureHandle = setTimeout(fire, rand(minGap, maxGap));
+}
+function stopMinigamePressureFx(){
+  if(mgPressureHandle){ clearTimeout(mgPressureHandle); mgPressureHandle=null; }
+  const box = document.getElementById('mgBox');
+  if(box) box.classList.remove('pressureGlitch');
+  const staticEl = document.getElementById('mgStaticOverlay');
+  if(staticEl) staticEl.classList.remove('show');
+}
+
+function startMinigame(room){
+  const ev = ROOM_DEF[room].event;
+  const isGridEvent = false;
+  const modal = document.getElementById('mgModal');
+  modal.classList.remove('hidden');
+  document.getElementById('mgTitle').textContent = isGridEvent
+    ? '⚡ KHỞI ĐỘNG LẠI CẦU DAO TỔNG — '+ROOM_DEF[room].name
+    : eventLabel(ev)+' — '+ROOM_DEF[room].name;
+  const body = document.getElementById('mgBody');
+  const footer = document.getElementById('mgFooter');
+  body.innerHTML=''; footer.innerHTML='';
+  let timerEl = document.getElementById('mgTimer');
+  let timeLeft, timerHandle;
+  startMinigamePressureFx(document.getElementById('mgBox'));
+
+  function finish(success){
+    clearInterval(timerHandle);
+    stopMinigamePressureFx();
+    modal.classList.add('hidden');
+    delete S.activeEvents[room];
+    if(success){
+      const gain = 10 + S.night*5;
+      S.points += gain;
+      addLog('Bạn đã xử lý xong sự cố tại '+ROOM_DEF[room].name+'. +'+gain+' điểm.','good');
+    } else {
+      addLog('Bạn thất bại ở sự cố tại '+ROOM_DEF[room].name+'!','warn');
+      if(S.tiuOn && Math.random()<0.6) lureTIUNear(room);
+    }
+    markActionDirty();
+    refreshAll();
+  }
+
+  function startTimer(seconds, onTimeout){
+    timeLeft = seconds;
+    timerEl.textContent = 'Thời gian còn lại: '+timeLeft+'s';
+    timerHandle = setInterval(()=>{
+      timeLeft--;
+      timerEl.textContent = 'Thời gian còn lại: '+timeLeft+'s';
+      if(timeLeft<=0){ clearInterval(timerHandle); onTimeout(); }
+    },1000);
+  }
+
+  if(ev==='stage'){
+    // spot the odd cell among grid within time
+    let round=0, totalRounds=3, solved=0;
+    function newRound(){
+      body.innerHTML='<p style="font-size:12px;color:var(--text-dim);">Tìm vật thể bất thường trên sân khấu trước khi hết giờ!</p><div class="stageGrid"></div>';
+      const grid = body.querySelector('.stageGrid');
+      const oddIdx = Math.floor(Math.random()*20);
+      for(let i=0;i<20;i++){
+        const c=document.createElement('div');
+        c.className='stageCell'+(i===oddIdx?' odd':'');
+        c.textContent = i===oddIdx?'◆':'♦';
+        c.onclick=()=>{
+          if(i===oddIdx){ solved++; round++; if(round<totalRounds) newRound(); else finish(true); }
+          else { finish(false); }
+        };
+        grid.appendChild(c);
+      }
+    }
+    newRound();
+    startTimer(18, ()=>finish(false));
+  }
+
+  else if(ev==='floors'){
+    const target = Array.from({length:7},()=>Math.random()<0.5);
+    const current = Array.from({length:7},()=>Math.random()<0.5);
+    body.innerHTML = '<p style="font-size:12px;color:var(--text-dim);">Chỉnh đèn từng tầng khớp với sơ đồ yêu cầu rồi bấm Xác nhận.</p>';
+    const listWrap=document.createElement('div');
+    for(let i=0;i<7;i++){
+      const row=document.createElement('div'); row.className='floorRow';
+      row.innerHTML = `<span style="width:70px;">Tầng ${i+1}</span>
+        <span style="width:70px;color:var(--text-dim);">Yêu cầu:</span><span class="floorLamp ${target[i]?'on':''}"></span>
+        <span style="width:70px;color:var(--text-dim);margin-left:14px;">Hiện tại:</span><span class="floorLamp fl-${i} ${current[i]?'on':''}"></span>
+        <button class="btn fbtn" data-i="${i}">Đảo</button>`;
+      listWrap.appendChild(row);
+    }
+    body.appendChild(listWrap);
+    listWrap.querySelectorAll('.fbtn').forEach(btn=>{
+      btn.onclick=()=>{
+        const i=+btn.dataset.i; current[i]=!current[i];
+        listWrap.querySelector('.fl-'+i).classList.toggle('on',current[i]);
+      };
+    });
+    const confirmBtn=document.createElement('button');
+    confirmBtn.className='btn primary'; confirmBtn.textContent='Xác nhận';
+    confirmBtn.onclick=()=>{
+      const ok = target.every((v,i)=>v===current[i]);
+      finish(ok);
+    };
+    footer.appendChild(confirmBtn);
+    startTimer(28, ()=>finish(false));
+  }
+
+  else if(ev==='wire'){
+    // Tủ điện bị đấu lộn dây: nối đúng cặp dây cùng màu giữa cột trái và cột phải
+    // trước khi hết giờ. Bấm 1 đầu dây bên trái rồi bấm đầu dây cùng màu bên phải.
+    const ALL_COLORS = [
+      {id:'red',    hex:'#e6293f', name:'ĐỎ'},
+      {id:'green',  hex:'#3ddc84', name:'XANH LÁ'},
+      {id:'amber',  hex:'#c9962f', name:'VÀNG'},
+      {id:'blue',   hex:'#3aa0c9', name:'XANH DƯƠNG'},
+      {id:'purple', hex:'#a662d9', name:'TÍM'},
+      {id:'white',  hex:'#e8e2d4', name:'TRẮNG'}
+    ];
+    const wireCount = Math.min(ALL_COLORS.length, 4 + (S.night-1));
+    const colors = shuffle(ALL_COLORS.slice()).slice(0, wireCount);
+    const leftOrder = shuffle(colors.slice());
+    let rightOrder;
+    do{ rightOrder = shuffle(colors.slice()); }
+    while(wireCount>1 && rightOrder.every((c,i)=>c.id===leftOrder[i].id));
+
+    const rowH = 44, rowGap = 12, boardH = wireCount*(rowH+rowGap)-rowGap;
+    body.innerHTML = `
+      <p style="font-size:12px;color:var(--text-dim);">Tủ điện bị đấu lộn dây! Bấm 1 đầu dây bên trái rồi bấm đầu dây <b>cùng màu</b> bên phải để nối lại — nối sai sẽ làm chập mạch ngay lập tức.</p>
+      <div id="wireBoardWrap" style="position:relative;height:${boardH}px;margin:6px auto 4px;max-width:340px;">
+        <svg id="wireSvg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;"></svg>
+        <div id="wireLeftCol" style="position:absolute;left:0;top:0;display:flex;flex-direction:column;gap:${rowGap}px;"></div>
+        <div id="wireRightCol" style="position:absolute;right:0;top:0;display:flex;flex-direction:column;gap:${rowGap}px;"></div>
+      </div>`;
+    const wrapEl = body.querySelector('#wireBoardWrap');
+    const leftCol = body.querySelector('#wireLeftCol');
+    const rightCol = body.querySelector('#wireRightCol');
+    const svg = body.querySelector('#wireSvg');
+
+    let selectedLeft = null;
+    let selectedLeftEl = null;
+    let connected = 0;
+    const leftEls = {}, rightEls = {};
+
+    function mkEndpoint(c){
+      const d = document.createElement('div');
+      d.className = 'wireEndpoint';
+      d.title = c.name;
+      d.style.cssText = `width:${rowH}px;height:${rowH}px;border-radius:50%;background:${c.hex};
+        border:3px solid #12100e;cursor:pointer;box-shadow:2px 3px 0 rgba(0,0,0,0.6);outline:3px solid transparent;`;
+      return d;
+    }
+
+    leftOrder.forEach(c=>{
+      const d = mkEndpoint(c);
+      d.onclick = ()=>{
+        if(d.classList.contains('done')) return;
+        if(selectedLeftEl) selectedLeftEl.style.outlineColor = 'transparent';
+        selectedLeft = c.id;
+        selectedLeftEl = d;
+        d.style.outlineColor = '#fff';
+      };
+      leftCol.appendChild(d);
+      leftEls[c.id] = d;
+    });
+    rightOrder.forEach(c=>{
+      const d = mkEndpoint(c);
+      d.onclick = ()=>{
+        if(!selectedLeft || d.classList.contains('done')) return;
+        if(selectedLeft === c.id){
+          drawWireLine(leftEls[selectedLeft], d, true);
+          leftEls[selectedLeft].classList.add('done');
+          leftEls[selectedLeft].style.outlineColor = 'transparent';
+          leftEls[selectedLeft].style.opacity = '0.35';
+          d.classList.add('done');
+          d.style.opacity = '0.35';
+          connected++;
+          selectedLeft = null; selectedLeftEl = null;
+          if(connected >= wireCount) finish(true);
+        } else {
+          drawWireLine(leftEls[selectedLeft], d, false);
+          finish(false);
+        }
+      };
+      rightCol.appendChild(d);
+      rightEls[c.id] = d;
+    });
+
+    function drawWireLine(elA, elB, ok){
+      const wrapRect = wrapEl.getBoundingClientRect();
+      const ra = elA.getBoundingClientRect(), rb = elB.getBoundingClientRect();
+      const x1 = ra.left + ra.width/2 - wrapRect.left, y1 = ra.top + ra.height/2 - wrapRect.top;
+      const x2 = rb.left + rb.width/2 - wrapRect.left, y2 = rb.top + rb.height/2 - wrapRect.top;
+      const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('x1',x1); line.setAttribute('y1',y1);
+      line.setAttribute('x2',x2); line.setAttribute('y2',y2);
+      line.setAttribute('stroke', ok ? 'var(--scan)' : 'var(--blood-bright)');
+      line.setAttribute('stroke-width','3');
+      svg.appendChild(line);
+    }
+
+    startTimer(14 + wireCount*3, ()=>finish(false));
+  }
+
+  else if(ev==='quiz'){
+    const QUESTIONS = [
+      {q:'UIT là tên viết tắt của trường đại học nào?', opts:['Trường Đại học Công nghệ Thông tin','Trường Đại học Bách Khoa','Trường Đại học Khoa học Tự nhiên'], a:0},
+      {q:'UIT là thành viên của hệ thống đại học nào?', opts:['Đại học Quốc gia Hà Nội','Đại học Quốc gia TP.HCM','Đại học Quốc gia Đà Nẵng'], a:1},
+      {q:'UIT được thành lập vào năm nào?', opts:['2001','2010','2006'], a:2},
+      {q:'UIT tọa lạc chủ yếu ở khu vực nào của TP.HCM?', opts:['Thủ Đức','Quận 1','Bình Thạnh'], a:0},
+      {q:'Ca trực bắt đầu lúc mấy giờ?', opts:['22:00','00:00','01:00'], a:1},
+      {q:'Khu vực an toàn để mua vật phẩm là?', opts:['Nhà E','Căn tin','Nhà C'], a:1},
+      {q:'Vật phẩm nào giúp hồi 1 HP?', opts:['Nước tăng lực','Bim Bim','Thẻ ra vào'], a:1},
+      {q:'The TIU di chuyển nhanh hơn khi nào?', opts:['Thanh meter cao','Trời sáng','Bạn đứng yên'], a:0},
+      {q:'Nhà nào có tủ điện cần nối lại dây?', opts:['Nhà B','Nhà C','Nhà D'], a:1},
+    ];
+    const q = pick(QUESTIONS);
+    body.innerHTML = `<p style="font-size:14px;margin-bottom:10px;">${q.q}</p>`;
+    q.opts.forEach((opt,i)=>{
+      const b=document.createElement('button');
+      b.className='btn qOpt'; b.textContent=opt;
+      b.onclick=()=>finish(i===q.a);
+      body.appendChild(b);
+    });
+    startTimer(15, ()=>finish(false));
+  }
+
+  else if(ev==='wibu'){
+    // Đuổi theo Wibu Việt Nhật qua các tầng: gõ đúng chuỗi phím mũi tên trước khi hết giờ.
+    const ARROWS = [
+      {key:'ArrowUp', sym:'↑'}, {key:'ArrowDown', sym:'↓'},
+      {key:'ArrowLeft', sym:'←'}, {key:'ArrowRight', sym:'→'}
+    ];
+    const patternLen = 5 + S.night; // dài hơn ở các đêm sau
+    const pattern = Array.from({length:patternLen}, ()=>pick(ARROWS));
+    let idx = 0;
+
+    body.innerHTML = `<p style="font-size:12px;color:var(--text-dim);">Wibu Việt Nhật đang chạy trốn qua các tầng — gõ đúng các phím mũi tên theo thứ tự để đuổi kịp!</p>
+      <div id="arrowSeq" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:18px 0;"></div>
+      <div style="text-align:center;font-size:12px;color:var(--text-dim);">Dùng phím mũi tên trên bàn phím ⌨</div>`;
+    const seqEl = body.querySelector('#arrowSeq');
+    const boxes = pattern.map(a=>{
+      const d=document.createElement('div');
+      d.style.cssText='width:46px;height:46px;display:flex;align-items:center;justify-content:center;font-size:22px;border:2px solid var(--line);border-radius:4px;background:#1a1d23;color:var(--text-dim);transition:all .15s;';
+      d.textContent=a.sym;
+      seqEl.appendChild(d);
+      return d;
+    });
+    function markCurrent(){
+      boxes.forEach((b,i)=>{
+        b.style.borderColor = i===idx? 'var(--amber)' : (i<idx? 'var(--scan)' : 'var(--line)');
+        b.style.color = i===idx? 'var(--amber)' : (i<idx? 'var(--scan)' : 'var(--text-dim)');
+        b.style.boxShadow = i===idx? '0 0 14px rgba(226,162,59,0.6)' : 'none';
+        b.style.background = i<idx? '#132018' : '#1a1d23';
+      });
+    }
+    markCurrent();
+    function onKey(e){
+      if(!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) return;
+      e.preventDefault();
+      if(e.key === pattern[idx].key){
+        idx++;
+        if(idx>=pattern.length){
+          document.removeEventListener('keydown', onKey);
+          markCurrent();
+          finish(true);
+        } else {
+          markCurrent();
+        }
+      } else {
+        document.removeEventListener('keydown', onKey);
+        boxes[idx].style.borderColor='var(--blood-bright)';
+        boxes[idx].style.background='#2a1013';
+        finish(false);
+      }
+    }
+    document.addEventListener('keydown', onKey);
+    startTimer(patternLen*2.6, ()=>{ document.removeEventListener('keydown', onKey); finish(false); });
+  }
+
+  else if(ev==='books'){
+    const nums = [1,2,3,4,5,6];
+    const shuffled = [...nums].sort(()=>Math.random()-0.5);
+    let expected = 1;
+    body.innerHTML = '<p style="font-size:12px;color:var(--text-dim);">Xếp lại sách theo đúng thứ tự số từ nhỏ đến lớn.</p><div class="bookRow"></div>';
+    const row = body.querySelector('.bookRow');
+    shuffled.forEach(n=>{
+      const t=document.createElement('div'); t.className='bookTile'; t.textContent=n;
+      t.onclick=()=>{
+        if(t.classList.contains('picked')) return;
+        if(n===expected){
+          t.classList.add('picked'); expected++;
+          if(expected>6) finish(true);
+        } else {
+          finish(false);
+        }
+      };
+      row.appendChild(t);
+    });
+    startTimer(20, ()=>finish(false));
+  }
+
+  else if(ev==='bikes'){
+    // Chỗ gửi xe bị đảo lộn: dắt xe về đúng số thứ tự từ nhỏ đến lớn trước khi hết giờ.
+    const nums = [1,2,3,4,5,6];
+    const shuffled = [...nums].sort(()=>Math.random()-0.5);
+    let expected = 1;
+    body.innerHTML = '<p style="font-size:12px;color:var(--text-dim);">Xe bị dựng lộn xộn! Bấm vào từng xe theo đúng thứ tự số từ nhỏ đến lớn để dắt về hàng.</p><div class="bookRow"></div>';
+    const row = body.querySelector('.bookRow');
+    shuffled.forEach(n=>{
+      const t=document.createElement('div'); t.className='bookTile'; t.textContent='🏍'+n;
+      t.onclick=()=>{
+        if(t.classList.contains('picked')) return;
+        if(n===expected){
+          t.classList.add('picked'); expected++;
+          if(expected>6) finish(true);
+        } else {
+          finish(false);
+        }
+      };
+      row.appendChild(t);
+    });
+    startTimer(20, ()=>finish(false));
+  }
+
+  else if(ev==='ball'){
+    // Sân bóng tối om: tìm đúng quả bóng lạc giữa một rừng bóng giả trước khi hết giờ.
+    let round=0, totalRounds=3;
+    function newRound(){
+      body.innerHTML='<p style="font-size:12px;color:var(--text-dim);">Một quả bóng thật lẫn trong đám bóng giả — tìm và bấm vào nó trước khi hết giờ!</p><div class="stageGrid"></div>';
+      const grid = body.querySelector('.stageGrid');
+      const oddIdx = Math.floor(Math.random()*20);
+      for(let i=0;i<20;i++){
+        const c=document.createElement('div');
+        c.className='stageCell'+(i===oddIdx?' odd':'');
+        c.textContent = i===oddIdx?'⚽':'●';
+        c.onclick=()=>{
+          if(i===oddIdx){ round++; if(round<totalRounds) newRound(); else finish(true); }
+          else { finish(false); }
+        };
+        grid.appendChild(c);
+      }
+    }
+    newRound();
+    startTimer(18, ()=>finish(false));
+  }
+}
 
 /* ============== QTE MŨI TÊN (dùng cho kỹ năng & phòng thủ) ============== */
 const ARROW_KEYS = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'];
@@ -1873,6 +2392,11 @@ function tdInteractables(m){
   (TD.npcMetas||[]).forEach((meta,i)=>{
     list.push({kind:'npc', pos:tdNpcSpot(m,i), meta, label:'💬 Gặp '+meta.name, act:()=>openNPCMenu(meta)});
   });
+  const ev = S.activeEvents[room];
+  if(ev){
+    list.push({kind:'event', pos:tdSpot(m,'event',1),
+      label:'⚠ Xử lý sự cố: '+eventLabel(def.event), act:()=>startMinigame(room)});
+  }
   if(def.safe){
     const open = isRoomSafe(room);
     list.push({kind:'shop', pos:tdSpot(m,'shop',2), icon:'🛒', label: open ? '🛒 Mở quầy Căn tin' : '🛒 Quầy Căn tin (đang đóng cửa)',
