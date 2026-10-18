@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>THE TIU</title>
+<title>THE TIU — BATTLE ROYALE ĐRL</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Roboto+Condensed:wght@400;700;900&display=swap" rel="stylesheet">
@@ -32,7 +32,6 @@
       </div>
     </div>
     <button id="soundToggleBtn" title="Bật/Tắt âm thanh" aria-pressed="false"><span id="soundIcon">🔊</span></button>
-    <button id="sneakToggleBtn" title="RÓN RÉN: đang TẮT — bấm để di chuyển chậm & yên tĩnh hơn" aria-pressed="false">🤫</button>
     <div id="nightBadge">ĐÊM 1</div>
   </div>
 
@@ -85,13 +84,6 @@
   </div>
 </div>
 
-<div id="crt"></div>
-<div id="filmGrain"></div>
-<div id="neonFlicker"></div>
-<div id="vignette"></div>
-<div id="tensionPulse"></div>
-<div id="flash"></div>
-<div id="glitchBars"></div>
 
 <button id="mapToggleBtn" class="panelToggleBtn" title="Bật/tắt sơ đồ">🗺️</button>
 <button id="logToggleBtn" class="panelToggleBtn" title="Bật/tắt nhật ký">📜</button>
@@ -99,13 +91,11 @@
 <div class="overlay" id="titleScreen">
   <div id="titleLeft">
     <h1>The TIU</h1>
-    <h2>THE TIU ĐANG RÌNH RẬP</h2>
-    <p>Một tựa game sinh tồn kinh dị nhiều chapter lấy bối cảnh khuôn viên trường UIT vào ban đêm.</p>
+    <h2>GIẢI ĐẤU SINH VIÊN NĂM CUỐI</h2>
+    <p>5 sinh viên thiếu Điểm Rèn Luyện, 1 suất tốt nghiệp loại Giỏi. Chiến thuật theo lượt tại khuôn viên UIT.</p>
     <div id="menuBtnRow">
       <button class="bigbtn" id="startBtn">BẮT ĐẦU</button>
       <button class="bigbtn secondary hidden" id="continueBtn">TIẾP TỤC (ĐÃ LƯU)</button>
-      <button class="bigbtn secondary" id="chapterSelectBtn">CHỌN CHAPTER</button>
-      <button class="bigbtn neutral" id="tutorialBtn">HƯỚNG DẪN</button>
       <button class="bigbtn neutral" id="settingsBtn">CÀI ĐẶT</button>
     </div>
   </div>
@@ -116,33 +106,9 @@
   </div>
 </div>
 
-<div class="overlay hidden" id="chapterIntroScreen">
-  <div id="chapterIntroBox">
-    <div id="chapterIntroTag" class="hud-label">TÓM TẮT CHAPTER</div>
-    <h1 id="chapterIntroTitle" style="font-size:32px;">—</h1>
-    <h2 id="chapterIntroSubtitle" style="font-size:13px;color:var(--text-dim);letter-spacing:4px;margin-top:2px;"></h2>
-    <div id="chapterIntroBody"></div>
-    <div id="chapterIntroBtnRow">
-      <button class="bigbtn" id="chapterIntroContinueBtn">TIẾP TỤC</button>
-      <button class="bigbtn neutral" id="chapterIntroBackBtn">QUAY LẠI</button>
-    </div>
-  </div>
-</div>
 
 
-<div class="overlay hidden" id="chapterSelectScreen">
-  <h1 style="font-size:32px;">CHỌN CHAPTER</h1>
-  <p style="color:var(--text-dim);font-size:12px;max-width:420px;">Chọn chapter bạn muốn chơi. Mỗi chapter là một câu chuyện sinh tồn riêng tại khuôn viên trường.</p>
-  <div id="chapterCardWrap" style="margin-top:14px;"></div>
-  <button class="bigbtn neutral" id="backFromChapterSelect" style="margin-top:14px;">QUAY LẠI</button>
-</div>
 
-<div class="overlay hidden" id="nightSelectScreen">
-  <h1 style="font-size:32px;" id="nightSelectTitle">CHỌN MÀN — CHAPTER 1</h1>
-  <p style="color:var(--text-dim);font-size:12px;max-width:420px;">Chơi riêng lẻ từng đêm để luyện tập. Mỗi đêm bắt đầu với đầy đủ 3 HP.</p>
-  <div id="nightCardWrap" style="margin-top:14px;"></div>
-  <button class="bigbtn neutral" id="backFromSelect" style="margin-top:14px;">QUAY LẠI CHỌN CHAPTER</button>
-</div>
 
 <div class="overlay hidden" id="settingsScreen">
   <h1 style="font-size:32px;">CÀI ĐẶT</h1>
@@ -157,23 +123,9 @@
   <button class="bigbtn neutral" id="menuFromGameOver">VỀ MENU CHÍNH</button>
 </div>
 
-<div id="jumpscareOverlay" class="hidden">
-  <div id="jsMonster"><div id="jsMonsterGlyph">☠</div></div>
-  <div id="jsPanel">
-    <div id="jsPanelText"></div>
-    <div id="jsPanelBtnRow">
-      <button class="bigbtn" id="jsContinueBtn">TIẾP TỤC</button>
-      <button class="bigbtn neutral" id="jsGiveUpBtn">BỎ CUỘC</button>
-    </div>
-  </div>
-</div>
 
-<audio id="tiuProximityAudio" preload="auto"></audio>
-<audio id="jumpscareSfxAudio" preload="auto"></audio>
 
-<div id="blackout"><div class="bo-label">⚡ CẦU DAO ĐÃ NGẮT — DI CHUYỂN TRONG BÓNG TỐI ⚡</div></div>
 
-<button id="breakerFloatBtn">⚡ KHỞI ĐỘNG LẠI CẦU DAO TỔNG<br><span class="breakerFloatSub">Bấm để xử lý sự cố ngay tại Tòa C</span></button>
 
 <div id="vnOverlay" class="hidden">
   <div id="vnBox">
@@ -193,20 +145,7 @@
   <button class="bigbtn neutral" id="menuFromWin">VỀ MENU CHÍNH</button>
 </div>
 
-<div class="overlay hidden" id="chapterEndScreen">
-  <div id="chapterEndTag" class="hud-label">CHAPTER 1</div>
-  <h1 id="chapterEndTitle" style="font-family:var(--font-disp);font-size:44px;color:var(--amber);letter-spacing:4px;">KẾT THÚC CHAPTER</h1>
-  <p id="chapterEndSub" style="color:var(--text-dim);max-width:480px;"></p>
-  <button class="bigbtn" id="chapter2ContinueBtn">TIẾP TỤC SANG CHAPTER 2</button>
-  <button class="bigbtn neutral" id="chapterEndMenuBtn">VỀ MÀN HÌNH CHÍNH</button>
-</div>
 
-<div class="overlay hidden" id="chapter2ComingSoonScreen">
-  <div id="chapter2ComingSoonTag" class="hud-label">CHAPTER 2</div>
-  <h1 id="chapter2ComingSoonTitle" style="font-family:var(--font-disp);font-size:44px;color:var(--amber);letter-spacing:4px;">SẮP RA MẮT</h1>
-  <p id="chapter2ComingSoonSub" style="color:var(--text-dim);max-width:480px;"></p>
-  <button class="bigbtn neutral" id="chapter2ComingSoonMenuBtn">VỀ MÀN HÌNH CHÍNH</button>
-</div>
 
 <div id="mgModal" class="hidden">
   <div id="mgBox">
@@ -221,7 +160,6 @@
   <div id="pauseMenuBox">
     <div id="pauseMenuTitle">TẠM DỪNG</div>
     <button class="bigbtn secondary" id="pauseResumeBtn">TIẾP TỤC CA ĐÊM</button>
-    <button class="bigbtn neutral" id="pauseTutorialBtn">HƯỚNG DẪN</button>
     <button class="bigbtn neutral" id="pauseSettingsBtn">CÀI ĐẶT</button>
     <button class="bigbtn" id="pauseMainMenuBtn">VỀ MÀN HÌNH CHÍNH</button>
   </div>
@@ -229,66 +167,27 @@
 
 <div id="battleOverlay" class="hidden">
   <div id="battleBg"></div>
-  <div id="battleShatter"></div>
-  <div id="battleBulletLayer" class="hidden"></div>
-  <div id="dodgeArena" class="hidden">
-    <div id="dodgeHint">DÙNG <b>WASD</b> HOẶC <b>MŨI TÊN</b> ĐỂ NÉ TRÁNH</div>
-    <div id="dodgeBox">
-      <div id="soulCircle"></div>
-    </div>
-    <div id="dodgeHitCounter">Trúng đòn: <span id="dodgeHitNum">0</span></div>
-  </div>
-  <div id="battleTurnBadge">LƯỢT <span id="battleTurnNum">1</span>/<span id="battleTurnMax">15</span></div>
-  <div id="battleNoKillNote">✦ THE TIU không thể bị hạ gục bằng đòn đánh — chỉ có thể thắng bằng cách CẦM CỰ ĐỦ 15 LƯỢT ✦</div>
-  <div id="bossPanel">
-    <div id="bossPatternTag"></div>
-    <div id="bossSprite"><div id="bossSpriteGlyph">☠</div></div>
-    <div id="bossName">THE TIU</div>
-    <div id="bossHpBarOuter"><div id="bossHpBarFill"></div></div>
-    <div id="bossHpText"></div>
-  </div>
+  <div id="battleTurnBadge">LƯỢT <span id="battleTurnNum">1</span></div>
+  <div id="battleEnemies"></div>
   <div id="battleMid">
     <div id="partyPanel"></div>
     <div id="battleLogPane"></div>
   </div>
   <div id="battleMenu"></div>
-</div>
-<div id="battleVictoryFx">
-  <div id="whiteFlashCore"></div>
-  <div id="rainbowBurst"></div>
-  <div id="lightColumn"></div>
-  <div id="colorSwirl">
-    <span class="swirlDot c1"></span>
-    <span class="swirlDot c2"></span>
-    <span class="swirlDot c3"></span>
-    <span class="swirlDot c4"></span>
-    <span class="swirlDot c5"></span>
-    <span class="swirlDot c6"></span>
-    <span class="swirlDot c7"></span>
-  </div>
-  <div id="battleVictoryText">✦ THANH TẨY THÀNH CÔNG — 15 LƯỢT ĐÃ QUA ✦</div>
-</div>
-<audio id="battleMusicAudio" preload="auto" loop></audio>
-
-<div id="tutorialLayer" class="hidden">
-  <div id="tutBlock"></div>
-  <div id="tutSpot" class="hidden"></div>
-  <div id="tutCard">
-    <div id="tutStep" class="hud-label"></div>
-    <div id="tutTitle"></div>
-    <div id="tutBody"></div>
-    <div id="tutBtns">
-      <button class="btn" id="tutSkipBtn">BỎ QUA</button>
-      <span style="flex:1"></span>
-      <button class="btn" id="tutPrevBtn">◀ TRƯỚC</button>
-      <button class="btn primary" id="tutNextBtn">TIẾP ▶</button>
+  <div id="dodgeArena" class="hidden">
+    <div id="dodgeHint">BẤM ĐÚNG HƯỚNG MŨI TÊN KHI NÓ HIỆN</div>
+    <div id="dodgeBox">
+      <div id="soulCircle"></div>
     </div>
+    <div id="dodgeHitCounter">Trúng đòn: <span id="dodgeHitNum">0</span></div>
   </div>
 </div>
+
 
 <script src="dialogue.js"></script>
 <script src="map.js"></script>
+<script src="rpg_core.js"></script>
+<script src="rpg_combat.js"></script>
 <script src="script.js"></script>
-<script src="horrorpolish.js"></script>
 </body>
 </html>
