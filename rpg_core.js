@@ -30,7 +30,8 @@
     EXP_UNDERDOG_BONUS: 0.5,             // thắng đối thủ Lv cao hơn: +50%
 
     START_DRL: 40,
-    DRL_STEAL_PCT: 0.5,                  // thắng: cướp 50% ĐRL kẻ thua (kẻ thua mất đúng số đó)
+    DRL_STEAL_PCT: 0.25,                 // THẮNG: cướp 25% ĐRL của kẻ thua
+    DRL_PLAYER_LOSS_PCT: 0.5,            // người chơi THUA: bị trừ 50% ĐRL (NPC đánh nhau với nhau: kẻ thua mất đúng phần bị cướp)
     TIU_PENALTY: 5,                      // The TIU bắt được người chơi (chỉ Chapter 1)
 
     BATTLE_MINUTES: 60,                  // 1 trận đấu tốn 60 phút đồng hồ trong game
@@ -40,6 +41,8 @@
     RAGE_MAX: 100,
     RAGE_ON_ATTACK: 25,
     RAGE_ON_SKILL: 35,
+
+    LAPEACE_NEEDED: 3,                   // đủ 3 Mảnh La Peace -> học Spell Breaker (parry Ultimate của địch)
 
     TRUST_MAX: 3,
     RECRUIT_TRUST: 2,
@@ -224,6 +227,9 @@
                desc: "+20 DEF trong 3 turn.",
                effects: [{ type: "buff", stat: "def", amount: 20, turns: 3 }] }
   };
+  const RELICS = {
+    lapeace: { name: "Mảnh La Peace", icon: "💠" }
+  };
   const COMPONENTS = {
     pin:  { name: "Pin cũ", icon: "🔋" },
     wire: { name: "Dây điện", icon: "🔌" },
@@ -277,7 +283,7 @@
     const f = {
       id: o.id, name: o.name, title: o.title || "", isPlayer: !!o.isPlayer,
       legacyKey: o.legacyKey || null, classId: o.classId, homeRoom: o.homeRoom || null,
-      level: 1, exp: 0, hp: 0, maxHp: 0, rage: 0,
+      level: 1, exp: 0, hp: 0, maxHp: 0, rage: 0, laPeace: 0, spellBreaker: false,
       drl: CFG.START_DRL, trust: 0, inParty: false, alive: true,
       items: {}, components: {}, statuses: []
     };
@@ -363,11 +369,12 @@
   /* Kết quả combat giữa 2 người: người thắng cướp 50% ĐRL người thua (người thua mất đúng số đó),
      cộng EXP cho người thắng. Trả về tóm tắt để UI hiển thị. */
   function resolveDuel(winner, loser) {
-    const amount = Math.floor(loser.drl * CFG.DRL_STEAL_PCT);
-    loser.drl -= amount;
-    winner.drl += amount;
+    const gain = Math.floor(loser.drl * CFG.DRL_STEAL_PCT);                         // người thắng cướp 25%
+    const lost = loser.isPlayer ? Math.floor(loser.drl * CFG.DRL_PLAYER_LOSS_PCT) : gain; // người chơi thua: -50%
+    loser.drl -= lost;
+    winner.drl += gain;
     const exp = addExp(winner, expForWin(winner, loser));
-    return { winnerId: winner.id, loserId: loser.id, drl: amount, exp: exp };
+    return { winnerId: winner.id, loserId: loser.id, drl: gain, lost: lost, exp: exp };
   }
   function tiuPenalty(f, amount) {
     const a = Math.min(f.drl, amount != null ? amount : CFG.TIU_PENALTY);
@@ -390,6 +397,15 @@
     const out = list[0];
     out.alive = false; out.inParty = false;
     return { eliminated: out, playerEliminated: out.isPlayer, remaining: aliveFighters().length };
+  }
+
+  /* ============================ LA PEACE / SPELL BREAKER ============================ */
+  /* Nhặt 1 Mảnh La Peace. Trả về {count, unlocked}: unlocked=true đúng lần thứ 3 (học Spell Breaker). */
+  function addLaPeace(f) {
+    f.laPeace = Math.min(CFG.LAPEACE_NEEDED, (f.laPeace || 0) + 1);
+    let unlocked = false;
+    if (f.laPeace >= CFG.LAPEACE_NEEDED && !f.spellBreaker) { f.spellBreaker = true; unlocked = true; }
+    return { count: f.laPeace, unlocked: unlocked };
   }
 
   /* ============================ TRUST / PARTY ============================ */
@@ -505,7 +521,7 @@
   /* ============================ XUẤT RA NGOÀI ============================ */
   const RPG = {
     CFG: CFG, CLASSES: CLASSES, CLASS_IDS: CLASS_IDS, CLASS_QUIZ: CLASS_QUIZ,
-    ITEMS: ITEMS, COMPONENTS: COMPONENTS, RECIPES: RECIPES, NPC_ROSTER: NPC_ROSTER,
+    ITEMS: ITEMS, RELICS: RELICS, COMPONENTS: COMPONENTS, RECIPES: RECIPES, NPC_ROSTER: NPC_ROSTER,
     DEFAULT_PLAYER_NAME: DEFAULT_PLAYER_NAME,
     setRng: setRng, scoreQuiz: scoreQuiz, init: init, get: get, player: player,
     getState: getState, serialize: serialize, load: load,
@@ -515,6 +531,7 @@
     expToNext: expToNext, expForWin: expForWin, addExp: addExp,
     resolveDuel: resolveDuel, tiuPenalty: tiuPenalty, aliveFighters: aliveFighters,
     rankAscending: rankAscending, eliminateLowest: eliminateLowest,
+    addLaPeace: addLaPeace,
     talk: talk, partyAllies: partyAllies, canRecruit: canRecruit, recruit: recruit, dismiss: dismiss,
     countItem: countItem, addItem: addItem, removeItem: removeItem, addComponent: addComponent,
     canCraft: canCraft, craft: craft, lootRandomItem: lootRandomItem,

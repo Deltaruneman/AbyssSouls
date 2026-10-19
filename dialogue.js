@@ -9,8 +9,9 @@ window.DLG = {
     { spk: "LOA TRƯỜNG", text: "Thông báo: sinh viên năm cuối chưa đủ Điểm Rèn Luyện (ĐRL) sẽ KHÔNG được xét tốt nghiệp." },
     { spk: "{P}", text: "Mình thiếu cả chục điểm... và cả nhóm năm đứa này cũng thế. Chỉ còn đúng một cách." },
     { spk: "LOA TRƯỜNG", text: "Một giải đấu Battle Royale. Năm người, ai trụ lại cuối cùng sẽ tốt nghiệp loại Giỏi." },
-    { spk: "{P}", text: "Mỗi người bắt đầu với 40 ĐRL. Thắng một trận thì cướp một nửa ĐRL của đối thủ, thua thì mất một nửa." },
-    { spk: "{P}", text: "Hết mỗi đêm, người có ĐRL thấp nhất sẽ bị loại. Và nhớ tránh The TIU — bị bắt gặp lang thang là bị trừ điểm." }
+    { spk: "{P}", text: "Mỗi người bắt đầu với 40 ĐRL. Thắng một trận thì cướp một phần tư ĐRL của đối thủ, còn thua thì bị trừ một nửa ĐRL của mình." },
+    { spk: "{P}", text: "Hết mỗi đêm, người có ĐRL thấp nhất sẽ bị loại. Và nhớ tránh The TIU — bị bắt gặp lang thang là bị trừ điểm." },
+    { spk: "{P}", text: "Nghe đồn trong trường giấu ba Mảnh La Peace. Gom đủ cả ba sẽ học được Spell Breaker — thứ có thể phá giải Ultimate của đối thủ." }
   ],
 
   INTRO_CH1_NIGHT: {

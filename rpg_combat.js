@@ -53,7 +53,8 @@
   /* opts: allies[], enemies[] (RPG fighters; allies[0] là người chơi),
            controlAllies (đồng đội do người chơi điều khiển, mặc định false = AI),
            autoPlayer (người chơi cũng do AI — dùng cho mô phỏng/test),
-           dodge (bật pha né đạn khi địch ra đòn lên người chơi — dành cho boss cuối),
+           dodge (QTE phòng thủ mọi đòn địch ra lên người chơi — dành cho boss cuối),
+           [Spell Breaker tự bật nếu người chơi có f.spellBreaker: QTE parry CHỈ cho Ultimate của địch],
            loseOnPlayerDeath (mặc định true), maxRounds, rng */
   function create(opts) {
     if (opts.rng) rng = opts.rng;
@@ -70,6 +71,8 @@
       if (f.isPlayer && !B.playerUnit) B.playerUnit = u;
     });
     if (!B.playerUnit) B.playerUnit = B.units.find(function (u) { return u.side === "A"; });
+    // SPELL BREAKER: người chơi đã học (đủ 3 Mảnh La Peace) -> được QTE parry Ultimate của kẻ địch
+    B.spellBreaker = !!(B.playerUnit && B.playerUnit.f && B.playerUnit.f.spellBreaker);
     opts.enemies.forEach(function (f) { makeUnit(B, f, "E").controller = "ai"; });
     return B;
   }
@@ -255,16 +258,25 @@
   /* ----------------------------- HIỆU ỨNG (generator) ----------------------------- */
   function* dmgGen(B, src, dst, power, o, ctx) {
     let mult = 1;
-    if (B.dodge && src.side === "E" && dst.f && dst.f.isPlayer) {
+    // QTE phòng thủ: trận cuối (mọi đòn) hoặc có Spell Breaker (CHỈ Ultimate của địch)
+    const needQte = (B.dodge || (B.spellBreaker && ctx.ult)) && src.side === "E" && dst.f && dst.f.isPlayer;
+    if (needQte) {
       if (ctx.dodge == null) {
-        const r = yield { type: "dodgeRequest", src: src.uid, dst: dst.uid, power: power };
+        const r = yield { type: "dodgeRequest", src: src.uid, dst: dst.uid, power: power, ult: !!ctx.ult, skill: ctx.skillName || "" };
         ctx.dodge = (typeof r === "number") ? clamp(r, 0, 1) : 1;
       }
       mult = ctx.dodge;
+      if (mult === 0 && ctx.ult) {
+        emit(B, "✦ SPELL BREAKER! " + dst.name + " phá giải hoàn toàn Ultimate \"" + ctx.skillName + "\" của " + src.name + "!", "good", { type: "parry", dst: dst.uid });
+        yield* flush(B);
+        return;
+      }
     }
     hit(B, src, dst, calcDamage(src, dst, power, o) * mult, o);
     yield* flush(B);
   }
+
+  const parried = (ctx, t) => ctx.dodge === 0 && t.f && t.f.isPlayer;
 
   function* applyEffects(B, u, effects, targets, scale, ctx, defn) {
     for (const e of effects) {
@@ -280,7 +292,7 @@
           emit(B, u.name + " +" + e.amount + " " + e.stat.toUpperCase() + " trong " + e.turns + " turn.", "skill");
           break;
         case "debuff":
-          for (const t of targets) if (t.alive) { addMod(t, e.stat, -e.amount, e.turns); emit(B, t.name + " bị giảm " + e.amount + " " + e.stat.toUpperCase() + "!", "skill"); }
+          for (const t of targets) if (t.alive && !parried(ctx, t)) { addMod(t, e.stat, -e.amount, e.turns); emit(B, t.name + " bị giảm " + e.amount + " " + e.stat.toUpperCase() + "!", "skill"); }
           break;
         case "immune": setSt(u, "immune", { turns: e.turns }); emit(B, u.name + " miễn nhiễm sát thương!", "skill"); break;
         case "reflect": setSt(u, "reflect", { turns: e.turns, pct: e.pct }); break;
@@ -296,7 +308,7 @@
         }
         case "status":
           for (const t of targets) {
-            if (!t.alive || rng() >= (e.chance == null ? 1 : e.chance)) continue;
+            if (!t.alive || parried(ctx, t) || rng() >= (e.chance == null ? 1 : e.chance)) continue;
             if (e.status === "burn") setSt(t, "burn", { turns: e.turns, dmg: Math.max(1, Math.round(effAtk(u) * e.dotPower * scale * CC.DMG_SCALE)) });
             else if (e.status === "freeze") setSt(t, "freeze", { turns: e.turns });
             else setSt(t, e.status, { turns: e.turns });           // paralyze / stun: tiêu hao khi bị bỏ lượt
@@ -319,14 +331,14 @@
           }
           break;
         case "doublePoisonStacks":
-          for (const t of targets) if (t.alive && t.st.poison) {
+          for (const t of targets) if (t.alive && t.st.poison && !parried(ctx, t)) {
             t.st.poison.stacks = Math.min(CC.POISON_MAX_ULT, t.st.poison.stacks * 2);
             t.st.poison.turns = Math.max(t.st.poison.turns, CC.POISON_TURNS);
             emit(B, "Độc trên " + t.name + " nhân đôi → " + t.st.poison.stacks + " stack!", "skill");
           }
           break;
         case "execute":
-          for (const t of targets) if (t.alive && rng() < e.chance) { emit(B, u.name + " KẾT LIỄU " + t.name + " ngay lập tức!", "danger"); kill(B, t); }
+          for (const t of targets) if (t.alive && !parried(ctx, t) && rng() < e.chance) { emit(B, u.name + " KẾT LIỄU " + t.name + " ngay lập tức!", "danger"); kill(B, t); }
           break;
         case "summon":
           if (e.summon === "windSpirit") {
@@ -365,7 +377,7 @@
   function skillReady(u, s) { return !(u.cds[s.id] > 0); }
 
   function* execAction(B, u, a) {
-    const ctx = { dodge: null };
+    const ctx = { dodge: null, ult: false, skillName: "" };
     if (a.type === "defend") { emit(B, u.name + " thủ thế, chuẩn bị chịu đòn.", "def"); yield* flush(B); return; }
 
     if (a.type === "attack") {
@@ -404,6 +416,7 @@
       emit(B, u.name + " không thể dùng kỹ năng này — đành tấn công thường.", "");
       yield* execAction(B, u, { type: "attack", target: a.target }); return;
     }
+    ctx.ult = isUlt; ctx.skillName = def.name;
     if (isUlt) u.rage = 0;
     else { u.cds[def.id] = def.cd + 1; u.rage = clamp(u.rage + RPG.CFG.RAGE_ON_SKILL, 0, RPG.CFG.RAGE_MAX); }
     const scale = qScale(a.quality);

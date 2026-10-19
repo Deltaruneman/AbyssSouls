@@ -677,15 +677,15 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
 /* ===================== GIAO DIỆN TRẬN ĐẤU KIỂU POKEMON ===================== */
 #battleOverlay{position:fixed;inset:0;z-index:70;display:flex;flex-direction:column;background:#101018;font-family:'Roboto Condensed','Roboto',sans-serif;}
 #battleOverlay.hidden{display:none;}
-#pkField{position:relative;flex:1 1 auto;min-height:0;overflow:hidden;background:linear-gradient(180deg,#8fd0ff 0%,#d6f0ff 46%,#9bd16a 46%,#6aad48 100%);}
-#battleBg{position:absolute;inset:0;background-size:cover;background-position:center;opacity:.28;mix-blend-mode:multiply;pointer-events:none;}
+#pkField{position:relative;flex:1 1 auto;min-height:0;overflow:hidden;background:radial-gradient(ellipse at 50% 30%,#2e2c46 0%,#1a1928 60%,#100f1a 100%);}
+#battleBg{position:absolute;inset:0;background-size:cover;background-position:center;opacity:.4;filter:blur(2px) brightness(.7);pointer-events:none;}
 #pkTurn{position:absolute;left:50%;top:8px;transform:translateX(-50%);background:rgba(20,20,32,.8);color:#fff;font-weight:900;letter-spacing:3px;font-size:12px;padding:3px 12px;border-radius:12px;z-index:5;}
 #pkFast{position:absolute;right:10px;top:8px;z-index:6;font-size:11px;padding:4px 10px;}
 #pkFast.on{background:var(--amber);color:#111;}
 
 #pkEnemyZone{position:absolute;right:7%;top:14%;width:40%;height:34%;}
 #pkAllyZone{position:absolute;left:6%;bottom:5%;width:44%;height:42%;}
-.pkPlat{position:absolute;left:0;right:0;bottom:-4%;height:30%;border-radius:50%;background:radial-gradient(ellipse at 50% 40%,#d9ef9a 0%,#9cc85c 62%,rgba(90,140,60,0) 66%);}
+.pkPlat{position:absolute;left:0;right:0;bottom:-4%;height:30%;border-radius:50%;background:radial-gradient(ellipse at 50% 40%,rgba(255,255,255,.2) 0%,rgba(255,255,255,.08) 60%,rgba(255,255,255,0) 66%);}
 .pkSprites{position:absolute;inset:0;display:flex;justify-content:center;align-items:flex-end;gap:10px;padding-bottom:6%;}
 .pkSpr{position:relative;width:clamp(56px,11vh,92px);height:clamp(56px,11vh,92px);border-radius:50%;background:var(--c,#555);border:3px solid rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;box-shadow:0 7px 0 rgba(0,0,0,.22),inset 0 -8px 14px rgba(0,0,0,.25);transition:transform .4s,opacity .5s,filter .5s;}
 .pkSpr .glyph{font-size:clamp(28px,6vh,50px);line-height:1;filter:drop-shadow(0 2px 2px rgba(0,0,0,.4));}
@@ -751,3 +751,5 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
   #pkMenu{flex:1 1 auto;}
   #pkTextBox{flex:0 0 auto;max-height:80px;}
 }
+
+#pkSB{position:absolute;left:10px;top:8px;z-index:6;background:linear-gradient(90deg,#5a2a8a,#8a3ab0);color:#fff;font-size:11px;font-weight:900;letter-spacing:2px;padding:3px 10px;border-radius:10px;box-shadow:0 0 10px rgba(160,80,220,.6);}

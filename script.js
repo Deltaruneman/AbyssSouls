@@ -57,9 +57,9 @@ const SETTINGS = { masterVolume:_storedVol, shake:true, flash:true };
 const TIU_IMAGE = "assets/images/TIU.png";
 const TIU_JUMPSCARE_SFX = "assets/sfx/TIUAttack.mp3";
 
-/* ---- Thời gian: 1 đêm = 00:00 -> 07:30 (450 phút game) = 10 phút thực ---- */
+/* ---- Thời gian: 1 giây thực = 1 phút game. 1 đêm = 00:00 -> 07:30 (450 phút game) = 7 phút 30 giây thực ---- */
 const GAME_MINUTES_TOTAL = 7.5*60;
-const NIGHT_REAL_MS = 10*60*1000;
+const NIGHT_REAL_MS = GAME_MINUTES_TOTAL*1000;   // 1 phút game = 1000ms
 function realMsPerGameMin(){
   return NIGHT_REAL_MS / ((S && S.nightTotalMin) || GAME_MINUTES_TOTAL);
 }
@@ -119,6 +119,7 @@ let S = null;
 let BATTLE = null;   // trận đấu đang diễn ra (xem phần BATTLE UI)
 
 function scavengeName(type){
+  if(RPG.RELICS[type]) return RPG.RELICS[type].name;
   if(RPG.COMPONENTS[type]) return RPG.COMPONENTS[type].name;
   if(RPG.ITEMS[type]) return RPG.ITEMS[type].name;
   return type;
@@ -137,6 +138,13 @@ function freshState(night, chapter, opts){
   const compIds = Object.keys(RPG.COMPONENTS);
   const lootIds = ['bimbim','water','antidote'];
   scavengeRooms.forEach(r=>{ scavenge[r] = Math.random()<0.25 ? pick(lootIds) : pick(compIds); });
+  // La Peace: mỗi đêm Chapter 1 chắc chắn có 1 Mảnh nằm trong một điểm thu gom (đủ 3 mảnh -> Spell Breaker).
+  // Chapter 2 đêm chuẩn bị bù thêm tối đa 2 mảnh nếu còn thiếu.
+  const need = RPG.CFG.LAPEACE_NEEDED - (RPG.getState() ? (RPG.player().laPeace || 0) : 0);
+  if(need>0){
+    const nPieces = chapter===1 ? 1 : Math.min(need, 2);
+    shuffle(Object.keys(scavenge)).slice(0, nPieces).forEach(r=>{ scavenge[r] = 'lapeace'; });
+  }
   const npcRoom = {};
   RPG.NPC_ROSTER.forEach(n=>{ npcRoom[n.id] = n.homeRoom; });
   return {
@@ -585,6 +593,7 @@ function refreshActionPane(){
   $('invRow').innerHTML = `<div class="itemChip">Class: <b>${RPG.CLASSES[me.classId].icon} ${RPG.CLASSES[me.classId].name} Lv${me.level}</b></div>
     <div class="itemChip">Đội hình: <b>${party}</b></div>
     <div class="itemChip">Linh kiện: <b>${comp}</b></div>
+    <div class="itemChip">💠 La Peace: <b>${me.laPeace||0}/${RPG.CFG.LAPEACE_NEEDED}</b>${me.spellBreaker?' · <b style="color:var(--amber);">Spell Breaker ✓</b>':''}</div>
     <div class="itemChip">Còn sống: <b>${RPG.aliveFighters().length}/5</b></div>`;
   refreshHiddenStats();
 }
@@ -602,7 +611,8 @@ function refreshHiddenStats(){
     const where = S.scouted[n.id] ? ` · 📍${ROOM_DEF[S.npcRoom[n.id]].name}` : '';
     return `<div class="itemChip">${f.name}${f.inParty?' (đồng đội)':''}: Tin tưởng <b>${f.trust}/${RPG.CFG.TRUST_MAX}</b>${info}${where}</div>`;
   }).join('');
-  pop.innerHTML = `<div class="hiddenStatsTitle">NPC</div>${rows}`;
+  const me0 = RPG.player();
+  pop.innerHTML = `<div class="hiddenStatsTitle">NPC</div>${rows}<div class="hiddenStatsTitle" style="margin-top:6px;">RELIC</div><div class="itemChip">💠 La Peace ${me0.laPeace||0}/${RPG.CFG.LAPEACE_NEEDED}${me0.spellBreaker?' — Spell Breaker ✓':''}</div>`;
 }
 
 /* ============== THU GOM / CHẾ TẠO ============== */
@@ -610,12 +620,24 @@ function pickupScavenge(){
   if(!S || !S.scavenge[S.playerRoom]) return;
   const type = S.scavenge[S.playerRoom];
   const me = RPG.player();
+  delete S.scavenge[S.playerRoom];
+  if(type==='lapeace'){
+    const r = RPG.addLaPeace(me);
+    addLog('💠 Bạn nhặt được Mảnh La Peace ('+r.count+'/'+RPG.CFG.LAPEACE_NEEDED+')!', 'good');
+    markActionDirty(); refreshAll();
+    if(r.unlocked) showSpellBreakerUnlock();
+    return;
+  }
   if(RPG.COMPONENTS[type]) RPG.addComponent(me, type, 1);
   else RPG.addItem(me, type, 1);
-  delete S.scavenge[S.playerRoom];
   addLog('🔧 Bạn nhặt được '+scavengeName(type)+' tại '+ROOM_DEF[S.playerRoom].name+'.', '');
   markActionDirty();
   refreshAll();
+}
+function showSpellBreakerUnlock(){
+  showModal('✦ SPELL BREAKER — ĐÃ MỞ KHOÁ', `<p style="font-size:14px;">Ba Mảnh La Peace hợp lại. Bạn học được <b>Spell Breaker</b>!</p>
+    <p style="font-size:13px;">Khi kẻ địch tung <b>ULTIMATE</b> lên bạn, một QTE parry sẽ hiện ra: bấm đúng hướng mũi tên trong vùng sáng để <b>phá giải hoàn toàn</b> đòn đó (kể cả hiệu ứng đi kèm). Chỉ parry được Ultimate, đòn thường và skill thì không.</p>`,
+    [{label:'Tuyệt vời!', primary:true, onClick:()=>closeModal()}]);
 }
 
 function openCraftBench(){
@@ -722,7 +744,7 @@ function openBagModal(){
     return `<div class="shopItem"><span>${it.icon} ${it.name} <b>x${me.items[id]}</b><br><span style="font-size:11px;color:var(--text-dim);">${it.desc}${it.usable.indexOf('map')<0?' (dùng trong trận)':''}</span></span>${mapUse?`<button class="btn primary" data-use="${id}">Dùng</button>`:''}</div>`;
   }).join('') : '<p style="color:var(--text-dim);">Túi đồ trống.</p>';
   const comp = Object.keys(RPG.COMPONENTS).map(k=>RPG.COMPONENTS[k].icon+' '+RPG.COMPONENTS[k].name+' '+(me.components[k]||0)).join(' &nbsp;|&nbsp; ');
-  showModal('🎒 TÚI ĐỒ', `${rows}<p style="font-size:12px;color:var(--text-dim);margin-top:10px;">Linh kiện: ${comp}</p>`, [{label:'Đóng', onClick:()=>closeModal()}]);
+  showModal('🎒 TÚI ĐỒ', `${rows}<p style="font-size:12px;color:var(--text-dim);margin-top:10px;">Linh kiện: ${comp}<br>💠 Mảnh La Peace: ${me.laPeace||0}/${RPG.CFG.LAPEACE_NEEDED}${me.spellBreaker?' — <b style="color:var(--amber);">đã học Spell Breaker</b>':''}</p>`, [{label:'Đóng', onClick:()=>closeModal()}]);
   document.querySelectorAll('#mgBody [data-use]').forEach(b=>{
     b.onclick = ()=>{
       const id = b.getAttribute('data-use');
@@ -1109,6 +1131,7 @@ function startBattle(opts){
   $('pkEnemyInfo').innerHTML = ''; $('pkAllyInfo').innerHTML = '';
   $('pkMenu').innerHTML = ''; $('pkText').textContent = '';
   $('pkFast').classList.remove('on');
+  $('pkSB').classList.toggle('hidden', !me.spellBreaker);
   const img = ROOM_IMAGES[S.playerRoom];
   $('battleBg').style.backgroundImage = img ? `url('${img}')` : '';
   renderBattle();
@@ -1363,12 +1386,27 @@ function commit(uid, action){
   battlePromptNext();
 }
 
-/* Phòng thủ bằng QTE (chỉ trận cuối, khi engine yêu cầu 'dodgeRequest') */
+/* Phòng thủ bằng QTE: trận cuối (mọi đòn) hoặc SPELL BREAKER (chỉ Ultimate của địch) */
 function runDefendQte(req, cb){
   const B = BATTLE.B, src = RPGCombat.unit(B, req.src);
+  $('pkMenu').innerHTML = '';
+  if(req.ult){
+    pkPrompt('⚠ '+src.name+' tung ULTIMATE "'+req.skill+'"!');
+    runArrowQte({
+      mode:'defend',
+      title:'✦ SPELL BREAKER — '+src.name+' tung "'+req.skill+'"!',
+      subtitle:'Bấm đúng hướng trong VÙNG SÁNG để PARRY hoàn toàn Ultimate!',
+      count:3, windowMs:1250, feintChance:0.1, parryWidth:0.3, shake:0, drift:0,
+      onDone:(r)=>{
+        const mult = clamp(1 - (r.perfect + 0.5*r.blocked)/r.total, 0, 1);
+        if(mult===0) cb(0);   // engine tự báo "SPELL BREAKER!" khi phá giải hoàn toàn
+        else pkSay('Parry chưa trọn vẹn: '+r.perfect+' parry, '+r.blocked+' đỡ, '+r.hits+' trúng → nhận '+Math.round(mult*100)+'% sát thương.', ()=>cb(mult));
+      }
+    });
+    return;
+  }
   const complexity = clamp(1 + Math.floor(Math.random()*3) + Math.floor(B.round/4), 1, 5);
   const difficulty = clamp((B.round-1)*0.04 + (complexity-1)*0.08, 0, 1);
-  $('pkMenu').innerHTML = '';
   runArrowQte({
     mode:'defend',
     title:'⚠ '+src.name+' RA ĐÒN — '+complexity+' MŨI TÊN',
@@ -1427,7 +1465,7 @@ function battleFinish(){
   let html = '';
   sum.duels.forEach(d=>{
     const foe = RPG.get(won ? d.loserId : d.winnerId);
-    html += `<p><b>${won ? '+' : '−'}${d.drl} ĐRL</b> ${won ? 'cướp từ' : 'bị cướp bởi'} ${foe.name}.</p>`;
+    html += `<p><b>${won ? '+'+d.drl : '−'+d.lost} ĐRL</b> ${won ? 'cướp từ' : 'bị trừ bởi'} ${foe.name}.</p>`;
     if(won){
       html += `<p>+${d.exp.gained} EXP`+(d.loot?` · cướp được ${RPG.ITEMS[d.loot].icon} ${RPG.ITEMS[d.loot].name}`:'')+`</p>`;
       d.exp.unlocked.forEach(u=>{ html += `<p style="color:var(--amber);">✦ LÊN CẤP Lv${u.lvl}: mở ${u.isUltimate?'ULTIMATE':'kỹ năng'} "${u.name}"!</p>`; });
