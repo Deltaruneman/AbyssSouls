@@ -180,14 +180,19 @@
 </div>
 
 <div id="battleOverlay" class="hidden">
-  <div id="battleBg"></div>
-  <div id="battleTurnBadge">LƯỢT <span id="battleTurnNum">1</span></div>
-  <div id="battleEnemies"></div>
-  <div id="battleMid">
-    <div id="partyPanel"></div>
-    <div id="battleLogPane"></div>
+  <div id="pkField">
+    <div id="battleBg"></div>
+    <div id="pkEnemyZone"><div class="pkPlat"></div><div id="pkEnemySprites" class="pkSprites"></div></div>
+    <div id="pkAllyZone"><div class="pkPlat"></div><div id="pkAllySprites" class="pkSprites"></div></div>
+    <div id="pkEnemyInfo" class="pkInfo"></div>
+    <div id="pkAllyInfo" class="pkInfo"></div>
+    <div id="pkTurn">LƯỢT <span id="battleTurnNum">1</span></div>
+    <button id="pkFast" class="btn" title="Tăng tốc hội thoại">⏩ NHANH</button>
   </div>
-  <div id="battleMenu"></div>
+  <div id="pkBottom">
+    <div id="pkTextBox"><div id="pkText"></div><div id="pkArrow">▼</div></div>
+    <div id="pkMenu"></div>
+  </div>
   <div id="dodgeArena" class="hidden">
     <div id="dodgeHint">BẤM ĐÚNG HƯỚNG MŨI TÊN KHI NÓ HIỆN</div>
     <div id="dodgeBox">

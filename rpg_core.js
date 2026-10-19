@@ -23,7 +23,7 @@
     EXP_TABLE: [0, 0, 30, 80, 150, 250], // EXP_TABLE[lv] = EXP tích lũy cần để đạt lv
     GROWTH_LEVELS: [2, 4],               // Lv không có skill -> cộng chỉ số
     GROWTH_PCT: 0.10,                    // +10% chỉ số gốc mỗi mốc
-    ULT_UNLOCK_LEVEL: 5,
+    ULT_UNLOCK_LEVEL: 1,                 // Ultimate dùng được từ Lv1 (chỉ cần đầy Nộ)
 
     EXP_BASE_WIN: 20,
     EXP_PER_ENEMY_LEVEL: 10,
@@ -32,6 +32,10 @@
     START_DRL: 40,
     DRL_STEAL_PCT: 0.5,                  // thắng: cướp 50% ĐRL kẻ thua (kẻ thua mất đúng số đó)
     TIU_PENALTY: 5,                      // The TIU bắt được người chơi (chỉ Chapter 1)
+
+    BATTLE_MINUTES: 60,                  // 1 trận đấu tốn 60 phút đồng hồ trong game
+    REGEN_PER_HOUR: 0.10,                // hồi dần 10% HP tối đa mỗi giờ game (ngoài trận)
+    REST_HEAL_PCT: 0.35,                 // "Nghỉ ngơi 1 giờ" ở Căn tin: +35% HP tối đa
 
     RAGE_MAX: 100,
     RAGE_ON_ATTACK: 25,
@@ -97,7 +101,7 @@
       skills: [
         { id: "fireball", lvl: 1, name: "Hỏa cầu thuật", target: "aoe",
           desc: "Gây sát thương, 30% tỉ lệ gây hiệu ứng Cháy (DoT).",
-          effects: [{ type: "damage", power: 1.0 },
+          effects: [{ type: "damage", power: 0.85 },
                     { type: "status", status: "burn", chance: 0.3, turns: 3, dotPower: 0.3 }] },
         { id: "iceWall", lvl: 3, name: "Băng phong vạn dặm", target: "aoe",
           desc: "Giảm SPD kẻ địch, 50% tỉ lệ Đóng băng. Kẻ địch bị Đóng băng nhận thêm 50% damage.",
@@ -111,7 +115,7 @@
       ],
       ultimate: { id: "thunder", name: "Lôi thần giáng thế", target: "aoe",
         desc: "Sát thương lớn, 50% tỉ lệ gây Tê liệt (bỏ qua turn).",
-        effects: [{ type: "damage", power: 2.4 },
+        effects: [{ type: "damage", power: 2.0 },
                   { type: "status", status: "paralyze", chance: 0.5, turns: 1 }] }
     },
 
@@ -301,6 +305,27 @@
   const rageOnSkill  = function (f) { return addRage(f, CFG.RAGE_ON_SKILL); };
   function canUseUltimate(f) { return f.level >= CFG.ULT_UNLOCK_LEVEL && f.rage >= CFG.RAGE_MAX; }
 
+  /* ============================ HP NGOÀI TRẬN (HP được giữ lại giữa các trận) ============================ */
+  function heal(f, amount) {
+    if (!f.alive) return 0;
+    const h = Math.max(0, Math.min(f.maxHp - f.hp, Math.round(amount)));
+    f.hp += h;
+    return h;
+  }
+  function healPct(f, pct) { return heal(f, f.maxHp * pct); }
+  /* Hồi dần theo thời gian: cộng dồn phần lẻ để không mất khi amount < 1 */
+  function regen(f, amount) {
+    if (!f.alive || f.hp >= f.maxHp) { f._acc = 0; return 0; }
+    f._acc = (f._acc || 0) + amount;
+    const whole = Math.floor(f._acc);
+    if (whole <= 0) return 0;
+    f._acc -= whole;
+    return heal(f, whole);
+  }
+  function healAll() {
+    state.order.forEach(function (id) { const f = state.fighters[id]; if (f.alive) { f.hp = f.maxHp; f._acc = 0; } });
+  }
+
   /* ============================ EXP / LEVEL ============================ */
   function expToNext(f) {
     return f.level >= CFG.MAX_LEVEL ? 0 : CFG.EXP_TABLE[f.level + 1] - f.exp;
@@ -486,6 +511,7 @@
     getState: getState, serialize: serialize, load: load,
     getStats: getStats, getSkills: getSkills, getUltimate: getUltimate,
     addRage: addRage, rageOnAttack: rageOnAttack, rageOnSkill: rageOnSkill, canUseUltimate: canUseUltimate,
+    heal: heal, healPct: healPct, regen: regen, healAll: healAll,
     expToNext: expToNext, expForWin: expForWin, addExp: addExp,
     resolveDuel: resolveDuel, tiuPenalty: tiuPenalty, aliveFighters: aliveFighters,
     rankAscending: rankAscending, eliminateLowest: eliminateLowest,

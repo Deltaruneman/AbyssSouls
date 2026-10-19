@@ -20,7 +20,8 @@
    Muốn chạy nhanh không hoạt ảnh:  RPGCombat.runRound(B)  /  RPGCombat.autoBattle(B)
 
    QUY ƯỚC QUAN TRỌNG
-   - HP/Nộ trong trận là BẢN SAO theo trận (đầy máu khi vào, Nộ=0). Chỉ ĐRL/EXP/Lv/vật phẩm là lâu dài.
+   - HP vào trận = HP hiện tại của nhân vật (được giữ lại sau mỗi trận, tối thiểu 1); Nộ luôn bắt đầu từ 0.
+     Sau trận settle() ghi HP về nhân vật (người thua còn 1 HP). Hồi máu ngoài trận: RPG.regen/healPct/healAll.
    - "N turn" của buff/debuff/status = tồn tại qua N lượt hành động CỦA CHỦ THỂ sau lượt áp dụng.
    - Hồi chiêu N = phải chờ N lượt của chính mình rồi mới dùng lại.
    - quality (QTE) < 0.4: skill thất bại (mất lượt, vẫn tính hồi chiêu). Ngược lại hiệu lực 70%–100%.
@@ -37,7 +38,7 @@
     DEFEND_MULT: 0.5,
     FREEZE_MULT: 1.5,
     QTE_FAIL_BELOW: 0.4,
-    SUMMON_HP: { sword: 0.25, guard: 0.5 },
+    SUMMON_HP: { sword: 0.4, guard: 0.7 },
     SUMMON_DEF_PCT: 0.5,
     POISON_TURNS: 3, POISON_MAX_ULT: 6,
     SWORDSMAN_RAGE_ATTACK: 15, SWORDSMAN_ULT_POWER: 2.0,
@@ -77,7 +78,7 @@
     const st = RPG.getStats(f);
     const u = {
       uid: "u" + (B.nextUid++), f: f, id: f.id, name: f.name, side: side, controller: "ai",
-      isSummon: false, hp: st.hp, maxHp: st.hp, rage: 0,
+      isSummon: false, hp: clamp(f.hp > 0 ? f.hp : st.hp, 1, st.hp), maxHp: st.hp, rage: 0,   // HP được giữ lại từ trận trước
       base: { atk: st.atk, def: st.def, spd: st.spd },
       mods: [], st: {}, cds: {}, alive: true, spirit: null, defending: false, action: null,
       taunt: false, voidActive: false
@@ -370,7 +371,7 @@
     if (a.type === "attack") {
       const ts = pickTargets(B, u, "single", a.target);
       if (!ts.length) return;
-      emit(B, u.name + " tấn công " + ts[0].name + ".", "atk");
+      emit(B, u.name + " tấn công " + ts[0].name + "!", "atk", { type: "attack", src: u.uid, dst: ts[0].uid });
       yield* dmgGen(B, u, ts[0], 1.0, { basic: true }, ctx);
       if (!u.isSummon) u.rage = clamp(u.rage + RPG.CFG.RAGE_ON_ATTACK, 0, RPG.CFG.RAGE_MAX);
       else if (u.hasRage) {
@@ -590,6 +591,8 @@
   function settle(B) {
     if (!B.over || B.settled) return null;
     B.settled = true;
+    // Ghi lại HP sau trận (người thua kiệt sức còn 1 HP). Làm TRƯỚC khi cộng EXP để bonus lên cấp được tính.
+    B.units.forEach(function (u) { if (!u.isSummon && u.f) u.f.hp = Math.max(1, Math.min(u.f.maxHp, u.hp)); });
     const pf = B.playerUnit.f;
     const foes = B.units.filter(function (u) { return u.side === "E" && !u.isSummon; }).map(function (u) { return u.f; });
     const mates = B.units.filter(function (u) { return u.side === "A" && !u.isSummon && u.f !== pf; }).map(function (u) { return u.f; });

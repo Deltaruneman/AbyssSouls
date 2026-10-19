@@ -460,7 +460,17 @@ function refreshHud(){
     : `${RPG.CLASSES[me.classId].name.toUpperCase()} · Lv ${me.level} · EXP ${me.exp}/${need}`;
   $('meterFill').style.width = pct+'%';
 
-  const st = $('staminaOuter'); if(st) st.style.display = 'none';
+  // Khối "THỂ LỰC" cũ -> thanh HP của người chơi (HP được giữ lại giữa các trận)
+  const st = $('staminaOuter');
+  if(st){
+    st.style.display = '';
+    const lab = st.querySelector('.hud-label');
+    if(lab) lab.textContent = 'HP '+me.hp+'/'+me.maxHp;
+    const fill = $('staminaFill');
+    const hpPct = Math.round(me.hp/Math.max(1,me.maxHp)*100);
+    fill.style.width = hpPct+'%';
+    fill.style.background = hpPct>50 ? 'linear-gradient(90deg,#2e9e4f,#6fe89a)' : (hpPct>20 ? 'linear-gradient(90deg,#b58a1e,#f0c040)' : 'linear-gradient(90deg,#a02020,#e04040)');
+  }
 
   const tiuEl = $('tiuLastSeen');
   const tiuLabelEl = $('tiuLastSeenLabel');
@@ -631,6 +641,19 @@ function openCraftBench(){
   render();
 }
 
+/* ============== NGHỈ NGƠI Ở CĂN TIN: tốn 1 giờ, hồi HP ============== */
+function restAtCanteen(){
+  if(!S || !S.running || !isRoomSafe(S.playerRoom)) return;
+  const me = RPG.player();
+  const healed = RPG.healPct(me, RPG.CFG.REST_HEAL_PCT);
+  RPG.partyAllies().forEach(a=>RPG.healPct(a, RPG.CFG.REST_HEAL_PCT));
+  closeModal(true);
+  S.paused = false; S.lastTick = performance.now();
+  addLog('😴 Bạn nghỉ ngơi ở Căn tin, hồi '+healed+' HP.', 'good');
+  spendTime(60, 'Nghỉ ngơi 1 giờ');
+  if(S.running) refreshAll();
+}
+
 /* ============== SHOP (Căn tin) ============== */
 const SHOP_ITEMS = ['bimbim','water','antidote'];
 function openShop(){
@@ -640,7 +663,9 @@ function openShop(){
       const it = RPG.ITEMS[id];
       return `<div class="shopItem"><span>${it.icon} ${it.name} — ${it.price}đ<br><span style="font-size:11px;color:var(--text-dim);">${it.desc} (đang có ${RPG.countItem(me,id)})</span></span><button class="btn primary" data-buy="${id}" ${S.points>=it.price?'':'disabled'}>Mua</button></div>`;
     }).join('');
-    showModal('QUẦY CĂN TIN', `<p style="font-size:12px;color:var(--text-dim);">Điểm hiện có: <b>${S.points}</b> (thắng trận để kiếm thêm)</p>${rows}`, [{label:'Đóng', onClick:()=>closeModal()}]);
+    showModal('QUẦY CĂN TIN', `<p style="font-size:12px;color:var(--text-dim);">Điểm hiện có: <b>${S.points}</b> (thắng trận để kiếm thêm)</p>${rows}
+      <div class="shopItem"><span>😴 Nghỉ ngơi 1 giờ<br><span style="font-size:11px;color:var(--text-dim);">Hồi ${Math.round(RPG.CFG.REST_HEAL_PCT*100)}% HP (cả đồng đội), tốn 60 phút game. HP hiện tại: ${me.hp}/${me.maxHp}</span></span><button class="btn" id="restBtn" ${me.hp>=me.maxHp?'disabled':''}>Nghỉ</button></div>`, [{label:'Đóng', onClick:()=>closeModal()}]);
+    const rb = $('restBtn'); if(rb) rb.onclick = restAtCanteen;
     document.querySelectorAll('#mgBody [data-buy]').forEach(b=>{
       b.onclick = ()=>{
         const id = b.getAttribute('data-buy'), it = RPG.ITEMS[id];
@@ -679,14 +704,21 @@ const BAG_MAP_USE = {
     addLog('🪤 Bạn đặt Bẫy gài tại '+ROOM_DEF[S.playerRoom].name+'.', '');
     return true;
   },
-  bimbim: ()=>{ addLog('Bạn ăn Bim Bim. HP trong trận luôn đầy lúc bắt đầu, hãy để dành cho lúc đánh nhau!', ''); return false; }
+  bimbim: ()=>{
+    const me = RPG.player();
+    if(me.hp>=me.maxHp){ addLog('HP đã đầy, chưa cần ăn Bim Bim.', ''); return false; }
+    const h = RPG.healPct(me, RPG.ITEMS.bimbim.effects[0].pct);
+    addLog('🍟 Bạn ăn Bim Bim, hồi '+h+' HP.', 'good');
+    return true;
+  },
+  antidote: ()=>{ addLog('Không có hiệu ứng xấu nào để giải ngoài trận.', ''); return false; }
 };
 function openBagModal(){
   const me = RPG.player();
   const ids = Object.keys(me.items).filter(k=>me.items[k]>0 && RPG.ITEMS[k]);
   const rows = ids.length ? ids.map(id=>{
     const it = RPG.ITEMS[id];
-    const mapUse = it.usable.indexOf('map')>=0 && BAG_MAP_USE[id] && id!=='bimbim';
+    const mapUse = it.usable.indexOf('map')>=0 && BAG_MAP_USE[id] && id!=='antidote';
     return `<div class="shopItem"><span>${it.icon} ${it.name} <b>x${me.items[id]}</b><br><span style="font-size:11px;color:var(--text-dim);">${it.desc}${it.usable.indexOf('map')<0?' (dùng trong trận)':''}</span></span>${mapUse?`<button class="btn primary" data-use="${id}">Dùng</button>`:''}</div>`;
   }).join('') : '<p style="color:var(--text-dim);">Túi đồ trống.</p>';
   const comp = Object.keys(RPG.COMPONENTS).map(k=>RPG.COMPONENTS[k].icon+' '+RPG.COMPONENTS[k].name+' '+(me.components[k]||0)).join(' &nbsp;|&nbsp; ');
@@ -729,6 +761,8 @@ function movePlayerNow(dest){
 
 /* ============== THẾ GIỚI: THỜI GIAN, NPC, THE TIU ============== */
 function advanceWorld(minutesPassed){
+  // Hồi dần HP ngoài trận (mọi người còn sống)
+  RPG.aliveFighters().forEach(f=>RPG.regen(f, f.maxHp * RPG.CFG.REGEN_PER_HOUR * minutesPassed / 60));
   if(S.tiuOn){
     expireEvents();
     S.nextEventAt -= minutesPassed;
@@ -1036,8 +1070,21 @@ function jumpscare(){
   };
 }
 
-/* ============== BATTLE UI (dùng RPGCombat) ============== */
+/* ============== BATTLE UI — kiểu Pokemon (dùng RPGCombat) ==============
+   Bố cục: sân đấu phía trên (đối thủ trên-phải, phe mình dưới-trái, hộp thông tin HP kiểu Pokemon),
+   phía dưới là hộp thoại gõ chữ dần (trái) + menu 2x2 (phải): CHIẾN ĐẤU / TÚI ĐỒ / PHÒNG THỦ / ULTIMATE.
+   Mỗi trận tốn RPG.CFG.BATTLE_MINUTES (60 phút) đồng hồ game và HP được giữ lại sau trận. */
 const STATUS_ICON = { burn:'🔥', poison:'☠️', freeze:'❄️', paralyze:'⚡', stun:'💫', stealth:'👁️', immune:'🛡️', reflect:'🔁' };
+const SUMMON_GLYPH = { sword:'🗡️', guard:'🛡️', swordsman:'⚔️' };
+const TARGET_LABEL = { self:'Bản thân', single:'1 mục tiêu', aoe:'Toàn bộ địch', summon:'Triệu hồi', none:'' };
+
+function unitLook(u){
+  if(u.isSummon) return { glyph:SUMMON_GLYPH[u.kind] || '✦', bg:'#4a3a8a' };
+  if(u.f.isPlayer) return { glyph:RPG.CLASSES[u.f.classId].icon, bg:'#2a5a8a' };
+  const m = NPC_META[u.f.id];
+  return { glyph: m ? m.avatarText : RPG.CLASSES[u.f.classId].icon, bg: m ? m.avatarBg : '#555' };
+}
+function hpClass(p){ return p>50 ? '' : (p>20 ? 'mid' : 'low'); }
 
 function startBattle(opts){
   const me = RPG.player();
@@ -1053,58 +1100,191 @@ function startBattle(opts){
     if(d.skipFirst) u.st.stun = { turns:1, fresh:false };
     delete S.npcDebuff[f.id];
   });
-  BATTLE = { B, opts, gen:null, pending:[], closed:false };
+  BATTLE = { B, opts, gen:null, pending:[], closed:false, disp:{}, sprites:{}, boxes:{}, fast:false, say:null, sayTimer:null };
+  B.units.forEach(u=>{ BATTLE.disp[u.uid] = u.hp; });
   S.paused = true;
   $('mgModal').classList.add('hidden');
   $('battleOverlay').classList.remove('hidden');
-  $('battleLogPane').innerHTML = '';
-  $('battleMenu').innerHTML = '';
-  const bg = $('battleBg');
+  $('pkEnemySprites').innerHTML = ''; $('pkAllySprites').innerHTML = '';
+  $('pkEnemyInfo').innerHTML = ''; $('pkAllyInfo').innerHTML = '';
+  $('pkMenu').innerHTML = ''; $('pkText').textContent = '';
+  $('pkFast').classList.remove('on');
   const img = ROOM_IMAGES[S.playerRoom];
-  bg.style.backgroundImage = img ? `url('${img}')` : '';
-  addBattleLog(opts.final ? '★ TRẬN QUYẾT ĐỊNH BẮT ĐẦU!' : '⚔ Trận đấu bắt đầu!', 'turn');
+  $('battleBg').style.backgroundImage = img ? `url('${img}')` : '';
   renderBattle();
-  battleNextRound();
+  const foe = enemies[0];
+  pkSay(opts.final ? '★ TRẬN QUYẾT ĐỊNH! '+foe.name+' chặn đường bạn!' : foe.name+' muốn đấu với bạn!', battleNextRound);
 }
 
-function addBattleLog(msg, cls){
-  const el = $('battleLogPane');
-  const d = document.createElement('div');
-  d.className = 'entry '+(cls||'');
-  d.textContent = msg;
-  el.appendChild(d);
-  while(el.children.length>80) el.removeChild(el.firstChild);
-  el.scrollTop = el.scrollHeight;
+/* ---- Hộp thoại gõ chữ dần. Bấm vào hộp để gõ nhanh / sang câu tiếp ---- */
+function pkSay(text, done){
+  const el = $('pkText'), bt = BATTLE;
+  if(!bt) return;
+  clearTimeout(bt.sayTimer);
+  $('pkMenu').dataset.mode = 'say';
+  $('pkMenu').innerHTML = '';
+  el.textContent = '';
+  const cur = { text, done, typing:true };
+  bt.say = cur;
+  let i = 0;
+  const advance = ()=>{
+    if(bt.say !== cur) return;
+    bt.say = null; clearTimeout(bt.sayTimer);
+    $('pkArrow').classList.remove('on');
+    if(cur.done) cur.done();
+  };
+  const finishTyping = ()=>{
+    cur.typing = false;
+    el.textContent = text;
+    $('pkArrow').classList.add('on');
+    clearTimeout(bt.sayTimer);
+    bt.sayTimer = setTimeout(advance, bt.fast ? 90 : 650);
+  };
+  cur.advance = advance; cur.finishTyping = finishTyping;
+  const typeNext = ()=>{
+    if(bt.closed || bt.say !== cur) return;
+    i++;
+    el.textContent = text.slice(0, i);
+    if(i < text.length) bt.sayTimer = setTimeout(typeNext, bt.fast ? 2 : 15);
+    else finishTyping();
+  };
+  typeNext();
 }
+function pkPrompt(text){            // dòng nhắc (không gõ chữ, không tự chuyển)
+  if(BATTLE){ clearTimeout(BATTLE.sayTimer); BATTLE.say = null; }
+  $('pkArrow').classList.remove('on');
+  $('pkText').textContent = text;
+}
+$('pkTextBox').onclick = ()=>{
+  const s = BATTLE && BATTLE.say;
+  if(!s) return;
+  if(s.typing){ s.finishTyping(); }
+  else { s.advance(); }
+};
+$('pkFast').onclick = ()=>{
+  if(!BATTLE) return;
+  BATTLE.fast = !BATTLE.fast;
+  $('pkFast').classList.toggle('on', BATTLE.fast);
+  const s = BATTLE.say;
+  if(s && s.typing) s.finishTyping();
+};
 
-function bbar(cur, max, cls){
-  const p = Math.max(0, Math.min(100, Math.round(cur/Math.max(1,max)*100)));
-  return `<div class="bbar ${cls}"><div style="width:${p}%"></div></div>`;
-}
-function unitCard(u, enemy){
+/* ---- Sân đấu: sprite + hộp thông tin HP ---- */
+function ensureUnitView(u){
+  const bt = BATTLE;
+  if(bt.sprites[u.uid]) return;
+  const enemy = u.side==='E';
+  const look = unitLook(u);
+  const spr = document.createElement('div');
+  spr.className = 'pkSpr '+(enemy?'enemy':'ally')+(u.isSummon?' summon':'')+' enter';
+  spr.style.setProperty('--c', look.bg);
+  spr.innerHTML = `<span class="glyph">${look.glyph}</span>`;
+  $(enemy ? 'pkEnemySprites' : 'pkAllySprites').appendChild(spr);
+  bt.sprites[u.uid] = spr;
+  const box = document.createElement('div');
+  box.className = 'pkBox'+(u.isSummon?' small':'')+(enemy?' enemy':' ally');
   const cdef = u.isSummon ? null : RPG.CLASSES[u.f.classId];
-  const sts = Object.keys(u.st).map(k=>(STATUS_ICON[k]||'')+(k==='poison'?('x'+u.st.poison.stacks):'')).join(' ') + (u.spirit?' 🌪️':'');
-  const head = u.isSummon ? `✦ ${u.name}` : `${cdef.icon} ${u.name} <span class="blv">Lv${u.f.level}</span>`;
-  return `<div class="bcard ${enemy?'enemy':'ally'} ${u.alive?'':'dead'} ${u.taunt?'taunt':''}">
-    <div class="bhead">${head}</div>
-    ${bbar(u.hp,u.maxHp,'hp')}<div class="bnum">${u.hp}/${u.maxHp}</div>
-    ${u.isSummon ? (u.hasRage ? bbar(u.rage,RPG.CFG.RAGE_MAX,'rage') : '') : bbar(u.rage,RPG.CFG.RAGE_MAX,'rage')}
-    <div class="bst">${sts}</div></div>`;
+  const showExp = !u.isSummon && u.f.isPlayer;
+  box.innerHTML = `<div class="pkRow1"><span class="pkName">${u.isSummon ? u.name : cdef.icon+' '+u.name}</span><span class="pkLv"></span></div>
+    <div class="pkHpRow"><span class="pkHpLbl">HP</span><div class="pkTrack"><div class="pkHpFill"></div></div></div>
+    <div class="pkNum"></div>
+    ${u.isSummon && !u.hasRage ? '' : '<div class="pkRageRow"><span class="pkMini">NỘ</span><div class="pkTrack thin"><div class="pkRageFill"></div></div></div>'}
+    ${showExp ? '<div class="pkRageRow"><span class="pkMini">EXP</span><div class="pkTrack thin"><div class="pkExpFill"></div></div></div>' : ''}
+    <div class="pkSt"></div>`;
+  $(enemy ? 'pkEnemyInfo' : 'pkAllyInfo').appendChild(box);
+  bt.boxes[u.uid] = box;
+  setTimeout(()=>spr.classList.remove('enter'), 450);
+}
+function updateUnitView(u){
+  const bt = BATTLE, box = bt.boxes[u.uid], spr = bt.sprites[u.uid];
+  if(!box) return;
+  const hp = Math.max(0, bt.disp[u.uid] != null ? bt.disp[u.uid] : u.hp);
+  const p = Math.round(hp/Math.max(1,u.maxHp)*100);
+  const fill = box.querySelector('.pkHpFill');
+  fill.style.width = p+'%';
+  fill.className = 'pkHpFill '+hpClass(p);
+  const lv = box.querySelector('.pkLv');
+  if(lv) lv.textContent = u.isSummon ? '' : 'Lv'+u.f.level;
+  box.querySelector('.pkNum').textContent = (u.side==='A' || u.isSummon) ? hp+'/'+u.maxHp : '';
+  const rf = box.querySelector('.pkRageFill');
+  if(rf) rf.style.width = Math.round(u.rage/RPG.CFG.RAGE_MAX*100)+'%';
+  const ef = box.querySelector('.pkExpFill');
+  if(ef){
+    const f = u.f, lo = RPG.CFG.EXP_TABLE[f.level];
+    const hi = f.level>=RPG.CFG.MAX_LEVEL ? lo : RPG.CFG.EXP_TABLE[f.level+1];
+    ef.style.width = (hi>lo ? Math.round((f.exp-lo)/(hi-lo)*100) : 100)+'%';
+  }
+  const sts = Object.keys(u.st).map(k=>(STATUS_ICON[k]||'')+(k==='poison'?'x'+u.st.poison.stacks:'')).join(' ') + (u.spirit?' 🌪️':'') + (u.taunt?' 🎯':'');
+  box.querySelector('.pkSt').textContent = sts;
+  const gone = !u.alive;
+  if(u.isSummon && gone){
+    spr.classList.add('faint');
+    setTimeout(()=>{ spr.remove(); box.remove(); }, 500);
+    delete bt.sprites[u.uid]; delete bt.boxes[u.uid];
+    return;
+  }
+  spr.classList.toggle('faint', gone && hp<=0);
+  box.classList.toggle('dead', gone && hp<=0);
 }
 function renderBattle(){
-  const B = BATTLE.B;
-  $('battleTurnNum').textContent = B.round;
-  const vis = u => u.alive || !u.isSummon;
-  $('battleEnemies').innerHTML = B.units.filter(u=>u.side==='E' && vis(u)).map(u=>unitCard(u,true)).join('');
-  $('partyPanel').innerHTML = B.units.filter(u=>u.side==='A' && vis(u)).map(u=>unitCard(u,false)).join('');
+  const bt = BATTLE;
+  if(!bt) return;
+  bt.B.units.forEach(u=>{ if(u.alive || !u.isSummon) ensureUnitView(u); });
+  bt.B.units.forEach(u=>updateUnitView(u));
 }
+function snapDisp(){ BATTLE.B.units.forEach(u=>{ BATTLE.disp[u.uid] = u.hp; }); }
+function sprFx(uid, cls, ms){
+  const s = BATTLE && BATTLE.sprites[uid];
+  if(!s) return;
+  s.classList.remove(cls); void s.offsetWidth; s.classList.add(cls);
+  setTimeout(()=>{ s && s.classList.remove(cls); }, ms || 520);
+}
+function applyEventFx(ev){
+  const bt = BATTLE, D = bt.disp;
+  if(ev.type==='attack' || ev.type==='cast'){
+    const u = RPGCombat.unit(bt.B, ev.src);
+    if(u) sprFx(ev.src, u.side==='A' ? 'lungeA' : 'lungeE', 420);
+  } else if(ev.type==='damage'){
+    if(D[ev.dst] != null) D[ev.dst] = Math.max(0, D[ev.dst] - ev.amount);
+    sprFx(ev.dst, 'hit', 520);
+  } else if(ev.type==='heal'){
+    const u = RPGCombat.unit(bt.B, ev.dst);
+    if(u && D[ev.dst] != null) D[ev.dst] = Math.min(u.maxHp, D[ev.dst] + ev.amount);
+    sprFx(ev.dst, 'healfx', 600);
+  } else if(ev.type==='death'){
+    D[ev.dst] = 0;
+  }
+  renderBattle();
+}
+
+/* ---- Menu phía dưới (2 cột) ---- */
+function pkMenuSet(mode, items){
+  const m = $('pkMenu');
+  m.innerHTML = '';
+  m.dataset.mode = mode;
+  items.forEach(it=>{
+    const b = document.createElement('button');
+    b.className = 'pkBtn'+(it.cls?' '+it.cls:'')+(it.span?' span2':'');
+    b.innerHTML = `<span class="pkBtnLbl">${it.label}</span>`+(it.sub ? `<span class="pkBtnSub">${it.sub}</span>` : '');
+    if(it.disabled) b.disabled = true;
+    b.onclick = it.onClick;
+    if(it.hint) b.onmouseenter = ()=>{ if(BATTLE && !BATTLE.say) $('pkText').textContent = it.hint; };
+    if(it.hoverUid){
+      b.onmouseenter = ()=>{ const s = BATTLE.sprites[it.hoverUid]; if(s) s.classList.add('targeted'); };
+      b.onmouseleave = ()=>{ const s = BATTLE.sprites[it.hoverUid]; if(s) s.classList.remove('targeted'); };
+    }
+    m.appendChild(b);
+  });
+}
+function clearTargeted(){ Object.keys(BATTLE.sprites).forEach(k=>BATTLE.sprites[k].classList.remove('targeted')); }
 
 function battleNextRound(){
   const B = BATTLE.B;
   if(B.over){ battleFinish(); return; }
   const info = RPGCombat.beginRound(B);
+  $('battleTurnNum').textContent = B.round;
   BATTLE.pending = info.pending.slice();
-  renderBattle();
+  snapDisp(); renderBattle();
   battlePromptNext();
 }
 function battlePromptNext(){
@@ -1112,67 +1292,57 @@ function battlePromptNext(){
   showBattleMenu(BATTLE.pending[0]);
 }
 
-function menuButton(row, label, fn, o){
-  o = o || {};
-  const b = document.createElement('button');
-  b.className = 'btn' + (o.primary?' primary':'') + (o.danger?' danger':'');
-  b.textContent = label;
-  if(o.disabled) b.disabled = true;
-  if(o.title) b.title = o.title;
-  b.onclick = fn;
-  row.appendChild(b);
-  return b;
-}
-function resetMenu(title){
-  const m = $('battleMenu');
-  m.innerHTML = '';
-  const t = document.createElement('div'); t.className = 'bmTitle'; t.textContent = title; m.appendChild(t);
-  const row = document.createElement('div'); row.className = 'bmRow'; m.appendChild(row);
-  return row;
-}
 function showBattleMenu(uid){
   const B = BATTLE.B, u = RPGCombat.unit(B, uid), op = RPGCombat.options(B, u);
-  const row = resetMenu('Lượt của '+u.name);
-  menuButton(row, '⚔ Tấn công', ()=>pickTarget(u,'single',t=>commit(uid,{type:'attack',target:t})), {primary:true});
-  menuButton(row, '✦ Kỹ năng', ()=>showSkillMenu(uid));
   const ult = op.ultimate;
-  menuButton(row, '✧ '+ult.name+(ult.unlocked ? ' ('+u.rage+'/'+ult.rageMax+' Nộ)' : ' (mở ở Lv5)'),
-    ()=>castWithQte(uid,'ultimate',ult), {danger:true, disabled:!ult.ready, title:ult.desc});
-  menuButton(row, '🎒 Vật phẩm', ()=>showBattleItemMenu(uid), {disabled:!op.items.length});
-  menuButton(row, '🛡 Phòng thủ', ()=>commit(uid,{type:'defend'}));
+  pkPrompt(u.name+' sẽ làm gì?');
+  pkMenuSet('main', [
+    { label:'CHIẾN ĐẤU', hint:'Tấn công thường hoặc dùng kỹ năng.', onClick:()=>showFightMenu(uid) },
+    { label:'TÚI ĐỒ', hint:'Dùng vật phẩm trong túi.', disabled:!op.items.length, onClick:()=>showBagMenu(uid) },
+    { label:'PHÒNG THỦ', hint:'Giảm 50% sát thương nhận trong lượt này.', onClick:()=>commit(uid,{type:'defend'}) },
+    { label:'ULTIMATE', cls:'ult', sub:ult.rage+'/'+ult.rageMax+' Nộ', hint:ult.name+': '+ult.desc, disabled:!ult.ready,
+      onClick:()=>castWithQte(uid,'ultimate',ult) }
+  ]);
 }
-function showSkillMenu(uid){
+function showFightMenu(uid){
   const B = BATTLE.B, u = RPGCombat.unit(B, uid), op = RPGCombat.options(B, u);
-  const row = resetMenu('Kỹ năng — '+u.name);
+  pkPrompt('Chọn đòn đánh.');
+  const items = [{ label:'Tấn công', sub:'Thường · +'+RPG.CFG.RAGE_ON_ATTACK+' Nộ', hint:'Đòn đánh thường lên 1 mục tiêu.',
+                   onClick:()=>pickTarget(u,'single',t=>commit(uid,{type:'attack',target:t}),()=>showFightMenu(uid)) }];
   op.skills.forEach(s=>{
-    const label = '✦ '+s.name+(s.unlocked ? (s.cd>0 ? ' (hồi '+s.cd+')' : '') : ' (mở ở Lv'+s.lvl+')');
-    menuButton(row, label, ()=>castWithQte(uid,'skill',s), {disabled:!s.ready, title:s.desc});
+    items.push({ label:s.name,
+      sub: s.unlocked ? ((TARGET_LABEL[s.target]||'')+(s.cd>0?' · hồi '+s.cd:'')) : 'Mở ở Lv'+s.lvl,
+      hint:s.desc, disabled:!s.ready,
+      onClick:()=>castWithQte(uid,'skill',s) });
   });
-  menuButton(row, '◀ Quay lại', ()=>showBattleMenu(uid));
+  items.push({ label:'◀ Quay lại', span:true, onClick:()=>showBattleMenu(uid) });
+  pkMenuSet('fight', items);
 }
-function showBattleItemMenu(uid){
+function showBagMenu(uid){
   const B = BATTLE.B, u = RPGCombat.unit(B, uid), op = RPGCombat.options(B, u);
-  const row = resetMenu('Vật phẩm — '+u.name);
-  op.items.forEach(it=>{
-    menuButton(row, it.icon+' '+it.name+' x'+it.count, ()=>{
-      pickTarget(u, it.target==='enemy'?'single':'none', t=>commit(uid,{type:'item',id:it.id,target:t}));
-    }, {title:it.desc});
-  });
-  menuButton(row, '◀ Quay lại', ()=>showBattleMenu(uid));
+  pkPrompt('Dùng vật phẩm nào?');
+  const items = op.items.map(it=>({ label:it.icon+' '+it.name, sub:'x'+it.count, hint:it.desc,
+    onClick:()=>pickTarget(u, it.target==='enemy'?'single':'none', t=>commit(uid,{type:'item',id:it.id,target:t}), ()=>showBagMenu(uid)) }));
+  items.push({ label:'◀ Quay lại', span:true, onClick:()=>showBattleMenu(uid) });
+  pkMenuSet('bag', items);
 }
-function pickTarget(u, kind, cb){
+function pickTarget(u, kind, cb, back){
   if(kind!=='single'){ cb(null); return; }
   const legal = RPGCombat.legalTargets(BATTLE.B, u, false);
   if(legal.length<=1){ cb(legal[0] ? legal[0].uid : null); return; }
-  const row = resetMenu('Chọn mục tiêu');
-  legal.forEach(t=> menuButton(row, t.name+' ('+t.hp+'/'+t.maxHp+')', ()=>cb(t.uid)));
-  menuButton(row, '◀ Quay lại', ()=>showBattleMenu(u.uid));
+  pkPrompt('Chọn mục tiêu.');
+  const items = legal.map(t=>({ label:t.name, sub:'HP '+t.hp+'/'+t.maxHp, hoverUid:t.uid,
+    onClick:()=>{ clearTargeted(); cb(t.uid); } }));
+  items.push({ label:'◀ Quay lại', span:true, onClick:()=>{ clearTargeted(); back ? back() : showBattleMenu(u.uid); } });
+  pkMenuSet('target', items);
 }
+
 /* Skill/Ultimate: chạy QTE mũi tên rồi mới nộp lệnh (quality = độ chính xác 0..1) */
 function castWithQte(uid, type, def){
   const u = RPGCombat.unit(BATTLE.B, uid);
   pickTarget(u, def.target==='single' ? 'single' : 'none', tgt=>{
-    $('battleMenu').innerHTML = '';
+    $('pkMenu').innerHTML = '';
+    pkPrompt(u.name+' tập trung niệm chiêu...');
     const count = (QTE_COUNT[u.f.classId] || 3) + (type==='ultimate' ? 2 : 0);
     runArrowQte({
       mode:'attack',
@@ -1181,13 +1351,12 @@ function castWithQte(uid, type, def){
       count, windowMs: 1500-(count-3)*60, feintChance:0, parryWidth:0.5, shake:0, drift:0,
       onDone:(r)=>commit(uid, {type, id:def.id, target:tgt, quality:r.accuracy})
     });
-  });
+  }, ()=>showFightMenu(uid));
 }
 function commit(uid, action){
   const r = RPGCombat.submit(BATTLE.B, uid, action);
   if(!r.ok){
-    addBattleLog('Không thể thực hiện ('+r.reason+').', 'warn');
-    showBattleMenu(uid);
+    pkSay('Không thể thực hiện ('+r.reason+').', ()=>showBattleMenu(uid));
     return;
   }
   BATTLE.pending.shift();
@@ -1199,6 +1368,7 @@ function runDefendQte(req, cb){
   const B = BATTLE.B, src = RPGCombat.unit(B, req.src);
   const complexity = clamp(1 + Math.floor(Math.random()*3) + Math.floor(B.round/4), 1, 5);
   const difficulty = clamp((B.round-1)*0.04 + (complexity-1)*0.08, 0, 1);
+  $('pkMenu').innerHTML = '';
   runArrowQte({
     mode:'defend',
     title:'⚠ '+src.name+' RA ĐÒN — '+complexity+' MŨI TÊN',
@@ -1208,32 +1378,38 @@ function runDefendQte(req, cb){
     drift: difficulty>0.35 ? (difficulty-0.35)*0.5 : 0,
     onDone:(r)=>{
       const mult = clamp(1 - (r.perfect + 0.5*r.blocked)/r.total, 0, 1);
-      addBattleLog('Phòng thủ: '+r.perfect+' parry, '+r.blocked+' đỡ, '+r.hits+' trúng → nhận '+Math.round(mult*100)+'% sát thương.', mult>0.5?'warn':'good');
-      cb(mult);
+      pkSay('Phòng thủ: '+r.perfect+' parry, '+r.blocked+' đỡ, '+r.hits+' trúng → nhận '+Math.round(mult*100)+'% sát thương.', ()=>cb(mult));
     }
   });
 }
 
 function battleResolve(){
-  $('battleMenu').innerHTML = '';
+  $('pkMenu').innerHTML = '';
   BATTLE.gen = RPGCombat.roundGen(BATTLE.B);
   battleStep();
 }
 function battleStep(val){
   const r = BATTLE.gen.next(val);
   if(r.done){
-    renderBattle();
-    setTimeout(battleNextRound, 450);
+    snapDisp(); renderBattle();
+    setTimeout(battleNextRound, BATTLE.fast ? 60 : 250);
     return;
   }
   const ev = r.value;
-  if(ev.type==='dodgeRequest'){
-    runDefendQte(ev, mult=>battleStep(mult));
-    return;
-  }
-  addBattleLog(ev.msg, ev.cls);
-  renderBattle();
-  setTimeout(()=>battleStep(), ev.type==='round' ? 250 : 480);
+  if(ev.type==='dodgeRequest'){ runDefendQte(ev, mult=>battleStep(mult)); return; }
+  if(ev.type==='round'){ $('battleTurnNum').textContent = ev.round; battleStep(); return; }
+  applyEventFx(ev);
+  pkSay(ev.msg, ()=>battleStep());
+}
+
+/* ---- Hết trận: tổng kết, HP được lưu, tốn 1 giờ đồng hồ game ---- */
+function spendTime(minutes, label){
+  const from = S.gameMinutes;
+  S.gameMinutes += minutes;
+  addLog('⏳ '+label+' ('+formatClock(from)+' → '+formatClock(S.gameMinutes)+').', '');
+  advanceWorld(minutes);
+  if(S.running) S.invulnUntil = Math.max(S.invulnUntil, S.gameMinutes + 10); // không bị TIU bắt ngay sau khi xong
+  markActionDirty();
 }
 
 function battleFinish(){
@@ -1244,6 +1420,7 @@ function battleFinish(){
   const pointsGain = won ? POINTS_PER_WIN*opts.enemyIds.length : 0;
   S.points += pointsGain;
   BATTLE.closed = true;
+  clearTimeout(BATTLE.sayTimer);
   $('battleOverlay').classList.add('hidden');
 
   const me = RPG.player();
@@ -1259,7 +1436,8 @@ function battleFinish(){
   });
   sum.allyExp.forEach(a=>{ if(a.exp.gained) html += `<p style="font-size:12px;color:var(--text-dim);">${RPG.get(a.id).name}: +${a.exp.gained} EXP</p>`; });
   if(pointsGain) html += `<p>+${pointsGain} điểm mua đồ.</p>`;
-  html += `<p style="color:var(--text-dim);font-size:12px;">ĐRL hiện tại: <b>${me.drl}</b></p>`;
+  html += `<p style="color:var(--text-dim);font-size:12px;">ĐRL: <b>${me.drl}</b> · HP còn lại: <b>${me.hp}/${me.maxHp}</b> (được giữ cho trận sau)</p>`;
+  if(!opts.final) html += `<p style="color:var(--text-dim);font-size:12px;">⏳ Trận đấu kéo dài ${RPG.CFG.BATTLE_MINUTES} phút (${formatClock(S.gameMinutes)} → ${formatClock(S.gameMinutes+RPG.CFG.BATTLE_MINUTES)}).</p>`;
 
   const afterLines = opts.final ? null : (won ? DLG.AFTER_WIN : DLG.AFTER_LOSE)[opts.enemyIds[0]];
   showModal(won ? '★ CHIẾN THẮNG!' : '✖ THẤT BẠI', html, [{ label:'Tiếp tục', primary:true, onClick:()=>{
@@ -1268,11 +1446,13 @@ function battleFinish(){
       if(opts.final){ endFinal(won); return; }
       BATTLE = null;
       S.paused = false; S.lastTick = performance.now();
-      markActionDirty(); refreshAll();
+      spendTime(RPG.CFG.BATTLE_MINUTES, 'Trận đấu kéo dài '+RPG.CFG.BATTLE_MINUTES+' phút');
+      if(S.running) refreshAll();
     };
     if(afterLines) playDLG(afterLines, proceed); else proceed();
   }}]);
 }
+
 
 /* ============== KẾT THÚC ĐÊM / CHƯƠNG / GAME ============== */
 function showGameOver(title, sub, retryLabel){
@@ -1355,6 +1535,7 @@ function refreshAll(){
 function beginNight(chapter, night, opts){
   opts = opts || {};
   S = freshState(night, chapter, { points: opts.points });
+  if(RPG.getState()) RPG.healAll();   // nghỉ ngơi qua ngày: HP hồi đầy khi bắt đầu đêm mới
   addLog('Ca đêm '+nightName(chapter,night)+' bắt đầu lúc '+formatClock(0)+'. Bạn xuất phát tại '+ROOM_DEF[S.playerRoom].name+'.', '');
   buildMap();
   refreshAll();
@@ -1418,7 +1599,7 @@ function showClassResult(name, classId){
   const skills = c.skills.map(s=>`<li>Lv${s.lvl} — <b>${s.name}</b>: ${s.desc}</li>`).join('');
   showModal('CLASS CỦA BẠN: '+c.icon+' '+c.name.toUpperCase(),
     `<p style="font-size:12px;">HP ${c.base.hp} · ATK ${c.base.atk} · DEF ${c.base.def} · SPD ${c.base.spd}</p>
-     <ul style="font-size:12px;line-height:1.5;padding-left:18px;">${skills}<li>Ultimate (Lv5) — <b>${c.ultimate.name}</b>: ${c.ultimate.desc}</li></ul>`,
+     <ul style="font-size:12px;line-height:1.5;padding-left:18px;">${skills}<li>Ultimate (dùng được từ Lv1, cần đầy Nộ) — <b>${c.ultimate.name}</b>: ${c.ultimate.desc}</li></ul>`,
     [{ label:'BẮT ĐẦU', primary:true, onClick:()=>{
         closeModal(true);
         RPG.init({ playerName:name, playerClass:classId });
