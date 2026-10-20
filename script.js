@@ -323,6 +323,15 @@ function playVN(lines, onDone, ctx){
       hintEl.textContent = 'Bấm vào hộp thoại để tiếp tục';
     }
   }
+  /* Phần đã gõ hiện bình thường, phần còn lại vẫn giữ chỗ nhưng ẩn → chữ chạy từ trái sang phải */
+  function setTyped(n){
+    txtEl.textContent = '';
+    txtEl.appendChild(document.createTextNode(fullText.slice(0, n)));
+    const ghost = document.createElement('span');
+    ghost.className = 'vnGhost';
+    ghost.textContent = fullText.slice(n);
+    txtEl.appendChild(ghost);
+  }
   function showLine(){
     const l = queue[i];
     applyFx(l.fx, ctx);
@@ -336,11 +345,11 @@ function playVN(lines, onDone, ctx){
     if(!fullText){ reveal(); return; }
     let n = 0;
     typing = true;
-    txtEl.textContent = '';
+    setTyped(0);
     typingTimer = setInterval(()=>{
       n += 2;
       if(n >= fullText.length) reveal();
-      else txtEl.textContent = fullText.slice(0, n);
+      else setTyped(n);
     }, 22);
   }
   function advance(){
@@ -3114,7 +3123,6 @@ function startTravel(dest){
   bg.style.background = img ? '' : (ROOM_FALLBACK_GRADIENT[dest] || '#111');
   if(img) bg.style.backgroundImage = `url('${img}')`;
   el.querySelector('.tlName').textContent = ROOM_DEF[dest].name;
-  // khởi động lại animation thanh tiến trình mỗi lần
   el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
   playTravelSfx();
 

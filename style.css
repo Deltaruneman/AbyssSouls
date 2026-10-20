@@ -469,6 +469,7 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
 #vnBox{position:relative;width:min(860px,94vw);margin-bottom:10px;background:linear-gradient(180deg, rgba(14,12,10,0.80), rgba(14,12,10,0.94));border-top:1px solid rgba(201,150,47,0.55);border-bottom:1px solid rgba(201,150,47,0.55);border-radius:4px;padding:16px 28px 14px;box-shadow:0 0 40px rgba(0,0,0,0.8);pointer-events:auto;cursor:pointer;text-align:center;}
 #vnSpeaker{display:inline-block;font-family:var(--font-disp);font-weight:900;color:var(--amber);font-size:19px;margin-bottom:10px;letter-spacing:2px;text-transform:uppercase;text-shadow:0 0 10px rgba(201,150,47,0.45);}
 #vnText{font-size:15px;line-height:1.75;min-height:62px;color:var(--text);text-align:center;text-shadow:0 1px 3px rgba(0,0,0,0.8);}
+#vnText .vnGhost{visibility:hidden;}
 #vnText.vnNarration{font-style:italic;color:var(--text-dim);}
 #vnFooter{text-align:right;margin-top:8px;min-height:30px;}
 #vnHint{font-size:10px;color:var(--text-dim);float:left;margin-top:12px;}

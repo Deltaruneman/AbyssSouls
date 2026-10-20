@@ -28,20 +28,21 @@ window.DLG = {
 
   /* ======================= CHƯƠNG 1 — MỞ ĐẦU ======================= */
   INTRO_CH1: [
-    say(LT,"Thông báo: sinh viên năm cuối chưa đủ Điểm Rèn Luyện (ĐRL) sẽ KHÔNG được xét tốt nghiệp."),
-    say(ME,"Mình thiếu cả chục điểm... và cả nhóm này cũng thế. Chỉ còn đúng một cách."),
-    say(LT,"Do UIT tăng học phí lên và ngân sách của trường đã được nâng lên nên trường sẽ tổ chức một giải đấu Battle Royale được gọi là The TIU."),
-    say(LT,"5 Người được chọn chính là 5 Đại Trụ UIT, đã học ở đây được 8 năm rồi."),
-    say(LT,"Thí sinh đầu tiên: Wibu Việt Nhật, hướng nội và sợ giao tiếp xã hội, không share bất kì bài của đoàn khoa nào."),
+    nar("(23:00. Cổng trường UIT đã khóa. Loa phát thanh ngoài sân vang lên, khàn khàn như đã chờ giây phút này từ rất lâu.)"),
+    say(LT,"Alo, alo. Thông báo đến toàn thể sinh viên năm cuối: hồ sơ xét tốt nghiệp sẽ bị treo đối với những ai chưa đủ Điểm Rèn Luyện."),
+    say(ME,"Thiếu mười mấy điểm. Mình nhớ rõ từng buổi tình nguyện đã lỡ... và những người đang đứng quanh mình cũng vậy."),
+    say(LT,"Để giải quyết tận gốc, Ban Giám hiệu quyết định biến việc tích điểm thành một cuộc thi. Học phí tăng thì ngân sách cũng tăng, nên đêm nay sẽ thật hoành tráng. Tên chương trình: The TIU."),
+    say(LT,"Năm thí sinh được chọn là năm sinh viên học lâu nhất khóa. Tám năm. Trường gọi các bạn là 'Năm Đại Trụ' — trụ lại lâu đến mức bảo vệ cũng thuộc mặt."),
+    say(LT,"Thí sinh thứ nhất: Việt Nhật, mọi người gọi là Wibu. Tám năm, chưa một lần bấm share bài của đoàn khoa."),
     nar("(Ở góc hội trường, một cậu trai ôm chặt balo vào ngực, cúi gằm mặt như muốn biến mất.)"),
-    say(LT,"Thí sinh tiếp theo là: Chang Linh Ngu Lam, kẻ đã cống hiến cả cuộc đời mình cho lmht nước nhà đến mức không cày nổi đrl."),
+    say(LT,"Thí sinh thứ hai: Chang Linh Ngu Lam. Dành cả thanh xuân cho Liên Minh, đến lúc cày điểm rèn luyện thì hết kiên nhẫn."),
     nar("(Hàng ghế sau, một người đang ngủ gục, điện thoại vẫn sáng màn hình tìm trận.)"),
-    say(LT,"Thí sinh kế tiếp là: Trọng, người Hoa Hòe, GPA cao nhất nhóm, và cũng là người duy nhất không có ai ngồi cạnh."),
+    say(LT,"Thí sinh thứ ba: Trọng. GPA cao nhất nhóm, và cũng là người ăn trưa một mình suốt tám năm."),
     nar("(Một chàng trai sơ mi phẳng phiu ngồi thẳng lưng, cằm hơi hếch lên — nhưng ngón tay cứ gõ lên đầu gối không ngừng.)"),
-    say(LT,"Thí sinh kế tiếp là: Toby, nam sinh ngoại quốc hay cúp học và 8 năm qua không hề có bạn bè để tag nhau share bài trường."),
+    say(LT,"Thí sinh thứ tư: Toby, sinh viên ngoại quốc. Số tiết đã cúp không đếm xuể, và ngần ấy năm chưa có ai để tag chung một bài share."),
     nar("(Dưới chân cậu ta là một chú chó lông xù, lén trốn bảo vệ vào tận đây.)"),
     say(D,"Gâu."),
-    say(LT,"Thí sinh cuối cùng là...Bạn, chính bạn đấy, không đủ điểm rèn luyện để ra khỏi trường dù trường drop điểm liên tục."),
+    say(LT,"Và thí sinh thứ năm... chính là bạn. Tên bạn nằm ngay đầu danh sách những người còn thiếu điểm."),
     ask(ME,"(Cả hội trường quay lại nhìn mình. Tay mình đang run... hay đang siết chặt?)",[
       opt("Mình chỉ cần tốt nghiệp. Ai cản đường, mình đánh.",{set:{mind:'cold'}},[
         say(ME,"Tình nghĩa không đóng được học phí. Điểm rèn luyện thì có."),
@@ -53,22 +54,22 @@ window.DLG = {
         say(ME,"Mình chưa biết mình sẽ làm gì cả. Chưa biết nữa."),
         nar("(Và có lẽ đó là lý do mình vẫn còn đứng đây.)")])
     ]),
-    say(TIU,"Mỗi người bắt đầu với 40 ĐRL. Thắng một trận thì cướp một phần tư ĐRL của đối thủ, còn thua thì bị trừ một nửa ĐRL của mình."),
-    say(TIU,"Luật chơi rất đơn giản."),
-    say(TIU,"Hết mỗi đêm, người có ĐRL thấp nhất sẽ bị loại. Và nhớ tránh The TIU nhất có thể."),
-    say(TIU,"Mọi người có thể chiến đấu với nhau để giành lấy điểm."),
+    say(TIU,"Luật rất ngắn gọn. Mỗi người bước vào với 40 ĐRL."),
+    say(TIU,"Thắng một trận, bạn lấy một phần tư ĐRL của đối thủ. Thua, bạn mất một nửa ĐRL của chính mình."),
+    say(TIU,"Hết mỗi đêm, người có ĐRL thấp nhất bị gạch tên khỏi danh sách tốt nghiệp. Và nhớ tránh mặt The TIU — chúng tôi cũng đang đi tuần."),
+    say(TIU,"Còn lại thì tùy các bạn. Hợp tác, đối đầu, hay cả hai."),
     say(W,"...Tôi muốn về nhà. Tôi muốn về nhà thật rồi."),
     say(L,"Đánh nhau hả? Ngươi chờ ta xong ván này đã... à, ta đang AFK."),
     say(T,"Hừ. Vớ vẩn. Tôi sẽ thắng, rồi gọi về báo ba mẹ — như mọi lần."),
     say(B,"Mình... mình có thể mang theo con chó không?"),
     say(D,"Gâu!"),
-    say(TIU,"Chỉ có kẻ mạnh nhất mới có thể tốt nghiệp loại Giỏi."),
-    say(TIU,"Bây giờ, The TIU chính thức bắt đầu..")
+    say(TIU,"Cuối cùng, chỉ một cái tên được ghi vào danh sách tốt nghiệp loại Giỏi. Chúc các bạn may mắn."),
+    say(TIU,"Ca đêm bắt đầu. Ngay bây giờ.")
   ],
 
   INTRO_CH1_NIGHT: {
     2: [
-      say(TIU,"Đêm thứ hai. Còn lại bốn người. Phải giữ ĐRL cao hơn ít nhất một đối thủ."),
+      say(TIU,"Rạng sáng. Bảng ĐRL vừa cập nhật: còn bốn cái tên. Hãy giữ điểm của bạn cao hơn ít nhất một người."),
       nar("(Bảng ĐRL treo ở sảnh vừa bị gạch đi một cái tên. Tối qua họ còn thở cùng một bầu không khí với mình.)"),
       ask(ME,"Một chiếc ghế trống. Một cái tên bị xóa. Mình nên nghĩ gì về chuyện này?",[
         opt("Tập trung. Mềm lòng là mất suất.",{set:{mind:'cold'}},[
@@ -80,7 +81,7 @@ window.DLG = {
       ])
     ],
     3: [
-      say(TIU,"Đêm cuối của chương này. Ba người còn lại — mà chỉ hai người được đi tiếp."),
+      say(TIU,"Đêm thứ ba. Ba cái tên, hai suất đi tiếp. Người thấp điểm nhất... các bạn biết quy trình rồi đấy."),
       say(ME,"Lạnh lùng như một phép tính: ba trừ một bằng hai. Nhưng con số ấy có tên, có mặt, có giọng nói.",{when:'mind=cold'}),
       say(ME,"Ba người, hai suất. Hóa ra tình bạn cũng có thể bị đo bằng con số.",{when:'mind=warm'}),
       say(ME,"Chỉ còn một đêm nữa thôi. Mình vẫn chưa biết mình sẽ trở thành người như thế nào.",{when:'mind=unsure'}),
@@ -93,9 +94,9 @@ window.DLG = {
 
   /* ======================= CHƯƠNG 2 ======================= */
   INTRO_CH2: [
-    say(LT,"Chỉ còn hai người đứng vững. Đêm nay, các bạn được chuẩn bị. Đêm mai, một trận quyết định."),
-    say(TIU,"The TIU đã đi ngủ. Giờ là lúc đi quanh trường, thu gom mọi thứ có thể dùng được."),
-    say(TIU,"Nếu tìm thấy đối thủ trước... mình có thể ra tay trước, cướp luôn đồ của họ."),
+    say(LT,"Hai người còn lại. Đêm nay chưa ai bị loại — chúng tôi cho các bạn thời gian chuẩn bị. Đêm mai sẽ là trận chung kết."),
+    say(TIU,"The TIU đã quay về phòng bảo vệ. Sân trường thuộc về các bạn. Hãy lục tìm bất cứ thứ gì còn sót lại trong khuôn viên."),
+    say(TIU,"Nếu chạm mặt đối thủ trước giờ chung kết, cứ ra tay và lấy đồ của họ. Không ai cấm cả."),
     ask(ME,"Sân trường vắng lặng. Chỉ còn tiếng gió lùa qua các dãy nhà. Mình sẽ chuẩn bị theo cách nào?",[
       opt("Lục soát thật kỹ. Càng nhiều đồ càng tốt.",null,[
         say(ME,"Từng hành lang, từng phòng học. Mình sẽ không bỏ sót thứ gì dùng được.")]),
@@ -114,7 +115,7 @@ window.DLG = {
 
   BETRAY_BY: {
     WIBU: [
-      say(TIU,"Chỉ có một suất tốt nghiệp loại Giỏi. Dù chúng ta từng sát cánh... thì đến đây là hết."),
+      say(TIU,"Danh sách chỉ còn một chỗ cho 'tốt nghiệp loại Giỏi'. Không có chỗ cho đồng đội. Tình nghĩa, xin dừng tại đây."),
       nar("(Wibu đứng ở cuối hành lang, balo ôm chặt trước ngực. Cậu ta không dám nhìn thẳng mình.)"),
       say(W,"Cậu hứa là sẽ không bỏ tôi mà.",{when:'promised_WIBU'}),
       say(W,"Cậu đã nói thật với tôi. Là người duy nhất làm vậy. Nên... tôi cũng sẽ nói thật.",{when:'honest_WIBU'}),
@@ -131,7 +132,7 @@ window.DLG = {
       ])
     ],
     LINH: [
-      say(TIU,"Chỉ có một suất tốt nghiệp loại Giỏi. Dù chúng ta từng sát cánh... thì đến đây là hết."),
+      say(TIU,"Danh sách chỉ còn một chỗ cho 'tốt nghiệp loại Giỏi'. Không có chỗ cho đồng đội. Tình nghĩa, xin dừng tại đây."),
       nar("(Linh đứng đó, không còn ngáp, không còn uể oải. Lần đầu tiên, ánh mắt cậu ta tỉnh táo hoàn toàn.)"),
       say(L,"Ngươi hứa là không bỏ lại ta. Ta nhớ đấy.",{when:'promised_LINH'}),
       say(L,"Ngươi không hứa suông. Ta quý điều đó, dù nó chẳng làm đoạn này dễ hơn.",{when:'honest_LINH'}),
@@ -147,7 +148,7 @@ window.DLG = {
       ])
     ],
     TRONG: [
-      say(TIU,"Chỉ có một suất tốt nghiệp loại Giỏi. Dù chúng ta từng sát cánh... thì đến đây là hết."),
+      say(TIU,"Danh sách chỉ còn một chỗ cho 'tốt nghiệp loại Giỏi'. Không có chỗ cho đồng đội. Tình nghĩa, xin dừng tại đây."),
       nar("(Trọng đứng thẳng, nhưng đôi vai hơi run. Chiếc áo sơ mi phẳng phiu giờ đã lấm bụi.)"),
       say(T,"Cậu hứa với tôi. Tôi nhớ rõ từng chữ.",{when:'promised_TRONG'}),
       say(T,"Cậu không hứa. Nhưng cậu đã nghe tôi nói hết. Đó là điều tôi chưa từng có.",{when:'honest_TRONG'}),
@@ -163,7 +164,7 @@ window.DLG = {
       ])
     ],
     TOBY: [
-      say(TIU,"Chỉ có một suất tốt nghiệp loại Giỏi. Dù chúng ta từng sát cánh... thì đến đây là hết."),
+      say(TIU,"Danh sách chỉ còn một chỗ cho 'tốt nghiệp loại Giỏi'. Không có chỗ cho đồng đội. Tình nghĩa, xin dừng tại đây."),
       nar("(Toby ôm chú chó vào lòng, như đang tạm biệt nó trước. Chú chó rên khe khẽ.)"),
       say(B,"Cậu đã hứa. Mình tin cậu. Mình chưa từng tin ai nhanh như vậy.",{when:'promised_TOBY'}),
       say(B,"Cậu nói thật với mình. Cảm ơn nhé, điều đó rất quý.",{when:'honest_TOBY'}),
@@ -186,7 +187,7 @@ window.DLG = {
   /* Đối thủ cuối cùng — mỗi người một cảnh. {FOE} = tên đối thủ */
   FINAL_BY: {
     WIBU: [
-      say(LT,"Đêm quyết định. Hai người, một suất. Mời vào sân đấu."),
+      say(LT,"Đêm chung kết. Hai cái tên, một suất duy nhất. Xin mời hai bạn vào sân."),
       say(W,"Cuối cùng cũng là cậu. Ở thế giới kia, tôi luôn thắng trận cuối. Hôm nay thử xem ở thế giới này có được không."),
       ask(W,"Tôi không chạy nữa đâu. Cậu thì sao?",[
         opt("Mình cũng vậy. Đến đi, Wibu.",null,[say(W,"Việt Nhật. Gọi tên tôi một lần thôi, trước khi bắt đầu.")]),
@@ -194,7 +195,7 @@ window.DLG = {
       ])
     ],
     LINH: [
-      say(LT,"Đêm quyết định. Hai người, một suất. Mời vào sân đấu."),
+      say(LT,"Đêm chung kết. Hai cái tên, một suất duy nhất. Xin mời hai bạn vào sân."),
       say(L,"Đây là trận chung kết. Ta chưa bao giờ vào được chung kết thật sự, kể cả trong game."),
       ask(L,"Ngươi biết ta nghĩ gì không? Thắng hay thua, ta cũng muốn đánh thật hết sức.",[
         opt("Đánh thật hết sức nhé, Linh.",null,[say(L,"Ê... ngươi gọi tên thật của ta. Được. Ván này tính!")]),
@@ -202,7 +203,7 @@ window.DLG = {
       ])
     ],
     TRONG: [
-      say(LT,"Đêm quyết định. Hai người, một suất. Mời vào sân đấu."),
+      say(LT,"Đêm chung kết. Hai cái tên, một suất duy nhất. Xin mời hai bạn vào sân."),
       say(T,"Tôi biết sớm muộn cũng là cậu. Cả trường này chỉ có cậu dám nhìn thẳng vào mặt tôi."),
       ask(T,"Đừng nương tay. Nếu thua mà còn bị thương hại thì tôi chịu không nổi.",[
         opt("Mình sẽ không nương tay. Cậu xứng đáng được đối xử như một đối thủ thật sự.",null,[say(T,"Hà. Tốt. Đây mới là điều tôi muốn nghe.")]),
@@ -210,7 +211,7 @@ window.DLG = {
       ])
     ],
     TOBY: [
-      say(LT,"Đêm quyết định. Hai người, một suất. Mời vào sân đấu."),
+      say(LT,"Đêm chung kết. Hai cái tên, một suất duy nhất. Xin mời hai bạn vào sân."),
       say(B,"Là cậu à. Mình đoán đúng rồi. Con chó nhà mình cũng đoán đúng."),
       say(D,"Gâu."),
       ask(B,"Dù ai thắng, mình vẫn muốn nhớ trận này. Đây là lần đầu tiên mình thấy mình thuộc về một nơi nào đó.",[
@@ -221,7 +222,7 @@ window.DLG = {
   },
 
   WIN_FINAL: [
-    say(LT,"Người cuối cùng trụ lại: {P}. Chúc mừng bạn đã đủ ĐRL để tốt nghiệp loại Giỏi!"),
+    say(LT,"Kết quả cuối cùng: {P} giữ lại nhiều ĐRL nhất. Chúc mừng bạn đã đủ điều kiện tốt nghiệp loại Giỏi!"),
     nar("(Tiếng vỗ tay vang lên đều đều từ khán đài trống. Ngoài kia, trời đã sáng hẳn.)"),
     say(ME,"Mình đã thắng. Và mình đã hiểu rằng, thắng cũng có giá của nó.",{when:'mind=cold'}),
     say(ME,"Mình thắng, nhưng chẳng có ai để chia sẻ niềm vui. Có lẽ đây là lý do họ gọi chúng mình là 'Đại Trụ' — vì trụ lại một mình.",{when:'mind=cold'}),
@@ -229,7 +230,7 @@ window.DLG = {
     say(ME,"Mình tưởng tượng một ngày nào đó cả nhóm cùng ngồi ở căn tin UIT, không còn ĐRL, không còn The TIU.",{when:'mind=warm'}),
     say(ME,"Mình đã thắng, theo cách nào đó. Chỉ là chưa biết mình sẽ trở thành ai sau ngày hôm nay.",{when:'mind=unsure'}),
     nar("(Có thể UIT sẽ ghi lại cái tên này thật long trọng. Nhưng cũng có thể, chỉ vài người nhớ rằng có những sinh viên từng đứng ở đó, cùng nhau.)"),
-    say(TIU,"Giải đấu kết thúc. Hẹn gặp lại ở lễ tốt nghiệp.")
+    say(TIU,"Chương trình The TIU kết thúc. Mời bạn qua phòng Công tác sinh viên nhận giấy xác nhận.")
   ],
 
 
@@ -239,7 +240,7 @@ window.DLG = {
     WIBU: [
       /* Lần 1 — gặp gỡ */
       [
-        say(W,"Hả? Ai đó? Đừng có động vào bộ figure trong balo của tôi nhé!"),
+        say(W,"Ư... ai đó? Tôi không có gì đáng giá đâu — chỉ có mấy mô hình thôi, đừng lấy!"),
         nar("(Cậu ta ôm chặt balo vào ngực, mắt nhìn xuống sàn như thể đang chờ ai đó cười mình.)"),
         ask(W,"Cậu... cậu cũng là thí sinh à? Tôi không muốn gây sự đâu.",[
           opt("Mình không có ý xấu. Chỉ muốn chào một tiếng thôi.",{trust:1,set:{w_first:'kind'}},[
@@ -314,7 +315,7 @@ window.DLG = {
       /* Lần 1 — gặp gỡ */
       [
         nar("(Cậu ta nằm dài trên ghế đá, mũ che mặt, điện thoại sáng rực trong tay: đang xếp hàng tìm trận.)"),
-        say(L,"Ta là Quỷ Vương Bất Tử... à khoan, cho ta ngủ thêm năm phút."),
+        say(L,"Còn tám phút nữa là vào trận... cho ta chợp mắt đã. Ta là Quỷ Vương Bất Tử, đừng đánh thức."),
         ask(L,"Ngươi là ai? Nếu không phải tướng địch thì đừng làm phiền, ta đang chờ hàng đợi.",[
           opt("Mình là thí sinh, giống cậu. Cậu chơi game đến mấy giờ rồi?",{trust:1},[
             say(L,"Mấy giờ à? Hừm... bốn giờ sáng. Hôm qua. Và hôm kia nữa. Ngày ta không nhớ nổi."),
@@ -382,7 +383,7 @@ window.DLG = {
     TRONG: [
       /* Lần 1 — gặp gỡ */
       [
-        say(T,"Chào, tôi là Trọng — Người Hoa Hòe. Nhìn đây, phong cách là tất cả!"),
+        say(T,"Trọng. Nhớ cho kỹ — phong cách là thứ duy nhất không ai lấy được của tôi."),
         nar("(Áo sơ mi ủi phẳng không một nếp nhăn, đồng hồ sáng loáng. Nhưng tay cậu ta không biết để đâu cho yên.)"),
         ask(T,"GPA 3.7, thành viên CLB, học bổng hai kỳ liền. Cậu thì sao? Chắc không so được đâu nhỉ?",[
           opt("Ấn tượng đấy. Cậu hẳn đã rất cố gắng.",{trust:1,set:{t_first:'praise'}},[
@@ -454,7 +455,7 @@ window.DLG = {
     TOBY: [
       /* Lần 1 — gặp gỡ */
       [
-        say(B,"Hi! Mình là Toby, sinh viên trao đổi. Xin lỗi, con chó này không chịu rời mình nửa bước."),
+        say(B,"Hi... mình là Toby, từ xa đến đây học. Xin lỗi nhé, con chó này đi đâu cũng bám theo mình."),
         say(D,"Gâu!"),
         nar("(Mấy sinh viên đi ngang tự động tránh sang bên kia hành lang. Toby vờ như không nhìn thấy.)"),
         ask(B,"Cậu... không ngại nói chuyện với mình à? Mọi người thường hay đi chỗ khác.",[
@@ -672,40 +673,40 @@ window.DLG = {
   CHALLENGE: {
     WIBU:  [
       say(W,"Cậu hứa là sẽ không bỏ tôi mà...",{when:'promised_WIBU'}),
-      say(W,"Muốn đấu hả? Được thôi, nhưng đừng khóc khi thua nhé!")
+      say(W,"Cậu thật sự muốn đấu? ...Được. Lần này tôi sẽ không chạy.")
     ],
     LINH:  [
       say(L,"Ngươi đã hứa... Thôi, ta không trách. Quỷ Vương không trách.",{when:'promised_LINH'}),
-      say(L,"Ngươi dám đánh thức Quỷ Vương? Chuẩn bị đi!")
+      say(L,"Hàng đợi tìm xong rồi. Ván này, Quỷ Vương chiến thật.")
     ],
     TRONG: [
       say(T,"Cậu hứa với tôi, nhớ không? ...Không sao. Tôi sẽ thắng thật phong cách.",{when:'promised_TRONG'}),
-      say(T,"Được thôi. Nhưng tôi sẽ thắng thật phong cách.")
+      say(T,"Cậu chọn đúng đối thủ rồi đấy. Tôi sẽ thắng, và thắng thật đẹp.")
     ],
     TOBY:  [
       say(B,"Cậu đã hứa mà... Nhưng mình hiểu. Mình cũng cần điểm.",{when:'promised_TOBY'}),
-      say(B,"Sorry, nhưng mình cần điểm! Ready... gâu!")
+      say(B,"Sorry trước nhé. Mình cũng cần điểm lắm. Ready? ...Gâu!")
     ]
   },
 
   /* Lời nhận lời vào đội */
   RECRUIT: {
     WIBU:  [
-      say(W,"Vào đội à? Được, nhưng mọi quyết định chiến thuật phải nghe tôi... đùa thôi."),
+      say(W,"Vào đội của cậu? ...Cậu chắc không? Tôi nói chuyện không giỏi đâu. Nhưng ừ. Tôi vào."),
       nar("(Cậu ta cười, một nụ cười hiếm hoi mà mình biết mình sẽ nhớ.)"),
       say(W,"Cảm ơn vì mời tôi. Lần đầu tiên có ai mời tôi vào nhóm.")
     ],
     LINH:  [
-      say(L,"Quỷ Vương gia nhập. Nhớ báo ta khi cần đánh nhau."),
+      say(L,"Được. Quỷ Vương gia nhập đội. Cần đánh thì gọi, cần ngủ thì... cũng đừng gọi."),
       say(L,"...Và nếu ngươi cần ai đó trò chuyện lúc ba giờ sáng, ta rảnh.")
     ],
     TRONG: [
-      say(T,"Okay, đội mình sẽ là đội phong cách nhất trường!"),
+      say(T,"Được. Tôi nhận lời. Nhưng đồng đội của tôi phải biết ăn mặc cho tử tế."),
       nar("(Cậu ta chỉnh lại cổ áo, nhưng lần này mình thấy rõ cậu ta đang vui.)"),
       say(T,"Đừng nói với ai là tôi đã gật đầu nhanh như vậy.")
     ],
     TOBY:  [
-      say(B,"Join! Mình sẽ cố không dắt chó vào trận... chắc vậy."),
+      say(B,"Okay, mình join! Còn chó thì... mình sẽ cố để nó ở ngoài. Chắc vậy."),
       say(D,"Gâu!"),
       say(B,"Nó nói nó cũng muốn gia nhập.")
     ]
@@ -714,19 +715,19 @@ window.DLG = {
   /* Không chịu vào đội khi chưa đủ tin tưởng */
   RECRUIT_REFUSE: {
     WIBU:  [
-      say(W,"Chưa đâu. Mình còn chưa hiểu nhau."),
+      say(W,"Xin lỗi... tôi chưa sẵn sàng. Tôi còn chưa biết cậu là người thế nào."),
       nar("(Cậu ta ôm chặt balo hơn. Không phải từ chối, mà là chưa sẵn sàng.)")
     ],
     LINH:  [
-      say(L,"Quỷ Vương không theo kẻ lạ."),
-      say(L,"Nhưng ngươi cứ đến nói chuyện thêm. Có thể ta đổi ý.")
+      say(L,"Xin vào đội mà ta còn chưa biết tên ngươi? Nói chuyện thêm đã."),
+      say(L,"Ghé lại thường xuyên đi. Biết đâu ta đổi ý.")
     ],
     TRONG: [
-      say(T,"Hơi sớm. Nói chuyện thêm đã nào."),
+      say(T,"Vẫn còn sớm. Tôi không gia nhập đội của người tôi chưa hiểu."),
       nar("(Cậu ta quay mặt đi, nhưng khóe mắt thì lén nhìn xem mình có bỏ đi không.)")
     ],
     TOBY:  [
-      say(B,"Mình chưa quen cậu lắm... nói chuyện thêm nhé?"),
+      say(B,"Mình... chưa quen thân với cậu lắm. Mình muốn hiểu cậu thêm một chút, được không?"),
       say(D,"Gâu.")
     ]
   },
@@ -734,7 +735,7 @@ window.DLG = {
   /* Cảm nghĩ sau trận (người chơi THẮNG — NPC thua) */
   AFTER_WIN: {
     WIBU:  [
-      say(W,"Hức... lần sau tôi sẽ mang nhân vật mạnh hơn!"),
+      say(W,"Hức... tôi thua rồi. Nhưng ít ra lần này, có người ở lại đến cuối trận."),
       ask(W,"Cậu thắng rồi. Tôi... tôi không sao. Thật đấy.",[
         opt("Xin lỗi, mình cần điểm. Cậu đánh rất hay.",{trust:1},[
           say(W,"...Cảm ơn. Cậu là người duy nhất từng nói tôi đánh hay.")]),
@@ -743,7 +744,7 @@ window.DLG = {
       ])
     ],
     LINH:  [
-      say(L,"Quỷ Vương... thua? Thôi, ta ngủ tiếp."),
+      say(L,"Thua rồi à... ván này không có nút chơi lại. Ta ngả lưng một chút đây."),
       ask(L,"Ngươi thắng. Nhưng... ngươi cũng mệt đúng không? Nhìn mặt ngươi là biết.",[
         opt("Ừ, mệt thật. Cảm ơn trận đấu.",{trust:1},[
           say(L,"Nghỉ chút đi. Ta nhường ghế đá cho.")]),
@@ -752,7 +753,7 @@ window.DLG = {
       ])
     ],
     TRONG: [
-      say(T,"Thua một trận không làm mất phong cách của tôi."),
+      say(T,"Tôi thua. Cứ nhìn đi — ngay cả lúc thua, tôi vẫn đứng thẳng."),
       ask(T,"Cậu đánh tốt. Đừng nghĩ là tôi sẽ nói câu này lần hai.",[
         opt("Cậu cũng vậy. Mình thật sự ấn tượng.",{trust:1},[
           say(T,"...Hừ. Cảm ơn.")]),
@@ -761,7 +762,7 @@ window.DLG = {
       ])
     ],
     TOBY:  [
-      say(B,"Mình thua rồi. Con chó thì vẫn đáng yêu hơn cậu."),
+      say(B,"Mình thua rồi... Không sao, con chó vẫn ở bên mình."),
       say(D,"Gâu!"),
       ask(B,"Nhưng mình không giận đâu. Trận đấu hay mà.",[
         opt("Cảm ơn Toby. Mình cũng thấy vui khi đấu với cậu.",{trust:1},[
@@ -775,20 +776,20 @@ window.DLG = {
   /* Sau trận (người chơi THUA — NPC thắng) */
   AFTER_LOSE: {
     WIBU:  [
-      say(W,"Hahaha! Điểm của cậu là của tôi!"),
+      say(W,"Tôi... thắng rồi sao? Điểm của cậu giờ là của tôi."),
       nar("(Cậu ta cười lớn, nhưng tiếng cười run run, như vừa làm điều gì chính cậu cũng không tin nổi.)"),
       say(W,"À... xin lỗi. Tôi không cố ý đắc ý đâu. Tôi chỉ... lần đầu thắng ai đó.")
     ],
     LINH:  [
-      say(L,"Đây là sức mạnh của Quỷ Vương Bất Tử."),
+      say(L,"Ván này ta thắng. Điểm của ngươi, ta nhận."),
       say(L,"...Ê, ngươi ổn không? Ta nhẹ tay mà. Xin lỗi.")
     ],
     TRONG: [
-      say(T,"Thắng một cách đẹp mắt, đúng chất của tôi."),
+      say(T,"Tôi thắng. Đúng như dự tính — và đúng như phong cách."),
       say(T,"...Cậu không sao chứ? Đứng dậy được không?")
     ],
     TOBY:  [
-      say(B,"Sorry nhé, mình cần điểm này hơn."),
+      say(B,"Sorry... mình cần số điểm này hơn cậu."),
       say(D,"Gâu gâu!"),
       say(B,"Con chó bảo cậu đứng dậy đi. Nó tin cậu sẽ thắng lần sau.")
     ]
