@@ -202,10 +202,10 @@
   /* ============================ 4) VẬT PHẨM HỖ TRỢ COMBAT ============================ */
   // usable: nơi dùng được. target: 'self' | 'enemy' | 'allEnemies' | 'room' | 'none'
   const ITEMS = {
-    bimbim:  { name: "Bim Bim", icon: "🍟", usable: ["combat", "map"], target: "self", price: 20,
+    bimbim:  { name: "Bim Bim", icon: "🍟", usable: ["combat", "map"], target: "self", price: 8,
                desc: "Hồi 30% HP tối đa.",
                effects: [{ type: "healPct", pct: 0.30 }] },
-    water:   { name: "Nước tăng lực", icon: "🥤", usable: ["combat"], target: "self", price: 15,
+    water:   { name: "Nước tăng lực", icon: "🥤", usable: ["combat"], target: "self", price: 6,
                desc: "+25 Nộ và +20 SPD trong 2 turn.",
                effects: [{ type: "rage", amount: 25 }, { type: "buff", stat: "spd", amount: 20, turns: 2 }] },
     camera:  { name: "Máy quay soi", icon: "📷", usable: ["map", "combat"], target: "enemy", price: null,
@@ -220,7 +220,7 @@
     trap:    { name: "Bẫy gài", icon: "🪤", usable: ["map"], target: "room", price: null,
                desc: "Đặt ở phòng hiện tại. Ai bước vào bị trừ 20% HP và mất lượt đầu của trận kế tiếp.",
                effects: [{ type: "placeTrap", hpPct: 0.2, skipFirstTurn: true, durationMin: 120 }] },
-    antidote:{ name: "Thuốc giải", icon: "💊", usable: ["combat", "map"], target: "self", price: 25,
+    antidote:{ name: "Thuốc giải", icon: "💊", usable: ["combat", "map"], target: "self", price: 10,
                desc: "Xóa Cháy, Độc, Đóng băng, Tê liệt.",
                effects: [{ type: "cleanse", only: ["burn", "poison", "freeze", "paralyze"] }] },
     armor:   { name: "Áo giáp bìa carton", icon: "📦", usable: ["combat"], target: "self", price: null,

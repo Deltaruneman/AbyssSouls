@@ -88,8 +88,8 @@ const TIU_INVULN_MIN = 40;      // sau khi bị bắt, TIU bị đẩy đi và k
 const TIU_CHASE_CHANCE = 0.35;  // xác suất mỗi bước TIU tiến thẳng về phía người chơi
 const NPC_MOVE_EVERY = [45,75]; // các NPC đi lang thang theo chu kỳ này (phút game)
 const NPC_MOVE_CHANCE = 0.6;
-const POINTS_START = 30;        // "Điểm" dùng mua đồ ở Căn tin
-const POINTS_PER_WIN = 25;
+const EVENT_REWARD_BASE = 4;    // giải sự cố thành công: +(4 + 2 x số đêm) ĐRL (6 / 8 / 10)
+const EVENT_REWARD_PER_NIGHT = 2;
 const QTE_COUNT = { fighter:3, assassin:5, mage:4, healer:3, summoner:4 };
 
 const SAVE_KEY = 'uit_savegame_v2';
@@ -151,7 +151,6 @@ function freshState(night, chapter, opts){
     chapter, night, standalone:false,
     gameMinutes:0, nightStartClockMin:0, nightTotalMin:GAME_MINUTES_TOTAL,
     running:true, paused:false, lastTick:performance.now(),
-    points: opts.points!=null ? opts.points : POINTS_START,
     playerRoom:startRoom,
     tiuOn: chapter===1,
     monsterRoom, lastSeenRoom:null, lastSeenAt:0, invulnUntil:0,
@@ -450,7 +449,6 @@ function refreshHud(){
   if(!S) return;
   const me = RPG.player();
   $('clockVal').textContent = formatClock(S.gameMinutes);
-  $('pointsHud').textContent = S.points;
   $('nightBadge').textContent = (S.chapter===2 ? 'CH.2 · ' : 'CH.1 · ') + nightName(S.chapter, S.night);
 
   // Khối "HP" cũ -> ĐRL của người chơi
@@ -683,18 +681,18 @@ function openShop(){
   function render(){
     const rows = SHOP_ITEMS.map(id=>{
       const it = RPG.ITEMS[id];
-      return `<div class="shopItem"><span>${it.icon} ${it.name} — ${it.price}đ<br><span style="font-size:11px;color:var(--text-dim);">${it.desc} (đang có ${RPG.countItem(me,id)})</span></span><button class="btn primary" data-buy="${id}" ${S.points>=it.price?'':'disabled'}>Mua</button></div>`;
+      return `<div class="shopItem"><span>${it.icon} ${it.name} — ${it.price} ĐRL<br><span style="font-size:11px;color:var(--text-dim);">${it.desc} (đang có ${RPG.countItem(me,id)})</span></span><button class="btn primary" data-buy="${id}" ${me.drl>it.price?'':'disabled'}>Mua</button></div>`;
     }).join('');
-    showModal('QUẦY CĂN TIN', `<p style="font-size:12px;color:var(--text-dim);">Điểm hiện có: <b>${S.points}</b> (thắng trận để kiếm thêm)</p>${rows}
+    showModal('QUẦY CĂN TIN', `<p style="font-size:12px;color:var(--text-dim);">ĐRL hiện có: <b>${me.drl}</b> — mua đồ sẽ <b>tiêu ĐRL</b> của bạn (luôn giữ lại ít nhất 1). Thắng trận và giải sự cố để kiếm thêm.</p>${rows}
       <div class="shopItem"><span>😴 Nghỉ ngơi 1 giờ<br><span style="font-size:11px;color:var(--text-dim);">Hồi ${Math.round(RPG.CFG.REST_HEAL_PCT*100)}% HP (cả đồng đội), tốn 60 phút game. HP hiện tại: ${me.hp}/${me.maxHp}</span></span><button class="btn" id="restBtn" ${me.hp>=me.maxHp?'disabled':''}>Nghỉ</button></div>`, [{label:'Đóng', onClick:()=>closeModal()}]);
     const rb = $('restBtn'); if(rb) rb.onclick = restAtCanteen;
     document.querySelectorAll('#mgBody [data-buy]').forEach(b=>{
       b.onclick = ()=>{
         const id = b.getAttribute('data-buy'), it = RPG.ITEMS[id];
-        if(S.points < it.price) return;
-        S.points -= it.price;
+        if(me.drl <= it.price) return;
+        me.drl -= it.price;
         RPG.addItem(me, id, 1);
-        addLog('Bạn mua '+it.name+' tại Căn tin.', '');
+        addLog('Bạn mua '+it.name+' tại Căn tin (−'+it.price+' ĐRL).', '');
         markActionDirty(); refreshAll(); render();
       };
     });
@@ -892,7 +890,7 @@ function checkEncounter(){
 }
 function caughtByTIU(){ jumpscare(); }
 
-/* ---- SỰ CỐ do The TIU gây ra: giải minigame kịp giờ để kiếm điểm ---- */
+/* ---- SỰ CỐ do The TIU gây ra: giải minigame kịp giờ để kiếm ĐRL ---- */
 function lureTIUNear(room){
   const adj = ROOM_DEF[room].connects.filter(r=>!isRoomSafe(r));
   S.monsterRoom = adj.length ? pick(adj) : room;
@@ -1455,8 +1453,6 @@ function battleFinish(){
   const sum = RPGCombat.settle(B);
   opts.enemyIds.forEach(id=>{ S.duelDone[id] = true; });
   const won = sum.winner==='A';
-  const pointsGain = won ? POINTS_PER_WIN*opts.enemyIds.length : 0;
-  S.points += pointsGain;
   BATTLE.closed = true;
   clearTimeout(BATTLE.sayTimer);
   $('battleOverlay').classList.add('hidden');
@@ -1473,7 +1469,6 @@ function battleFinish(){
     }
   });
   sum.allyExp.forEach(a=>{ if(a.exp.gained) html += `<p style="font-size:12px;color:var(--text-dim);">${RPG.get(a.id).name}: +${a.exp.gained} EXP</p>`; });
-  if(pointsGain) html += `<p>+${pointsGain} điểm mua đồ.</p>`;
   html += `<p style="color:var(--text-dim);font-size:12px;">ĐRL: <b>${me.drl}</b> · HP còn lại: <b>${me.hp}/${me.maxHp}</b> (được giữ cho trận sau)</p>`;
   if(!opts.final) html += `<p style="color:var(--text-dim);font-size:12px;">⏳ Trận đấu kéo dài ${RPG.CFG.BATTLE_MINUTES} phút (${formatClock(S.gameMinutes)} → ${formatClock(S.gameMinutes+RPG.CFG.BATTLE_MINUTES)}).</p>`;
 
@@ -1530,12 +1525,12 @@ function endNight(){
     }
     sub += 'Còn lại '+RPG.aliveFighters().length+' người.';
     if(S.night<3){
-      showWinScreen('QUA ĐÊM '+S.night, sub, 'ĐÊM TIẾP THEO', ()=>beginNight(1, S.night+1, {points:S.points}));
+      showWinScreen('QUA ĐÊM '+S.night, sub, 'ĐÊM TIẾP THEO', ()=>beginNight(1, S.night+1, {}));
     } else {
       showWinScreen('HẾT CHAPTER 1', sub, 'SANG CHAPTER 2', ()=>beginChapter2());
     }
   } else {
-    showWinScreen('QUA ĐÊM CHUẨN BỊ', 'Đại chiến bắt đầu. Chúc may mắn!', 'VÀO TRẬN CUỐI', ()=>beginNight(2, 2, {points:S.points}));
+    showWinScreen('QUA ĐÊM CHUẨN BỊ', 'Đại chiến bắt đầu. Chúc may mắn!', 'VÀO TRẬN CUỐI', ()=>beginNight(2, 2, {}));
   }
 }
 
@@ -1543,7 +1538,7 @@ function beginChapter2(){
   // Đồng đội còn sống phản bội: chỉ còn 1 suất tốt nghiệp
   const allies = RPG.partyAllies();
   allies.forEach(a=>RPG.dismiss(a));
-  const finish = ()=>beginNight(2, 1, {points:S.points});
+  const finish = ()=>beginNight(2, 1, {});
   if(allies.length) playDLG(DLG.BETRAY, ()=>playDLG(DLG.INTRO_CH2, finish));
   else playDLG(DLG.INTRO_CH2, finish);
 }
@@ -1572,7 +1567,7 @@ function refreshAll(){
 }
 function beginNight(chapter, night, opts){
   opts = opts || {};
-  S = freshState(night, chapter, { points: opts.points });
+  S = freshState(night, chapter, {});
   if(RPG.getState()) RPG.healAll();   // nghỉ ngơi qua ngày: HP hồi đầy khi bắt đầu đêm mới
   addLog('Ca đêm '+nightName(chapter,night)+' bắt đầu lúc '+formatClock(0)+'. Bạn xuất phát tại '+ROOM_DEF[S.playerRoom].name+'.', '');
   buildMap();
@@ -2011,9 +2006,9 @@ function startMinigame(room){
     modal.classList.add('hidden');
     delete S.activeEvents[room];
     if(success){
-      const gain = 10 + S.night*5;
-      S.points += gain;
-      addLog('Bạn đã xử lý xong sự cố tại '+ROOM_DEF[room].name+'. +'+gain+' điểm.','good');
+      const gain = EVENT_REWARD_BASE + S.night*EVENT_REWARD_PER_NIGHT;
+      RPG.player().drl += gain;
+      addLog('Bạn đã xử lý xong sự cố tại '+ROOM_DEF[room].name+'. +'+gain+' ĐRL.','good');
     } else {
       addLog('Bạn thất bại ở sự cố tại '+ROOM_DEF[room].name+'!','warn');
       if(S.tiuOn && Math.random()<0.6) lureTIUNear(room);
@@ -2953,13 +2948,13 @@ function startTravel(dest){
 
   const doSwap = ()=>{
     if(S!==s0 || !S.running){ endTravel(); return; }
-    if(S.paused){ setTimeout(doSwap, 200); return; }       // đang tạm dừng: chờ rồi mới chuyển
-    if(isBlockingOverlayOpen()){ endTravel(); return; }    // bị jumpscare / game over chen vào: hủy
+    if(S.paused){ setTimeout(doSwap, 200); return; }      
+    if(isBlockingOverlayOpen()){ endTravel(); return; }   
     movePlayerNow(dest);
     const rest = Math.max(0, TD_TRAVEL_TOTAL_MS - TD_TRAVEL_SWAP_MS);
     const t0 = performance.now();
     (function wait(){
-      if(S!==s0 || !S.running || isBlockingOverlayOpen()){ endTravel(); return; } // jumpscare sau khi tới nơi: bỏ loading ngay
+      if(S!==s0 || !S.running || isBlockingOverlayOpen()){ endTravel(); return; } 
       if(performance.now()-t0 >= rest) endTravel(); else setTimeout(wait, 80);
     })();
   };
