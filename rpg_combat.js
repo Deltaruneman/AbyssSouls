@@ -54,7 +54,10 @@
            controlAllies (đồng đội do người chơi điều khiển, mặc định false = AI),
            autoPlayer (người chơi cũng do AI — dùng cho mô phỏng/test),
            dodge (QTE phòng thủ mọi đòn địch ra lên người chơi — dành cho boss cuối),
-           [Spell Breaker tự bật nếu người chơi có f.spellBreaker: QTE parry CHỈ cho Ultimate của địch],
+           [Mảnh La Peace — sức mạnh đặc biệt cho BẤT KỲ nhân vật nào giữ mảnh (f.pieces):
+              spellBreaker : người chơi có QTE parry CHỈ cho Ultimate của địch
+              manaTransfer : sau khi tung Ultimate được hồi lại 50% Nộ
+              dieTwice     : hồi sinh 50% HP sau khi chết lần đầu trong trận],
            loseOnPlayerDeath (mặc định true), maxRounds, rng */
   function create(opts) {
     if (opts.rng) rng = opts.rng;
@@ -71,8 +74,8 @@
       if (f.isPlayer && !B.playerUnit) B.playerUnit = u;
     });
     if (!B.playerUnit) B.playerUnit = B.units.find(function (u) { return u.side === "A"; });
-    // SPELL BREAKER: người chơi đã học (đủ 3 Mảnh La Peace) -> được QTE parry Ultimate của kẻ địch
-    B.spellBreaker = !!(B.playerUnit && B.playerUnit.f && B.playerUnit.f.spellBreaker);
+    // SPELL BREAKER: người chơi đang giữ Mảnh La Peace loại Spell Breaker -> được QTE parry Ultimate của kẻ địch
+    B.spellBreaker = !!(B.playerUnit && B.playerUnit.f && RPG.hasPiece(B.playerUnit.f, "spellBreaker"));
     opts.enemies.forEach(function (f) { makeUnit(B, f, "E").controller = "ai"; });
     return B;
   }
@@ -84,7 +87,7 @@
       isSummon: false, hp: clamp(f.hp > 0 ? f.hp : st.hp, 1, st.hp), maxHp: st.hp, rage: 0,   // HP được giữ lại từ trận trước
       base: { atk: st.atk, def: st.def, spd: st.spd },
       mods: [], st: {}, cds: {}, alive: true, spirit: null, defending: false, action: null,
-      taunt: false, voidActive: false
+      taunt: false, voidActive: false, revived: false   // revived: đã dùng Die Twice trong trận này
     };
     B.units.push(u);
     return u;
@@ -157,6 +160,14 @@
   }
   function kill(B, u) {
     if (!u.alive) return;
+    // DIE TWICE: chết lần đầu trong trận -> hồi sinh với 50% HP, xóa hiệu ứng xấu (1 lần / trận)
+    if (!u.isSummon && u.f && !u.revived && RPG.hasPiece(u.f, "dieTwice")) {
+      u.revived = true;
+      u.hp = Math.max(1, Math.round(u.maxHp * RPG.CFG.DIE_TWICE_HP_PCT));
+      cleanse(u);
+      emit(B, "♻ DIE TWICE! " + u.name + " hồi sinh với " + u.hp + " HP!", "good", { type: "revive", dst: u.uid, amount: u.hp });
+      return;
+    }
     u.alive = false; u.hp = 0;
     emit(B, u.name + " gục ngã!", "danger", { type: "death", dst: u.uid });
     B.units.forEach(function (s) { if (s.isSummon && s.owner === u && s.alive) { s.alive = false; s.hp = 0; } });
@@ -361,7 +372,8 @@
           break;
         case "scout": {
           const t = targets[0];
-          if (t) emit(B, "📷 " + t.name + " — " + RPG.CLASSES[t.f.classId].name + " Lv" + t.f.level + ", HP " + t.hp + "/" + t.maxHp + ", Nộ " + t.rage + ", ĐRL " + t.f.drl + ".", "skill", { type: "scout", dst: t.uid });
+          if (t) emit(B, "📷 " + t.name + " — " + RPG.CLASSES[t.f.classId].name + " Lv" + t.f.level + ", HP " + t.hp + "/" + t.maxHp + ", Nộ " + t.rage + ", ĐRL " + t.f.drl +
+            ((t.f.pieces && t.f.pieces.length) ? ", 💠 " + t.f.pieces.map(function (p) { return RPG.LAPEACE_PIECES[p].name; }).join("/") : "") + ".", "skill", { type: "scout", dst: t.uid });
           break;
         }
         case "recastExplode": case "fuse": case "placeTrap": break;     // đã xử lý ở nơi khác / chỉ dùng ngoài map
@@ -417,10 +429,13 @@
       yield* execAction(B, u, { type: "attack", target: a.target }); return;
     }
     ctx.ult = isUlt; ctx.skillName = def.name;
-    if (isUlt) u.rage = 0;
+    // MANA TRANSFER: sau khi tung Ultimate được hồi lại một phần Nộ thay vì về 0
+    const manaRefund = isUlt && !u.isSummon && u.f && RPG.hasPiece(u.f, "manaTransfer");
+    if (isUlt) u.rage = manaRefund ? Math.round(RPG.CFG.RAGE_MAX * RPG.CFG.MANA_TRANSFER_PCT) : 0;
     else { u.cds[def.id] = def.cd + 1; u.rage = clamp(u.rage + RPG.CFG.RAGE_ON_SKILL, 0, RPG.CFG.RAGE_MAX); }
     const scale = qScale(a.quality);
     emit(B, (isUlt ? "✧ " : "✦ ") + u.name + " dùng \"" + def.name + "\"" + (scale === 0 ? " — THẤT BẠI!" : "") + (isUlt ? " ✧" : ""), isUlt ? "skill" : "skill", { type: "cast", src: u.uid, skill: def.id });
+    if (manaRefund) emit(B, "🔷 MANA TRANSFER! " + u.name + " hồi lại " + u.rage + " Nộ.", "good");
     if (scale === 0) { yield* flush(B); return; }
     const targets = pickTargets(B, u, def.target, a.target);
     if (def.target !== "self" && def.target !== "summon" && !targets.length) { yield* flush(B); return; }

@@ -118,7 +118,14 @@ function pickDistinctRooms(pool, n){
 let S = null;
 let BATTLE = null;   // trận đấu đang diễn ra (xem phần BATTLE UI)
 
+/* Mảnh La Peace trên bản đồ có dạng 'lapeace:<loại>' (loại chỉ lộ ra khi nhặt). 'lapeace' trần = save cũ. */
+function isPieceScav(type){ return typeof type==='string' && (type==='lapeace' || type.indexOf('lapeace:')===0); }
+function pieceNamesHtml(f){
+  const ps = (f.pieces||[]).map(t=>RPG.LAPEACE_PIECES[t]).filter(Boolean);
+  return ps.length ? ' · <b style="color:var(--amber);">'+ps.map(p=>p.icon+' '+p.name).join(', ')+'</b>' : '';
+}
 function scavengeName(type){
+  if(isPieceScav(type)) return RPG.RELICS.lapeace.name;
   if(RPG.RELICS[type]) return RPG.RELICS[type].name;
   if(RPG.COMPONENTS[type]) return RPG.COMPONENTS[type].name;
   if(RPG.ITEMS[type]) return RPG.ITEMS[type].name;
@@ -138,12 +145,13 @@ function freshState(night, chapter, opts){
   const compIds = Object.keys(RPG.COMPONENTS);
   const lootIds = ['bimbim','water','antidote'];
   scavengeRooms.forEach(r=>{ scavenge[r] = Math.random()<0.25 ? pick(lootIds) : pick(compIds); });
-  // La Peace: mỗi đêm Chapter 1 chắc chắn có 1 Mảnh nằm trong một điểm thu gom (đủ 3 mảnh -> Spell Breaker).
-  // Chapter 2 đêm chuẩn bị bù thêm tối đa 2 mảnh nếu còn thiếu.
-  const need = RPG.CFG.LAPEACE_NEEDED - (RPG.getState() ? (RPG.player().laPeace || 0) : 0);
-  if(need>0){
-    const nPieces = chapter===1 ? 1 : Math.min(need, 2);
-    shuffle(Object.keys(scavenge)).slice(0, nPieces).forEach(r=>{ scavenge[r] = 'lapeace'; });
+  // La Peace: mỗi đêm Chapter 1 có 1 Mảnh (mỗi LOẠI mang 1 sức mạnh riêng) nằm trong một điểm thu gom, chọn ngẫu nhiên
+  // trong các loại chưa ai nắm giữ. Chapter 2 đêm chuẩn bị rải tối đa 2 mảnh còn thiếu. Trận cuối không rải.
+  // Nếu đến 03:00 người chơi vẫn chưa nhặt thì 1 đối thủ ngẫu nhiên nhận mảnh (xem dealUnclaimedPieces).
+  if(RPG.getState() && !(chapter===2 && night===2)){
+    const free = shuffle(RPG.unownedPieces());
+    const nPieces = Math.min(chapter===1 ? 1 : 2, free.length);
+    shuffle(Object.keys(scavenge)).slice(0, nPieces).forEach((r,i)=>{ scavenge[r] = 'lapeace:'+free[i]; });
   }
   const npcRoom = {};
   RPG.NPC_ROSTER.forEach(n=>{ npcRoom[n.id] = n.homeRoom; });
@@ -158,6 +166,7 @@ function freshState(night, chapter, opts){
     nextNpcMoveAt: rand(...NPC_MOVE_EVERY),
     activeEvents:{}, nextEventAt: rand(...(EVENT_EVERY[night] || EVENT_EVERY[1])),
     scavenge, npcRoom,
+    lapeaceDealt:false,
     talked:{}, duelDone:{}, scouted:{}, traps:{}, npcDebuff:{},
     log:[], tdSeed:null, tdRoom:null, tdX:null, tdY:null, final:false
   };
@@ -166,7 +175,7 @@ function freshState(night, chapter, opts){
 /* ============== LƯU / TẢI ============== */
 function serializeSave(){
   if(!S) return null;
-  return { v:2, savedAt:Date.now(), state:S, rpg:RPG.serialize() };
+  return { v:2, savedAt:Date.now(), state:S, rpg:RPG.serialize(), story:STORY };
 }
 function persistSave(){
   if(!S || !S.running) return;
@@ -197,6 +206,7 @@ function deleteSaveGame(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} }
 function restoreFrom(data){
   S = data.state;
   RPG.load(data.rpg);
+  STORY = Object.assign({ flags:{}, stage:{} }, data.story || {});
   S.lastTick = performance.now();
   S.paused = false;
   S.running = true;
@@ -220,56 +230,130 @@ function loadCheckpoint(){
   return data ? restoreFrom(data) : false;
 }
 
-/* ============== VISUAL NOVEL ============== */
+/* ============== VISUAL NOVEL (kiểu Genshin: thoại ở giữa, lựa chọn dạng bong bóng bên phải) ============== */
 let VN_ACTIVE = null;
+/* Cờ cốt truyện + tiến độ nói chuyện — sống xuyên suốt các đêm, được lưu cùng file save */
+let STORY = { flags:{}, stage:{} };
+function resetStory(){ STORY = { flags:{}, stage:{} }; }
 function isChoiceLine(l){ return !!(l && l.choices && l.choices.length); }
 
-function playVN(lines, onDone){
+/* Điều kiện cờ: 'k' | 'k=v' | '!k' | mảng (phải thoả tất cả) */
+function storyCond(expr){
+  if(!expr) return true;
+  return [].concat(expr).every(e=>{
+    let neg = false;
+    if(e[0]==='!'){ neg = true; e = e.slice(1); }
+    const parts = e.split('='), k = parts[0], v = parts[1];
+    const cur = STORY.flags[k];
+    const ok = (v===undefined) ? !!cur : String(cur)===v;
+    return neg ? !ok : ok;
+  });
+}
+function lineVisible(l){ return storyCond(l.when) && !(l.unless && storyCond(l.unless)); }
+
+/* Hiệu ứng của dòng thoại / lựa chọn: cờ + Tin tưởng */
+function applyFx(fx, ctx){
+  if(!fx) return;
+  if(fx.flag) [].concat(fx.flag).forEach(k=>{ STORY.flags[k] = true; });
+  if(fx.set) Object.assign(STORY.flags, fx.set);
+  if(fx.trust){
+    const id = fx.npc || (ctx && ctx.npcId);
+    const f = id && RPG.get(id);
+    if(f && typeof f.trust==='number'){
+      f.trust = Math.max(0, Math.min(RPG.CFG.TRUST_MAX, f.trust + fx.trust));
+      addLog('💬 '+f.name+(fx.trust>0?' có thiện cảm hơn với bạn':' mất lòng tin ở bạn')+' (Tin tưởng '+f.trust+'/'+RPG.CFG.TRUST_MAX+').', fx.trust>0?'good':'');
+    }
+  }
+}
+
+function playVN(lines, onDone, ctx){
   if(!lines || !lines.length){ if(onDone) onDone(); return; }
   S.paused = true;
   const overlay = document.getElementById('vnOverlay');
+  const box = document.getElementById('vnBox');
   const spkEl = document.getElementById('vnSpeaker');
   const txtEl = document.getElementById('vnText');
   const nextBtn = document.getElementById('vnNextBtn');
-  const footer = document.getElementById('vnFooter');
+  const hintEl = document.getElementById('vnHint');
+  const choicesEl = document.getElementById('vnChoices');
   overlay.classList.remove('hidden');
-  let i = 0;
-  let finished = false;
   const queue = lines.slice();
-  function clearChoiceButtons(){
-    footer.querySelectorAll('.vnChoiceBtn').forEach(b=>b.remove());
-    nextBtn.classList.remove('hidden');
+  let i = -1, finished = false, typing = false, typingTimer = null, fullText = '', curChoices = [];
+
+  function clearChoices(){ choicesEl.innerHTML = ''; choicesEl.classList.add('hidden'); curChoices = []; }
+  function stopTyping(){ if(typingTimer){ clearInterval(typingTimer); typingTimer = null; } typing = false; }
+  function isLastVisible(){
+    for(let k=i+1; k<queue.length; k++) if(lineVisible(queue[k])) return false;
+    return true;
+  }
+  function pick(choice){
+    if(finished) return;
+    clearChoices();
+    applyFx(choice.fx, ctx);
+    if(choice.insert && choice.insert.length) queue.splice(i+1, 0, ...choice.insert);
+    if(choice.onChoose) choice.onChoose(); // hook cho lựa chọn tác động cơ chế game
+    advance();
+  }
+  function renderChoices(l){
+    clearChoices();
+    curChoices = l.choices.filter(c=>storyCond(c.when));
+    curChoices.forEach((c, idx)=>{
+      const b = document.createElement('button');
+      b.className = 'vnChoice';
+      b.style.animationDelay = (idx*70)+'ms';
+      b.innerHTML = '<span class="vnChoiceIcon">💬</span><span class="vnChoiceLabel"></span><span class="vnChoiceKey">'+(idx+1)+'</span>';
+      b.querySelector('.vnChoiceLabel').textContent = c.label;
+      b.onclick = (e)=>{ e.stopPropagation(); pick(c); };
+      choicesEl.appendChild(b);
+    });
+    choicesEl.classList.remove('hidden');
+  }
+  /* Hiện đủ chữ; nếu là dòng lựa chọn thì hiện bong bóng, ngược lại hiện nút Tiếp tục */
+  function reveal(){
+    stopTyping();
+    const l = queue[i];
+    txtEl.textContent = fullText;
+    if(isChoiceLine(l)){
+      nextBtn.classList.add('hidden');
+      hintEl.textContent = 'Chọn một câu trả lời — bấm 1–'+Math.min(4, l.choices.length)+' để chọn nhanh';
+      renderChoices(l);
+    } else {
+      nextBtn.classList.remove('hidden');
+      nextBtn.textContent = isLastVisible() ? 'ĐÓNG ▶' : 'TIẾP TỤC ▶';
+      hintEl.textContent = 'Bấm vào hộp thoại để tiếp tục';
+    }
   }
   function showLine(){
     const l = queue[i];
-    spkEl.textContent = l.spk;
-    txtEl.textContent = l.text || '';
-    clearChoiceButtons();
-    if(l.choices && l.choices.length){
-      nextBtn.classList.add('hidden');
-      l.choices.forEach(choice=>{
-        const b = document.createElement('button');
-        b.className = 'btn primary vnChoiceBtn';
-        b.textContent = choice.label;
-        b.onclick = ()=>{
-          if(choice.insert && choice.insert.length) queue.splice(i+1, 0, ...choice.insert);
-          if(choice.onChoose) choice.onChoose(); // hook cho lựa chọn có ảnh hưởng cơ chế game (không chỉ chèn thoại)
-          advance();
-        };
-        footer.appendChild(b);
-      });
-    } else {
-      nextBtn.textContent = (i>=queue.length-1) ? 'ĐÓNG ▶' : 'TIẾP TỤC ▶';
-    }
+    applyFx(l.fx, ctx);
+    spkEl.textContent = l.spk || '';
+    spkEl.style.visibility = l.spk ? 'visible' : 'hidden';
+    txtEl.classList.toggle('vnNarration', !l.spk);
+    fullText = l.text || '';
+    clearChoices();
+    nextBtn.classList.add('hidden');
+    stopTyping();
+    if(!fullText){ reveal(); return; }
+    let n = 0;
+    typing = true;
+    txtEl.textContent = '';
+    typingTimer = setInterval(()=>{
+      n += 2;
+      if(n >= fullText.length) reveal();
+      else txtEl.textContent = fullText.slice(0, n);
+    }, 22);
   }
   function advance(){
+    stopTyping();
     i++;
-    if(i>=queue.length){
+    while(i < queue.length && !lineVisible(queue[i])) i++;
+    if(i >= queue.length){
       finished = true;
       if(VN_ACTIVE === ctl) VN_ACTIVE = null; // gỡ TRƯỚC onDone để onDone có thể mở đoạn thoại mới
       overlay.classList.add('hidden');
-      clearChoiceButtons();
+      clearChoices();
       nextBtn.onclick = null;
+      box.onclick = null;
       S.paused = false;
       S.lastTick = performance.now();
       if(onDone) onDone();
@@ -277,35 +361,62 @@ function playVN(lines, onDone){
     }
     showLine();
   }
-  nextBtn.onclick = advance;
+  nextBtn.onclick = (e)=>{ e.stopPropagation(); if(!finished && !typing) advance(); };
+  box.onclick = ()=>{
+    if(finished) return;
+    if(typing){ reveal(); return; }
+    if(!isChoiceLine(queue[i])) advance();
+  };
   const ctl = {
-    /* Phím J: sang câu thoại kế tiếp. Không làm gì nếu câu hiện tại đang chờ chọn nhánh. */
+    /* Phím J: hiện đủ chữ nếu đang gõ, hoặc sang câu kế. Không làm gì ở dòng chờ chọn nhánh. */
     next(){
-      if(finished || isChoiceLine(queue[i])) return false;
+      if(finished) return false;
+      if(typing){ reveal(); return true; }
+      if(isChoiceLine(queue[i])) return false;
       advance();
       return true;
     },
-    /* Phím Ctrl: tua qua toàn bộ phần hội thoại còn lại. Dừng lại tại dòng có lựa chọn để
-       người chơi tự quyết định (vì lựa chọn có thể chèn thoại / tác động cơ chế game). */
+    /* Phím Ctrl: tua qua phần còn lại, dừng tại dòng có lựa chọn để người chơi tự quyết định. */
     skip(){
       if(finished) return false;
-      while(!finished && !isChoiceLine(queue[i])) advance();
+      while(!finished){
+        if(isChoiceLine(queue[i])){ if(typing) reveal(); return true; }
+        advance();
+      }
+      return true;
+    },
+    /* Phím 1–4: chọn đáp án thứ n (n bắt đầu từ 0) */
+    choose(n){
+      if(finished || typing || !isChoiceLine(queue[i]) || !curChoices[n]) return false;
+      pick(curChoices[n]);
       return true;
     }
   };
   VN_ACTIVE = ctl;
-  showLine();
+  advance();
 }
 
 /* ---- Nội dung hội thoại (VN_INTRO, VN_OUTRO, NPC_DIALOGUES, TRONG_DIALOGUE)
    đã được chuyển sang file dialogue.js — nạp trước script.js trong index.html. ---- */
 
-/* Thay {P} bằng tên người chơi */
-function fmtLines(lines){
+/* Thay token: {P}/{Bạn} = tên người chơi · {TIU} = "THE TIU" · {ALLY}/{FOE}... lấy từ ctx.vars. Áp dụng cả cho lựa chọn. */
+function fmtLines(lines, vars){
   const me = (typeof RPG!=='undefined' && RPG.getState && RPG.getState()) ? RPG.player().name : 'Bạn';
-  return (lines||[]).map(l=>Object.assign({}, l, { spk:(l.spk||'').replace(/\{P\}/g, me), text:(l.text||'').replace(/\{P\}/g, me) }));
+  const sub = (str)=> (str==null ? str : String(str))
+    .replace(/\{P\}|\{Bạn\}/g, me)
+    .replace(/\{TIU\}/g, 'THE TIU')
+    .replace(/\{(\w+)\}/g, (m,k)=> (vars && vars[k]!=null) ? vars[k] : m);
+  return (lines||[]).map(l=>{
+    const out = Object.assign({}, l, { spk: sub(l.spk||''), text: sub(l.text||'') });
+    if(l.choices) out.choices = l.choices.map(c=>Object.assign({}, c, {
+      label: sub(c.label||''),
+      insert: fmtLines(c.insert||[], vars)
+    }));
+    return out;
+  });
 }
-function playDLG(lines, onDone){ playVN(fmtLines(lines), onDone); }
+/* ctx = { npcId, vars } — npcId dùng cho fx.trust; vars dùng cho {ALLY}, {FOE} */
+function playDLG(lines, onDone, ctx){ playVN(fmtLines(lines, ctx && ctx.vars), onDone, ctx); }
 
 /* ============== LOG ============== */
 function addLog(msg, cls){
@@ -591,7 +702,7 @@ function refreshActionPane(){
   $('invRow').innerHTML = `<div class="itemChip">Class: <b>${RPG.CLASSES[me.classId].icon} ${RPG.CLASSES[me.classId].name} Lv${me.level}</b></div>
     <div class="itemChip">Đội hình: <b>${party}</b></div>
     <div class="itemChip">Linh kiện: <b>${comp}</b></div>
-    <div class="itemChip">💠 La Peace: <b>${me.laPeace||0}/${RPG.CFG.LAPEACE_NEEDED}</b>${me.spellBreaker?' · <b style="color:var(--amber);">Spell Breaker ✓</b>':''}</div>
+    <div class="itemChip">💠 La Peace: <b>${me.laPeace||0}/${RPG.CFG.LAPEACE_NEEDED}</b>${pieceNamesHtml(me)}</div>
     <div class="itemChip">Còn sống: <b>${RPG.aliveFighters().length}/5</b></div>`;
   refreshHiddenStats();
 }
@@ -609,8 +720,12 @@ function refreshHiddenStats(){
     const where = S.scouted[n.id] ? ` · 📍${ROOM_DEF[S.npcRoom[n.id]].name}` : '';
     return `<div class="itemChip">${f.name}${f.inParty?' (đồng đội)':''}: Tin tưởng <b>${f.trust}/${RPG.CFG.TRUST_MAX}</b>${info}${where}</div>`;
   }).join('');
-  const me0 = RPG.player();
-  pop.innerHTML = `<div class="hiddenStatsTitle">NPC</div>${rows}<div class="hiddenStatsTitle" style="margin-top:6px;">RELIC</div><div class="itemChip">💠 La Peace ${me0.laPeace||0}/${RPG.CFG.LAPEACE_NEEDED}${me0.spellBreaker?' — Spell Breaker ✓':''}</div>`;
+  const relicRows = RPG.LAPEACE_ORDER.map(t=>{
+    const p = RPG.LAPEACE_PIECES[t], o = RPG.pieceOwner(t);
+    const who = o ? (o.isPlayer ? '<b style="color:var(--amber);">Bạn</b>' : o.name) : '—';
+    return `<div class="itemChip">${p.icon} ${p.name}: ${who}</div>`;
+  }).join('');
+  pop.innerHTML = `<div class="hiddenStatsTitle">NPC</div>${rows}<div class="hiddenStatsTitle" style="margin-top:6px;">LA PEACE</div>${relicRows}`;
 }
 
 /* ============== THU GOM / CHẾ TẠO ============== */
@@ -619,11 +734,12 @@ function pickupScavenge(){
   const type = S.scavenge[S.playerRoom];
   const me = RPG.player();
   delete S.scavenge[S.playerRoom];
-  if(type==='lapeace'){
-    const r = RPG.addLaPeace(me);
-    addLog('💠 Bạn nhặt được Mảnh La Peace ('+r.count+'/'+RPG.CFG.LAPEACE_NEEDED+')!', 'good');
+  if(isPieceScav(type)){
+    const r = RPG.addLaPeace(me, type.slice(8) || null);
+    const p = r.type ? RPG.LAPEACE_PIECES[r.type] : null;
+    addLog('💠 Bạn nhặt được Mảnh La Peace'+(p?' — '+p.name:'')+' ('+r.count+'/'+RPG.CFG.LAPEACE_NEEDED+')!', 'good');
     markActionDirty(); refreshAll();
-    if(r.unlocked) showSpellBreakerUnlock();
+    if(r.unlocked && r.type) showPieceUnlock(r.type);
     return;
   }
   if(RPG.COMPONENTS[type]) RPG.addComponent(me, type, 1);
@@ -632,10 +748,33 @@ function pickupScavenge(){
   markActionDirty();
   refreshAll();
 }
-function showSpellBreakerUnlock(){
-  showModal('✦ SPELL BREAKER — ĐÃ MỞ KHOÁ', `<p style="font-size:14px;">Ba Mảnh La Peace hợp lại. Bạn học được <b>Spell Breaker</b>!</p>
-    <p style="font-size:13px;">Khi kẻ địch tung <b>ULTIMATE</b> lên bạn, một QTE parry sẽ hiện ra: bấm đúng hướng mũi tên trong vùng sáng để <b>phá giải hoàn toàn</b> đòn đó (kể cả hiệu ứng đi kèm). Chỉ parry được Ultimate, đòn thường và skill thì không.</p>`,
+function showPieceUnlock(type){
+  const p = RPG.LAPEACE_PIECES[type];
+  if(!p) return;
+  const extra = type==='spellBreaker'
+    ? 'Chỉ parry được Ultimate, đòn thường và skill thì không. Parry đủ tốt sẽ phá giải hoàn toàn đòn đó (kể cả hiệu ứng đi kèm).'
+    : type==='manaTransfer' ? 'Thanh Nộ không còn về 0 sau Ultimate mà được hồi lại '+Math.round(RPG.CFG.MANA_TRANSFER_PCT*100)+'%.'
+    : 'Hiệu lực 1 lần mỗi trận đấu. Hồi sinh xong bạn được xóa mọi hiệu ứng xấu.';
+  showModal(p.icon+' '+p.name.toUpperCase()+' — SỨC MẠNH MỚI', `<p style="font-size:14px;">Mảnh La Peace trao cho bạn <b>${p.name}</b>!</p>
+    <p style="font-size:13px;">${p.desc}</p><p style="font-size:12px;color:var(--text-dim);">${extra}<br>Đối thủ nào đang giữ một mảnh khác, bạn có thể đánh bại để cướp mảnh đó.</p>`,
     [{label:'Tuyệt vời!', primary:true, onClick:()=>closeModal()}]);
+}
+
+/* 03:00: Mảnh La Peace nào vẫn nằm trên bản đồ (người chơi chưa nhặt) sẽ rơi vào tay 1 đối thủ ngẫu nhiên.
+   Đánh bại kẻ đó để cướp lại (RPG.resolveDuel tự chuyển mảnh khi thắng). */
+function dealUnclaimedPieces(){
+  S.lapeaceDealt = true;
+  Object.keys(S.scavenge).forEach(room=>{
+    const v = S.scavenge[room];
+    if(!isPieceScav(v)) return;
+    delete S.scavenge[room];
+    const type = v.slice(8) || RPG.unownedPieces()[0];
+    const p = RPG.LAPEACE_PIECES[type];
+    if(!p) return;
+    const f = RPG.giveToRandomOpponent(type);
+    if(f) addLog('💠 03:00 — Mảnh La Peace ('+p.name+') chưa ai nhặt đã rơi vào tay '+f.name+'! Đánh bại '+f.name+' để cướp lấy.', 'warn');
+  });
+  markActionDirty();
 }
 
 function openCraftBench(){
@@ -742,7 +881,7 @@ function openBagModal(){
     return `<div class="shopItem"><span>${it.icon} ${it.name} <b>x${me.items[id]}</b><br><span style="font-size:11px;color:var(--text-dim);">${it.desc}${it.usable.indexOf('map')<0?' (dùng trong trận)':''}</span></span>${mapUse?`<button class="btn primary" data-use="${id}">Dùng</button>`:''}</div>`;
   }).join('') : '<p style="color:var(--text-dim);">Túi đồ trống.</p>';
   const comp = Object.keys(RPG.COMPONENTS).map(k=>RPG.COMPONENTS[k].icon+' '+RPG.COMPONENTS[k].name+' '+(me.components[k]||0)).join(' &nbsp;|&nbsp; ');
-  showModal('🎒 TÚI ĐỒ', `${rows}<p style="font-size:12px;color:var(--text-dim);margin-top:10px;">Linh kiện: ${comp}<br>💠 Mảnh La Peace: ${me.laPeace||0}/${RPG.CFG.LAPEACE_NEEDED}${me.spellBreaker?' — <b style="color:var(--amber);">đã học Spell Breaker</b>':''}</p>`, [{label:'Đóng', onClick:()=>closeModal()}]);
+  showModal('🎒 TÚI ĐỒ', `${rows}<p style="font-size:12px;color:var(--text-dim);margin-top:10px;">Linh kiện: ${comp}<br>💠 Mảnh La Peace: ${me.laPeace||0}/${RPG.CFG.LAPEACE_NEEDED}${pieceNamesHtml(me)}${(me.pieces||[]).map(k=>'<br><span style="font-size:11px;">'+RPG.LAPEACE_PIECES[k].icon+' '+RPG.LAPEACE_PIECES[k].name+': '+RPG.LAPEACE_PIECES[k].desc+'</span>').join('')}</p>`, [{label:'Đóng', onClick:()=>closeModal()}]);
   document.querySelectorAll('#mgBody [data-use]').forEach(b=>{
     b.onclick = ()=>{
       const id = b.getAttribute('data-use');
@@ -803,6 +942,11 @@ function advanceWorld(minutesPassed){
   if(S.nextNpcMoveAt<=0){
     moveNPCs();
     S.nextNpcMoveAt = rand(...NPC_MOVE_EVERY);
+  }
+  if(!S.lapeaceDealt && !S.final){
+    const start = S.nightStartClockMin || 0;
+    const deadline = (((RPG.CFG.LAPEACE_DEADLINE_MIN - start) % 1440) + 1440) % 1440;   // phút game tính từ đầu đêm tới 03:00
+    if(S.gameMinutes >= deadline) dealUnclaimedPieces();
   }
   if(S.gameMinutes >= S.nightTotalMin) endNight();
 }
@@ -952,9 +1096,10 @@ function openNPCMenu(meta){
   const info = known
     ? `${RPG.CLASSES[f.classId].icon} ${RPG.CLASSES[f.classId].name} · Lv${f.level}`
     : '❓ Class và Lv chưa rõ (nói chuyện hoặc dùng Máy quay soi để biết)';
+  const heldHtml = (f.pieces||[]).length ? `<br>💠 Đang giữ: <b style="color:var(--amber);">${f.pieces.map(k=>RPG.LAPEACE_PIECES[k].name).join(', ')}</b> (đánh bại để cướp)` : '';
   const hearts = '♥'.repeat(f.trust)+'♡'.repeat(Math.max(0,RPG.CFG.TRUST_MAX-f.trust));
   const body = `<p style="font-size:13px;"><b>${f.name}</b><br><span style="color:var(--text-dim);font-size:12px;">${f.title}</span></p>
-    <p style="font-size:12px;">${info}<br>Tin tưởng: <span style="color:var(--amber);">${hearts}</span></p>`;
+    <p style="font-size:12px;">${info}<br>Tin tưởng: <span style="color:var(--amber);">${hearts}</span>${heldHtml}</p>`;
   const rc = RPG.canRecruit(f);
   const recruitLabel = rc.ok ? '🤝 Mời vào đội'
     : rc.reason==='trust' ? '🤝 Mời vào đội (cần Tin tưởng '+RPG.CFG.RECRUIT_TRUST+')'
@@ -968,29 +1113,39 @@ function openNPCMenu(meta){
     { label:'Rời đi', onClick:()=>closeModal() }
   ]);
 }
+/* Chọn cảnh nói chuyện: 4 cảnh chính theo thứ tự cốt truyện, sau đó xoay vòng TALK_REPEAT */
+function pickTalkLines(f){
+  const st = STORY.stage[f.id] || 0;
+  STORY.stage[f.id] = st + 1;
+  const main = DLG.TALK[f.id];
+  if(st < main.length) return main[st];
+  const rep = (DLG.TALK_REPEAT || {})[f.id];
+  if(rep && rep.length) return rep[(st - main.length) % rep.length];
+  return main[main.length-1];
+}
 function npcTalk(f){
   closeModal(true);
   const trust = RPG.talk(f);
   S.talked[f.id] = true;
-  const lines = DLG.TALK[f.id][Math.min(3, trust)];
+  const lines = pickTalkLines(f);
   addLog('💬 Bạn nói chuyện với '+f.name+' (Tin tưởng '+trust+'/'+RPG.CFG.TRUST_MAX+').', '');
-  playDLG(lines, ()=>{ markActionDirty(); refreshAll(); });
+  playDLG(lines, ()=>{ markActionDirty(); refreshAll(); }, { npcId:f.id });
 }
 function npcRecruit(f){
   closeModal(true);
   const r = RPG.recruit(f);
   if(r.ok){
     addLog('🤝 '+f.name+' gia nhập đội hình của bạn!', 'good');
-    playDLG(DLG.RECRUIT[f.id], ()=>{ markActionDirty(); refreshAll(); });
+    playDLG(DLG.RECRUIT[f.id], ()=>{ markActionDirty(); refreshAll(); }, { npcId:f.id });
   } else {
-    playDLG(DLG.RECRUIT_REFUSE[f.id], ()=>refreshAll());
+    playDLG(DLG.RECRUIT_REFUSE[f.id], ()=>refreshAll(), { npcId:f.id });
   }
 }
 function npcChallenge(f){
   closeModal(true);
   playDLG(DLG.CHALLENGE[f.id], ()=>{
     startBattle({ enemyIds:[f.id], final:false });
-  });
+  }, { npcId:f.id });
 }
 
 
@@ -1129,7 +1284,9 @@ function startBattle(opts){
   $('pkEnemyInfo').innerHTML = ''; $('pkAllyInfo').innerHTML = '';
   $('pkMenu').innerHTML = ''; $('pkText').textContent = '';
   $('pkFast').classList.remove('on');
-  $('pkSB').classList.toggle('hidden', !me.spellBreaker);
+  const _pcs = (me.pieces||[]).map(k=>RPG.LAPEACE_PIECES[k]).filter(Boolean);
+  $('pkSB').textContent = '✦ '+_pcs.map(p=>p.name.toUpperCase()).join(' · ');
+  $('pkSB').classList.toggle('hidden', !_pcs.length);
   const img = ROOM_IMAGES[S.playerRoom];
   $('battleBg').style.backgroundImage = img ? `url('${img}')` : '';
   renderBattle();
@@ -1274,6 +1431,9 @@ function applyEventFx(ev){
     sprFx(ev.dst, 'healfx', 600);
   } else if(ev.type==='death'){
     D[ev.dst] = 0;
+  } else if(ev.type==='revive'){
+    D[ev.dst] = ev.amount;
+    sprFx(ev.dst, 'healfx', 900);
   }
   renderBattle();
 }
@@ -1464,6 +1624,7 @@ function battleFinish(){
     html += `<p><b>${won ? '+'+d.drl : '−'+d.lost} ĐRL</b> ${won ? 'cướp từ' : 'bị trừ bởi'} ${foe.name}.</p>`;
     if(won){
       html += `<p>+${d.exp.gained} EXP`+(d.loot?` · cướp được ${RPG.ITEMS[d.loot].icon} ${RPG.ITEMS[d.loot].name}`:'')+`</p>`;
+      if(d.pieces && d.pieces.length) html += `<p style="color:var(--amber);">💠 Cướp được Mảnh La Peace: <b>${d.pieces.map(k=>RPG.LAPEACE_PIECES[k].icon+' '+RPG.LAPEACE_PIECES[k].name).join(', ')}</b>!<br><span style="font-size:11px;">${d.pieces.map(k=>RPG.LAPEACE_PIECES[k].desc).join('<br>')}</span></p>`;
       d.exp.unlocked.forEach(u=>{ html += `<p style="color:var(--amber);">✦ LÊN CẤP Lv${u.lvl}: mở ${u.isUltimate?'ULTIMATE':'kỹ năng'} "${u.name}"!</p>`; });
       if(d.exp.levelsGained.length && !d.exp.unlocked.length) html += `<p style="color:var(--amber);">✦ LÊN CẤP Lv${me.level}: chỉ số tăng 10%!</p>`;
     }
@@ -1482,7 +1643,7 @@ function battleFinish(){
       spendTime(RPG.CFG.BATTLE_MINUTES, 'Trận đấu kéo dài '+RPG.CFG.BATTLE_MINUTES+' phút');
       if(S.running) refreshAll();
     };
-    if(afterLines) playDLG(afterLines, proceed); else proceed();
+    if(afterLines) playDLG(afterLines, proceed, { npcId:opts.enemyIds[0] }); else proceed();
   }}]);
 }
 
@@ -1514,10 +1675,11 @@ function endNight(){
     const out = RPG.eliminateLowest();
     let sub = 'Kết thúc '+nightName(1,S.night)+'. ';
     if(sims.length){
-      sub += sims.map(d=>RPG.get(d.winnerId).name+' đánh bại '+RPG.get(d.loserId).name).join('; ')+'. ';
+      sub += sims.map(d=>RPG.get(d.winnerId).name+' đánh bại '+RPG.get(d.loserId).name+(d.pieces&&d.pieces.length?' và cướp La Peace ('+d.pieces.map(k=>RPG.LAPEACE_PIECES[k].name).join(', ')+')':'')).join('; ')+'. ';
     }
     if(out){
       sub += out.eliminated.name+' có ĐRL thấp nhất ('+out.eliminated.drl+') và bị loại. ';
+      if(out.droppedPieces && out.droppedPieces.length) sub += 'Mảnh La Peace của họ ('+out.droppedPieces.map(k=>RPG.LAPEACE_PIECES[k].name).join(', ')+') thất lạc, có thể xuất hiện lại. ';
       if(out.playerEliminated){
         showGameOver('BẠN ĐÃ BỊ LOẠI', sub+'Bạn có ĐRL thấp nhất đêm nay.', 'THỬ LẠI ĐÊM NÀY');
         return;
@@ -1535,18 +1697,22 @@ function endNight(){
 }
 
 function beginChapter2(){
-  // Đồng đội còn sống phản bội: chỉ còn 1 suất tốt nghiệp
-  const allies = RPG.partyAllies();
-  allies.forEach(a=>RPG.dismiss(a));
+  // Đồng đội còn sống phản bội: chỉ còn 1 suất tốt nghiệp. Mỗi đồng đội có một cảnh riêng (DLG.BETRAY_BY).
+  const allies = RPG.partyAllies().map(a=>({ id:a.id, name:a.name }));
+  RPG.partyAllies().forEach(a=>RPG.dismiss(a));
   const finish = ()=>beginNight(2, 1, {});
-  if(allies.length) playDLG(DLG.BETRAY, ()=>playDLG(DLG.INTRO_CH2, finish));
-  else playDLG(DLG.INTRO_CH2, finish);
+  const chain = allies.slice().reverse().reduce(
+    (next, a)=> ()=> playDLG((DLG.BETRAY_BY && DLG.BETRAY_BY[a.id]) || DLG.BETRAY, next, { npcId:a.id, vars:{ ALLY:a.name } }),
+    ()=> playDLG(DLG.INTRO_CH2, finish, {})
+  );
+  chain();
 }
 
 function startFinalBattle(){
   const foe = RPG.aliveFighters().find(f=>!f.isPlayer);
   if(!foe){ endFinal(true); return; }
-  playDLG(DLG.INTRO_CH2_FINAL, ()=>startBattle({ enemyIds:[foe.id], final:true }));
+  const lines = (DLG.FINAL_BY && DLG.FINAL_BY[foe.id]) || DLG.INTRO_CH2_FINAL;
+  playDLG(lines, ()=>startBattle({ enemyIds:[foe.id], final:true }), { npcId:foe.id, vars:{ FOE:foe.name } });
 }
 function endFinal(won){
   BATTLE = null;
@@ -1636,6 +1802,7 @@ function showClassResult(name, classId){
     [{ label:'BẮT ĐẦU', primary:true, onClick:()=>{
         closeModal(true);
         RPG.init({ playerName:name, playerClass:classId });
+        resetStory();
         beginNight(1, 1, {});
       }}]);
 }
@@ -1803,6 +1970,11 @@ document.addEventListener('keydown', (e)=>{
   if(e.repeat) return;
   const k = (e.key || '').toLowerCase();
 
+  if(k >= '1' && k <= '4'){
+    if(VN_ACTIVE && isVNOpen()){ e.preventDefault(); VN_ACTIVE.choose(parseInt(k,10)-1); }
+    return;
+  }
+
   if(k === 'j'){
     if(VN_ACTIVE && isVNOpen()){ e.preventDefault(); VN_ACTIVE.next(); }
     return;
@@ -1912,7 +2084,7 @@ document.getElementById('closeMapBtn').onclick = closeMapModal;
     bagBtn: 'Túi đồ [B]',
     miniMapExpand: 'Phóng to bản đồ [M]',
     closeMapBtn: 'Đóng bản đồ [M]',
-    vnNextBtn: 'Tiếp tục [J] · Bỏ qua hội thoại [Ctrl]'
+    vnNextBtn: 'Tiếp tục [J] · Chọn đáp án [1–4] · Bỏ qua hội thoại [Ctrl]'
   };
   Object.keys(hints).forEach(id=>{
     const el = document.getElementById(id);

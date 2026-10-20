@@ -42,7 +42,10 @@
     RAGE_ON_ATTACK: 25,
     RAGE_ON_SKILL: 35,
 
-    LAPEACE_NEEDED: 3,                   // đủ 3 Mảnh La Peace -> học Spell Breaker (parry Ultimate của địch)
+    LAPEACE_NEEDED: 3,                   // tổng số loại Mảnh La Peace (mỗi loại cho 1 sức mạnh riêng, xem LAPEACE_PIECES)
+    LAPEACE_DEADLINE_MIN: 180,           // 03:00 — mảnh chưa ai nhặt sẽ rơi vào tay 1 đối thủ ngẫu nhiên
+    MANA_TRANSFER_PCT: 0.5,              // Mana Transfer: sau khi tung Ultimate được hồi lại 50% thanh Nộ
+    DIE_TWICE_HP_PCT: 0.5,               // Die Twice: hồi sinh với 50% HP tối đa (1 lần mỗi trận)
 
     TRUST_MAX: 3,
     RECRUIT_TRUST: 2,
@@ -230,6 +233,16 @@
   const RELICS = {
     lapeace: { name: "Mảnh La Peace", icon: "💠" }
   };
+  /* Mỗi loại Mảnh La Peace = 1 sức mạnh đặc biệt cho người nắm giữ (người chơi lẫn NPC). Mỗi loại chỉ có 1 mảnh. */
+  const LAPEACE_ORDER = ["spellBreaker", "manaTransfer", "dieTwice"];
+  const LAPEACE_PIECES = {
+    spellBreaker: { id: "spellBreaker", name: "Spell Breaker", icon: "✦",
+      desc: "Khi kẻ địch tung ULTIMATE lên bạn sẽ hiện QTE parry: bấm đúng để phá giải hoàn toàn đòn đó." },
+    manaTransfer: { id: "manaTransfer", name: "Mana Transfer", icon: "🔷",
+      desc: "Sau mỗi lần tung ULTIMATE, bạn được hồi lại 50% thanh Nộ." },
+    dieTwice:     { id: "dieTwice", name: "Die Twice", icon: "♻️",
+      desc: "Sau khi chết lần đầu trong một trận, bạn hồi sinh với 50% HP tối đa." }
+  };
   const COMPONENTS = {
     pin:  { name: "Pin cũ", icon: "🔋" },
     wire: { name: "Dây điện", icon: "🔌" },
@@ -283,7 +296,7 @@
     const f = {
       id: o.id, name: o.name, title: o.title || "", isPlayer: !!o.isPlayer,
       legacyKey: o.legacyKey || null, classId: o.classId, homeRoom: o.homeRoom || null,
-      level: 1, exp: 0, hp: 0, maxHp: 0, rage: 0, laPeace: 0, spellBreaker: false,
+      level: 1, exp: 0, hp: 0, maxHp: 0, rage: 0, pieces: [], laPeace: 0, spellBreaker: false,
       drl: CFG.START_DRL, trust: 0, inParty: false, alive: true,
       items: {}, components: {}, statuses: []
     };
@@ -374,7 +387,9 @@
     loser.drl -= lost;
     winner.drl += gain;
     const exp = addExp(winner, expForWin(winner, loser));
-    return { winnerId: winner.id, loserId: loser.id, drl: gain, lost: lost, exp: exp };
+    // Đánh bại kẻ nắm giữ Mảnh La Peace -> lấy hết mảnh của họ (người chơi thua thì KHÔNG bị mất mảnh)
+    const pieces = loser.isPlayer ? [] : transferPieces(loser, winner);
+    return { winnerId: winner.id, loserId: loser.id, drl: gain, lost: lost, exp: exp, pieces: pieces };
   }
   function tiuPenalty(f, amount) {
     const a = Math.min(f.drl, amount != null ? amount : CFG.TIU_PENALTY);
@@ -396,16 +411,53 @@
     if (list.length <= 2) return null;
     const out = list[0];
     out.alive = false; out.inParty = false;
-    return { eliminated: out, playerEliminated: out.isPlayer, remaining: aliveFighters().length };
+    const dropped = (out.pieces || []).slice();      // mảnh của người bị loại rơi ra, đêm sau lại có thể xuất hiện
+    out.pieces = []; syncPieces(out);
+    return { eliminated: out, playerEliminated: out.isPlayer, remaining: aliveFighters().length, droppedPieces: dropped };
   }
 
-  /* ============================ LA PEACE / SPELL BREAKER ============================ */
-  /* Nhặt 1 Mảnh La Peace. Trả về {count, unlocked}: unlocked=true đúng lần thứ 3 (học Spell Breaker). */
-  function addLaPeace(f) {
-    f.laPeace = Math.min(CFG.LAPEACE_NEEDED, (f.laPeace || 0) + 1);
-    let unlocked = false;
-    if (f.laPeace >= CFG.LAPEACE_NEEDED && !f.spellBreaker) { f.spellBreaker = true; unlocked = true; }
-    return { count: f.laPeace, unlocked: unlocked };
+  /* ============================ LA PEACE (3 loại mảnh, mỗi loại 1 sức mạnh) ============================ */
+  /* f.pieces = danh sách loại mảnh đang giữ. f.laPeace (số mảnh) và f.spellBreaker (bool) được đồng bộ để code cũ vẫn chạy. */
+  function syncPieces(f) {
+    f.pieces = f.pieces || [];
+    f.laPeace = f.pieces.length;
+    f.spellBreaker = f.pieces.indexOf("spellBreaker") >= 0;
+  }
+  function hasPiece(f, type) { return !!(f && f.pieces && f.pieces.indexOf(type) >= 0); }
+  /* Người còn sống đang giữ loại mảnh này (hoặc null) */
+  function pieceOwner(type) {
+    return aliveFighters().filter(function (f) { return hasPiece(f, type); })[0] || null;
+  }
+  /* Các loại mảnh chưa ai (còn sống) nắm giữ -> có thể xuất hiện trên bản đồ */
+  function unownedPieces() {
+    return LAPEACE_ORDER.filter(function (t) { return !pieceOwner(t); });
+  }
+  /* Nhặt 1 Mảnh La Peace loại `type` (bỏ trống = loại chưa ai giữ đầu tiên).
+     Trả về {count, type, unlocked}: unlocked=true nếu thực sự nhận thêm sức mạnh mới. */
+  function addLaPeace(f, type) {
+    f.pieces = f.pieces || [];
+    if (!type) type = unownedPieces()[0];
+    if (!type || !LAPEACE_PIECES[type] || hasPiece(f, type)) { syncPieces(f); return { count: f.pieces.length, type: type || null, unlocked: false }; }
+    f.pieces.push(type);
+    syncPieces(f);
+    return { count: f.pieces.length, type: type, unlocked: true };
+  }
+  /* Người thắng lấy toàn bộ mảnh của người thua. Trả về mảng loại mảnh vừa chuyển. */
+  function transferPieces(from, to) {
+    const moved = (from.pieces || []).filter(function (t) { return !hasPiece(to, t); });
+    from.pieces = (from.pieces || []).filter(function (t) { return moved.indexOf(t) < 0; });
+    to.pieces = (to.pieces || []).concat(moved);
+    syncPieces(from); syncPieces(to);
+    return moved;
+  }
+  /* Mảnh không ai nhặt trước 03:00 -> 1 đối thủ ngẫu nhiên nhận (ưu tiên đối thủ chưa vào đội người chơi). Trả về fighter nhận. */
+  function giveToRandomOpponent(type) {
+    let pool = aliveFighters().filter(function (f) { return !f.isPlayer && !f.inParty; });
+    if (!pool.length) pool = aliveFighters().filter(function (f) { return !f.isPlayer; });
+    if (!pool.length) return null;
+    const f = pool[Math.floor(rng() * pool.length)];
+    addLaPeace(f, type);
+    return f;
   }
 
   /* ============================ TRUST / PARTY ============================ */
@@ -516,12 +568,20 @@
   const player = function () { return state.fighters.PLAYER; };
   const getState = function () { return state; };
   const serialize = function () { return state ? JSON.parse(JSON.stringify(state)) : null; };
-  const load = function (data) { state = data ? JSON.parse(JSON.stringify(data)) : null; return state; };
+  const load = function (data) {
+    state = data ? JSON.parse(JSON.stringify(data)) : null;
+    if (state) Object.keys(state.fighters).forEach(function (id) {   // tương thích save cũ (chỉ có bộ đếm laPeace)
+      const f = state.fighters[id];
+      if (!f.pieces) { f.pieces = []; for (let i = 0; i < (f.laPeace || 0) && i < LAPEACE_ORDER.length; i++) f.pieces.push(LAPEACE_ORDER[i]); }
+      syncPieces(f);
+    });
+    return state;
+  };
 
   /* ============================ XUẤT RA NGOÀI ============================ */
   const RPG = {
     CFG: CFG, CLASSES: CLASSES, CLASS_IDS: CLASS_IDS, CLASS_QUIZ: CLASS_QUIZ,
-    ITEMS: ITEMS, RELICS: RELICS, COMPONENTS: COMPONENTS, RECIPES: RECIPES, NPC_ROSTER: NPC_ROSTER,
+    ITEMS: ITEMS, RELICS: RELICS, LAPEACE_PIECES: LAPEACE_PIECES, LAPEACE_ORDER: LAPEACE_ORDER, COMPONENTS: COMPONENTS, RECIPES: RECIPES, NPC_ROSTER: NPC_ROSTER,
     DEFAULT_PLAYER_NAME: DEFAULT_PLAYER_NAME,
     setRng: setRng, scoreQuiz: scoreQuiz, init: init, get: get, player: player,
     getState: getState, serialize: serialize, load: load,
@@ -531,7 +591,8 @@
     expToNext: expToNext, expForWin: expForWin, addExp: addExp,
     resolveDuel: resolveDuel, tiuPenalty: tiuPenalty, aliveFighters: aliveFighters,
     rankAscending: rankAscending, eliminateLowest: eliminateLowest,
-    addLaPeace: addLaPeace,
+    addLaPeace: addLaPeace, hasPiece: hasPiece, pieceOwner: pieceOwner, unownedPieces: unownedPieces,
+    transferPieces: transferPieces, giveToRandomOpponent: giveToRandomOpponent, syncPieces: syncPieces,
     talk: talk, partyAllies: partyAllies, canRecruit: canRecruit, recruit: recruit, dismiss: dismiss,
     countItem: countItem, addItem: addItem, removeItem: removeItem, addComponent: addComponent,
     canCraft: canCraft, craft: craft, lootRandomItem: lootRandomItem,
