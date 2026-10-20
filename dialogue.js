@@ -7,26 +7,34 @@ window.DLG = {
 
   INTRO_CH1: [
     { spk: "LOA TRƯỜNG", text: "Thông báo: sinh viên năm cuối chưa đủ Điểm Rèn Luyện (ĐRL) sẽ KHÔNG được xét tốt nghiệp." },
-    { spk: "{P}", text: "Mình thiếu cả chục điểm... và cả nhóm năm đứa này cũng thế. Chỉ còn đúng một cách." },
-    { spk: "LOA TRƯỜNG", text: "Một giải đấu Battle Royale. Năm người, ai trụ lại cuối cùng sẽ tốt nghiệp loại Giỏi." },
-    { spk: "{P}", text: "Mỗi người bắt đầu với 40 ĐRL. Thắng một trận thì cướp một phần tư ĐRL của đối thủ, còn thua thì bị trừ một nửa ĐRL của mình." },
-    { spk: "{P}", text: "Hết mỗi đêm, người có ĐRL thấp nhất sẽ bị loại. Và nhớ tránh The TIU — bị bắt gặp lang thang là bị trừ điểm." },
-    { spk: "{P}", text: "Nghe đồn trong trường giấu ba Mảnh La Peace. Gom đủ cả ba sẽ học được Spell Breaker — thứ có thể phá giải Ultimate của đối thủ." }
+    { spk: "{Bạn}", text: "Mình thiếu cả chục điểm... và cả nhóm này cũng thế. Chỉ còn đúng một cách." },
+    { spk: "LOA TRƯỜNG", text: "Do UIT tăng học phí lên và ngân sách của trường đã được nâng lên nên trường sẽ tổ chức một giải đấu Battle Royale được gọi là The TIU." },
+    { spk: "LOA TRƯỜNG", text: "5 Người được chọn chính là 5 Đại Trụ UIT, đã học ở đây được 8 năm rồi." },
+    { spk: "LOA TRƯỜNG", text: "Thí sinh đầu tiên: Wibu Việt Nhật, hướng nội và sợ giao tiếp xã hội, không share bất kì bài của đoàn khoa nào." },
+    { spk: "LOA TRƯỜNG", text: "Thí sinh tiếp theo là: Chang Linh Ngu Lam, kẻ đã cống hiến cả cuộc đời mình cho lmht nước nhà đến mức không cày nổi đrl." },
+    { spk: "LOA TRƯỜNG", text: "Thí sinh kế tiếp là: Toby, nam sinh ngoại quốc hay cúp học và 8 năm qua không hề có bạn bè để tag nhau share bài trường." },
+    { spk: "LOA TRƯỜNG", text: "Thí sinh cuối cùng là...Bạn, chính bạn đấy, không đủ điểm rèn luyện để ra khỏi trường dù trường drop điểm liên tục ." },
+    { spk: "{TIU}", text: "Mỗi người bắt đầu với 40 ĐRL. Thắng một trận thì cướp một phần tư ĐRL của đối thủ, còn thua thì bị trừ một nửa ĐRL của mình." },
+    { spk: "{TIU}", text: "Luật chơi rất đơn giản." },
+    { spk: "{TIU}", text: "Hết mỗi đêm, người có ĐRL thấp nhất sẽ bị loại. Và nhớ tránh The TIU nhất có thể." },
+    { spk: "{TIU}", text: "Mọi người có thể chiến đấu với nhau để giành lấy điểm." },
+    { spk: "{TIU}", text: "Chỉ có kẻ mạnh nhất mới có thể tốt nghiệp loại Giỏi." },
+    { spk: "{TIU}", text: "Bây giờ, The TIU chính thức bắt đầu.." }
   ],
 
   INTRO_CH1_NIGHT: {
-    2: [{ spk: "{P}", text: "Đêm thứ hai. Còn lại bốn người. Phải giữ ĐRL cao hơn ít nhất một đối thủ." }],
-    3: [{ spk: "{P}", text: "Đêm cuối của chương này. Ba người còn lại — mà chỉ hai người được đi tiếp." }]
+    2: [{ spk: "{TIU}", text: "Đêm thứ hai. Còn lại bốn người. Phải giữ ĐRL cao hơn ít nhất một đối thủ." }],
+    3: [{ spk: "{TIU}", text: "Đêm cuối của chương này. Ba người còn lại — mà chỉ hai người được đi tiếp." }]
   },
 
   INTRO_CH2: [
     { spk: "LOA TRƯỜNG", text: "Chỉ còn hai người đứng vững. Đêm nay, các bạn được chuẩn bị. Đêm mai, một trận quyết định." },
-    { spk: "{P}", text: "The TIU đã đi ngủ. Giờ là lúc đi quanh trường, thu gom mọi thứ có thể dùng được." },
-    { spk: "{P}", text: "Nếu tìm thấy đối thủ trước... mình có thể ra tay trước, cướp luôn đồ của họ." }
+    { spk: "{TIU}", text: "The TIU đã đi ngủ. Giờ là lúc đi quanh trường, thu gom mọi thứ có thể dùng được." },
+    { spk: "{TIU}", text: "Nếu tìm thấy đối thủ trước... mình có thể ra tay trước, cướp luôn đồ của họ." }
   ],
 
   BETRAY: [
-    { spk: "{P}", text: "Chỉ có một suất tốt nghiệp loại Giỏi. Dù chúng ta từng sát cánh... thì đến đây là hết." }
+    { spk: "{TIU}", text: "Chỉ có một suất tốt nghiệp loại Giỏi. Dù chúng ta từng sát cánh... thì đến đây là hết." }
   ],
 
   INTRO_CH2_FINAL: [
@@ -37,7 +45,7 @@ window.DLG = {
     { spk: "LOA TRƯỜNG", text: "Người cuối cùng trụ lại: {P}. Chúc mừng bạn đã đủ ĐRL để tốt nghiệp loại Giỏi!" }
   ],
 
-  /* Nói chuyện theo mức Tin tưởng khi gặp (0, 1, 2, 3+) */
+
   TALK: {
     WIBU: [
       [{ spk: "WIBU VIỆT NHẬT", text: "Hả? Ai đó? Đừng có động vào bộ figure trong balo của tôi nhé!" }],
