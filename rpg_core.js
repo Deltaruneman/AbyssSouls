@@ -20,7 +20,7 @@
   /* ============================ 1) CẤU HÌNH ============================ */
   const CFG = {
     MAX_LEVEL: 5,
-    EXP_TABLE: [0, 0, 30, 80, 150, 250], // EXP_TABLE[lv] = EXP tích lũy cần để đạt lv
+    EXP_TABLE: [0, 0, 30, 80, 130, 200], // EXP_TABLE[lv] = EXP tích lũy cần để đạt lv
     GROWTH_LEVELS: [2, 4],               // Lv không có skill -> cộng chỉ số
     GROWTH_PCT: 0.10,                    // +10% chỉ số gốc mỗi mốc
     ULT_UNLOCK_LEVEL: 1,                 // Ultimate dùng được từ Lv1 (chỉ cần đầy Nộ)
@@ -29,9 +29,9 @@
     EXP_PER_ENEMY_LEVEL: 10,
     EXP_UNDERDOG_BONUS: 0.5,             // thắng đối thủ Lv cao hơn: +50%
 
-    START_DRL: 40,
+    START_DRL: 30,
     DRL_STEAL_PCT: 0.25,                 // THẮNG: cướp 25% ĐRL của kẻ thua
-    DRL_PLAYER_LOSS_PCT: 0.5,            // người chơi THUA: bị trừ 50% ĐRL (NPC đánh nhau với nhau: kẻ thua mất đúng phần bị cướp)
+    DRL_PLAYER_LOSS_PCT: 0.25,            // người chơi THUA: bị trừ 50% ĐRL (NPC đánh nhau với nhau: kẻ thua mất đúng phần bị cướp)
     TIU_PENALTY: 5,                      // The TIU bắt được người chơi (chỉ Chapter 1)
 
     BATTLE_MINUTES: 60,                  // 1 trận đấu tốn 60 phút đồng hồ trong game
@@ -61,17 +61,17 @@
   const CLASSES = {
     fighter: {
       id: "fighter", name: "Đấu Sĩ", icon: "🛡️",
-      base: { hp: 100, atk: 30, def: 30, spd: 40 },
+      base: { hp: 100, atk: 20, def: 60, spd: 20 },
       passive: { id: "ironWill", name: "Ý chí thép", rageOnHit: 35,
                  desc: "Mỗi lần bị tấn công trúng, tích thêm 35 Nộ." },
       skills: [
-        { id: "guard", lvl: 1, name: "Thủ thế", target: "self",
+        { id: "guard", lvl: 1, name: "Rho Aias", target: "self",
           desc: "Tăng 40 DEF trong 2 turn.",
           effects: [{ type: "buff", stat: "def", amount: 40, turns: 2 }] },
         { id: "counter", lvl: 3, name: "Phản đòn", target: "self",
           desc: "Miễn nhiễm sát thương 1 turn, phản lại 50% sát thương địch vừa gây ra.",
           effects: [{ type: "immune", turns: 1 }, { type: "reflect", pct: 0.5, turns: 1 }] },
-        { id: "lastStand", lvl: 5, name: "Chiến binh cuối cùng", target: "self",
+        { id: "lastStand", lvl: 5, name: "Cửu mệnh", target: "self",
           desc: "Xóa mọi debuff, tăng 20 ATK và 20 DEF trong 3 turn.",
           effects: [{ type: "cleanse" },
                     { type: "buff", stat: "atk", amount: 20, turns: 3 },
@@ -86,17 +86,17 @@
       id: "assassin", name: "Sát Thủ", icon: "🗡️",
       base: { hp: 70, atk: 60, def: 10, spd: 60 },
       skills: [
-        { id: "nimble", lvl: 1, name: "Thân thủ nhanh nhẹn", target: "self",
-          desc: "Tăng 40 SPD trong 2 turn.",
-          effects: [{ type: "buff", stat: "spd", amount: 40, turns: 2 }] },
-        { id: "finisher", lvl: 3, name: "Sát chiêu", target: "single",
+        { id: "nimble", lvl: 1, name: "Trace on ", target: "self",
+          desc: "Tăng 40 ATK trong 2 turn.",
+          effects: [{ type: "buff", stat: "atk", amount: 40, turns: 2 }] },
+        { id: "finisher", lvl: 3, name: "Xạ Sát Bách Thủ", target: "single",
           desc: "Gây sát thương lớn lên 1 kẻ địch.",
           effects: [{ type: "damage", power: 1.3 }] },
-        { id: "instinct", lvl: 5, name: "Bản năng sát thủ", target: "self",
+        { id: "instinct", lvl: 5, name: "Hòa vào màn đêm", target: "self",
           desc: "Tàng hình 2 turn (không thể bị chỉ định, chỉ nhận sát thương từ skill AoE).",
           effects: [{ type: "stealth", turns: 2 }] }
       ],
-      ultimate: { id: "perfectKill", name: "Sát chiêu hoàn hảo", target: "single",
+      ultimate: { id: "perfectKill", name: "Vô hạn kiếm giới", target: "single",
         desc: "Gây sát thương cực lớn, 30% tỉ lệ kết liễu (Execute) mục tiêu ngay lập tức.",
         effects: [{ type: "damage", power: 2.4 }, { type: "execute", chance: 0.3 }] }
     },
@@ -261,7 +261,7 @@
   const DEFAULT_PLAYER_NAME = "Tôi Yêu UIT";
   // legacyKey: khoá cũ trong script.js (S.npc.B / S.npc.E) để dễ nối code về sau
   const NPC_ROSTER = [
-    { id: "WIBU",  legacyKey: "E", name: "Wibu Việt Nhật",      title: "Lolicon Protector", homeRoom: "E" },
+    { id: "WIBU",  legacyKey: "E", name: "Wibu Việt Nhật",      title: "Lolicon", homeRoom: "E" },
     { id: "LINH",  legacyKey: "B", name: "Chàng Lính Ngu Lam",  title: "Quỷ Vương Bất Tử",  homeRoom: "B" },
     { id: "TRONG", legacyKey: null, name: "Trọng",              title: "Người Hoa Hòe",     homeRoom: "C" },
     { id: "TOBY",  legacyKey: null, name: "Toby",               title: "Sinh viên ngoại quốc, hay cúp tiết, luôn dắt theo một con chó phiền phức", homeRoom: "A" }

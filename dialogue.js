@@ -26,6 +26,17 @@ const opt  = (label,fx,insert,extra)=>Object.assign({label,fx:fx||null,insert:in
 
 window.DLG = {
 
+  /* Portrait hội thoại: tên người nói → ảnh PNG (nền trong suốt, nên cao ~800×1200).
+     Dòng thoại có thể thêm mood:'sad' để dùng assets/images/icons/wibu_sad.png (thiếu file thì tự dùng ảnh gốc).
+     Người chơi / LOA TRƯỜNG / THE TIU không có portrait. Thiếu file ảnh → hội thoại vẫn chạy bình thường. */
+  PORTRAITS: {
+    "WIBU VIỆT NHẬT":     "assets/images/icons/wibu.png",
+    "CHÀNG LÍNH NGU LAM": "assets/images/icons/linh.png",
+    "TRỌNG":              "assets/images/icons/trong.png",
+    "TOBY":               "assets/images/icons/toby.png",
+    "CHÓ CỦA TOBY":       "assets/images/icons/dog.png"
+  },
+
   /* ======================= CHƯƠNG 1 — MỞ ĐẦU ======================= */
   INTRO_CH1: [
     nar("(23:00. Cổng trường UIT đã khóa. Loa phát thanh ngoài sân vang lên, khàn khàn như đã chờ giây phút này từ rất lâu.)"),

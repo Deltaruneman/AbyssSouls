@@ -41,12 +41,32 @@ const ROOM_FALLBACK_GRADIENT = {
   FIELD:"linear-gradient(135deg,#0e2018,#0c1410)"
 };
 
+/* NPC_META: icon = ảnh PNG vuông (avatar tròn: banner phòng, sân đấu, bản đồ). Chưa có ảnh → tự rơi về avatarText.
+   Thư mục ảnh: xem img/README.txt. Portrait trong hội thoại khai báo ở DLG.PORTRAITS (dialogue.js). */
 const NPC_META = {
-  WIBU:  { avatarBg:'#5a3a8a', avatarText:'和' },
-  LINH:  { avatarBg:'#2a5a3a', avatarText:'💤' },
-  TRONG: { avatarBg:'#7a1a1a', avatarText:'✦' },
-  TOBY:  { avatarBg:'#2a4a7a', avatarText:'🐕' }
+  WIBU:  { avatarBg:'#5a3a8a', avatarText:'', icon:'assets/images/icons/wibu.png' },
+  LINH:  { avatarBg:'#2a5a3a', avatarText:'', icon:'assets/images/icons/linh.png' },
+  TRONG: { avatarBg:'#7a1a1a', avatarText:'', icon:'assets/images/icons/trong.png' },
+  TOBY:  { avatarBg:'#2a4a7a', avatarText:'', icon:'assets/images/icons/toby.png' }
 };
+/* Cache ảnh cho canvas bản đồ: trả về Image đã tải xong, hoặc null nếu chưa có / lỗi */
+const ICON_CACHE = {};
+function iconImg(src){
+  if(!src) return null;
+  let e = ICON_CACHE[src];
+  if(!e){
+    e = ICON_CACHE[src] = { img:new Image(), ok:false };
+    e.img.onload = ()=>{ e.ok = true; };
+    e.img.onerror = ()=>{ e.ok = false; };
+    e.img.src = src;
+  }
+  return (e.ok && e.img.naturalWidth) ? e.img : null;
+}
+Object.keys(NPC_META).forEach(k=>iconImg(NPC_META[k].icon));   // tải trước
+/* Chèn ảnh icon đè lên glyph; thiếu file thì ảnh tự gỡ, glyph vẫn hiện */
+function iconTag(meta, cls){
+  return meta && meta.icon ? '<img class="'+(cls||'npcImg')+'" src="'+meta.icon+'" alt="" draggable="false" onerror="this.remove()">' : '';
+}
 
 let _storedVol = 80;
 try{
@@ -276,6 +296,16 @@ function playVN(lines, onDone, ctx){
   const nextBtn = document.getElementById('vnNextBtn');
   const hintEl = document.getElementById('vnHint');
   const choicesEl = document.getElementById('vnChoices');
+  const portraitEl = document.getElementById('vnPortrait');
+  /* Reset portrait mỗi đoạn thoại mới */
+  portraitEl.classList.add('hidden'); portraitEl.classList.remove('dim');
+  portraitEl.dataset.want = ''; portraitEl.dataset.base = ''; portraitEl.removeAttribute('src');
+  portraitEl.onload = ()=>portraitEl.classList.remove('hidden');
+  portraitEl.onerror = ()=>{
+    const base = portraitEl.dataset.base;
+    if(base && portraitEl.getAttribute('src') !== base) portraitEl.src = base;   // thiếu ảnh biểu cảm → về ảnh gốc
+    /* thiếu cả ảnh gốc → giữ ẩn, hội thoại vẫn chạy bình thường */
+  };
   overlay.classList.remove('hidden');
   const queue = lines.slice();
   let i = -1, finished = false, typing = false, typingTimer = null, fullText = '', curChoices = [];
@@ -332,9 +362,26 @@ function playVN(lines, onDone, ctx){
     ghost.textContent = fullText.slice(n);
     txtEl.appendChild(ghost);
   }
+  /* Portrait: tra theo tên người nói (DLG.PORTRAITS). Dòng có mood:'sad' thử img/portraits/XXX_sad.png trước.
+     Người nói không có portrait (người chơi, loa trường, dẫn truyện) → portrait đang hiện bị làm mờ. */
+  function setPortrait(l){
+    const base = l.spk && DLG.PORTRAITS && DLG.PORTRAITS[l.spk.toUpperCase()];
+    if(base){
+      const want = l.mood ? base.replace(/\.png$/i, '_'+l.mood+'.png') : base;
+      if(portraitEl.dataset.want !== want){
+        portraitEl.dataset.want = want; portraitEl.dataset.base = base;
+        portraitEl.classList.remove('vnPortraitIn'); void portraitEl.offsetWidth; portraitEl.classList.add('vnPortraitIn');
+        portraitEl.src = want;
+      }
+      portraitEl.classList.remove('dim');
+    } else {
+      portraitEl.classList.add('dim');
+    }
+  }
   function showLine(){
     const l = queue[i];
     applyFx(l.fx, ctx);
+    setPortrait(l);
     spkEl.textContent = l.spk || '';
     spkEl.style.visibility = l.spk ? 'visible' : 'hidden';
     txtEl.classList.toggle('vnNarration', !l.spk);
@@ -360,6 +407,7 @@ function playVN(lines, onDone, ctx){
       finished = true;
       if(VN_ACTIVE === ctl) VN_ACTIVE = null; // gỡ TRƯỚC onDone để onDone có thể mở đoạn thoại mới
       overlay.classList.add('hidden');
+      portraitEl.classList.add('hidden'); portraitEl.dataset.want = '';
       clearChoices();
       nextBtn.onclick = null;
       box.onclick = null;
@@ -664,7 +712,7 @@ function refreshActionPane(){
     const m = npcs[0];
     const av = $('npcAvatar');
     av.style.background = m.avatarBg;
-    av.textContent = m.avatarText;
+    av.innerHTML = '<span class="avGlyph">' + m.avatarText + '</span>' + iconTag(m, 'npcImg');
     $('npcName').textContent = m.name;
   }
 
@@ -1264,9 +1312,9 @@ const TARGET_LABEL = { self:'Bản thân', single:'1 mục tiêu', aoe:'Toàn b�
 
 function unitLook(u){
   if(u.isSummon) return { glyph:SUMMON_GLYPH[u.kind] || '✦', bg:'#4a3a8a' };
-  if(u.f.isPlayer) return { glyph:RPG.CLASSES[u.f.classId].icon, bg:'#2a5a8a' };
+  if(u.f.isPlayer) return { glyph:RPG.CLASSES[u.f.classId].icon, bg:'#2a5a8a' };   // người chơi: giữ icon class
   const m = NPC_META[u.f.id];
-  return { glyph: m ? m.avatarText : RPG.CLASSES[u.f.classId].icon, bg: m ? m.avatarBg : '#555' };
+  return { glyph: m ? m.avatarText : RPG.CLASSES[u.f.classId].icon, bg: m ? m.avatarBg : '#555', meta: m };
 }
 function hpClass(p){ return p>50 ? '' : (p>20 ? 'mid' : 'low'); }
 
@@ -1365,7 +1413,7 @@ function ensureUnitView(u){
   const spr = document.createElement('div');
   spr.className = 'pkSpr '+(enemy?'enemy':'ally')+(u.isSummon?' summon':'')+' enter';
   spr.style.setProperty('--c', look.bg);
-  spr.innerHTML = `<span class="glyph">${look.glyph}</span>`;
+  spr.innerHTML = `<span class="glyph">${look.glyph}</span>` + iconTag(look.meta, 'pkImg');
   $(enemy ? 'pkEnemySprites' : 'pkAllySprites').appendChild(spr);
   bt.sprites[u.uid] = spr;
   const box = document.createElement('div');
@@ -2992,7 +3040,15 @@ function tdDraw(m, ts){
       ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.beginPath(); ctx.ellipse(cx,cy+tp*0.28,tp*0.3,tp*0.12,0,0,Math.PI*2); ctx.fill();
       ctx.fillStyle = mt.avatarBg || '#5a3a8a'; ctx.strokeStyle = '#c9962f'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(cx,cy,tp*0.36,0,Math.PI*2); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#fff'; tdIcon(ctx, mt.avatarText||'?', cx, cy, tp*0.4);
+      const nimg = iconImg(mt.icon);
+      if(nimg){
+        const r = tp*0.36, side = Math.min(nimg.naturalWidth, nimg.naturalHeight);
+        ctx.save(); ctx.beginPath(); ctx.arc(cx,cy,r-1,0,Math.PI*2); ctx.clip();
+        ctx.drawImage(nimg, (nimg.naturalWidth-side)/2, (nimg.naturalHeight-side)/2, side, side, cx-r, cy-r, r*2, r*2);
+        ctx.restore();
+      } else {
+        ctx.fillStyle = '#fff'; tdIcon(ctx, mt.avatarText||'?', cx, cy, tp*0.4);
+      }
       ctx.fillStyle = '#c9962f'; ctx.font = 'bold 11px Roboto, sans-serif'; ctx.textAlign='center'; ctx.textBaseline='alphabetic';
       ctx.fillText(mt.name, cx, cy-tp*0.5);
     }
@@ -3123,6 +3179,7 @@ function startTravel(dest){
   bg.style.background = img ? '' : (ROOM_FALLBACK_GRADIENT[dest] || '#111');
   if(img) bg.style.backgroundImage = `url('${img}')`;
   el.querySelector('.tlName').textContent = ROOM_DEF[dest].name;
+  // khởi động lại animation thanh tiến trình mỗi lần
   el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
   playTravelSfx();
 
