@@ -31,7 +31,7 @@
 
     START_DRL: 30,
     DRL_STEAL_PCT: 0.25,                 // THẮNG: cướp 25% ĐRL của kẻ thua
-    DRL_PLAYER_LOSS_PCT: 0.25,            // người chơi THUA: bị trừ 50% ĐRL (NPC đánh nhau với nhau: kẻ thua mất đúng phần bị cướp)
+    DRL_PLAYER_LOSS_PCT: 0.25,            // người chơi THUA: bị trừ 25% ĐRL (NPC đánh nhau với nhau: kẻ thua mất đúng phần bị cướp)
     TIU_PENALTY: 5,                      // The TIU bắt được người chơi (chỉ Chapter 1)
 
     BATTLE_MINUTES: 60,                  // 1 trận đấu tốn 60 phút đồng hồ trong game
@@ -49,7 +49,7 @@
 
     TRUST_MAX: 3,
     RECRUIT_TRUST: 2,
-    PARTY_MAX_ALLIES: 2,                 // tối đa 2 đồng đội + người chơi = 3 người (giống PARTY_DEF cũ)
+    PARTY_MAX_ALLIES: 1,                 // tối đa 2 đồng đội + người chơi = 3 người (giống PARTY_DEF cũ)
 
     // hồi chiêu đề xuất (spec chưa nêu) — Ultimate không dùng CD mà dùng Nộ đầy
     SKILL_CD: { 1: 2, 3: 3, 5: 4 }
