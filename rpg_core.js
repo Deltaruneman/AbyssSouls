@@ -20,7 +20,7 @@
   /* ============================ 1) CẤU HÌNH ============================ */
   const CFG = {
     MAX_LEVEL: 5,
-    EXP_TABLE: [0, 0, 30, 80, 150, 250], // EXP_TABLE[lv] = EXP tích lũy cần để đạt lv
+    EXP_TABLE: [0, 0, 30, 80, 130, 200], // EXP_TABLE[lv] = EXP tích lũy cần để đạt lv
     GROWTH_LEVELS: [2, 4],               // Lv không có skill -> cộng chỉ số
     GROWTH_PCT: 0.10,                    // +10% chỉ số gốc mỗi mốc
     ULT_UNLOCK_LEVEL: 1,                 // Ultimate dùng được từ Lv1 (chỉ cần đầy Nộ)
@@ -29,9 +29,9 @@
     EXP_PER_ENEMY_LEVEL: 10,
     EXP_UNDERDOG_BONUS: 0.5,             // thắng đối thủ Lv cao hơn: +50%
 
-    START_DRL: 40,
+    START_DRL: 30,
     DRL_STEAL_PCT: 0.25,                 // THẮNG: cướp 25% ĐRL của kẻ thua
-    DRL_PLAYER_LOSS_PCT: 0.5,            // người chơi THUA: bị trừ 50% ĐRL (NPC đánh nhau với nhau: kẻ thua mất đúng phần bị cướp)
+    DRL_PLAYER_LOSS_PCT: 0.25,            // người chơi THUA: bị trừ 50% ĐRL (NPC đánh nhau với nhau: kẻ thua mất đúng phần bị cướp)
     TIU_PENALTY: 5,                      // The TIU bắt được người chơi (chỉ Chapter 1)
 
     BATTLE_MINUTES: 60,                  // 1 trận đấu tốn 60 phút đồng hồ trong game
@@ -49,7 +49,7 @@
 
     TRUST_MAX: 3,
     RECRUIT_TRUST: 2,
-    PARTY_MAX_ALLIES: 2,                 // tối đa 2 đồng đội + người chơi = 3 người (giống PARTY_DEF cũ)
+    PARTY_MAX_ALLIES: 1,                 // tối đa 2 đồng đội + người chơi = 3 người (giống PARTY_DEF cũ)
 
     // hồi chiêu đề xuất (spec chưa nêu) — Ultimate không dùng CD mà dùng Nộ đầy
     SKILL_CD: { 1: 2, 3: 3, 5: 4 }
@@ -61,7 +61,7 @@
   const CLASSES = {
     fighter: {
       id: "fighter", name: "Đấu Sĩ", icon: "🛡️",
-      base: { hp: 100, atk: 30, def: 30, spd: 40 },
+      base: { hp: 100, atk: 30, def: 50, spd: 20 },
       passive: { id: "ironWill", name: "Ý chí thép", rageOnHit: 35,
                  desc: "Mỗi lần bị tấn công trúng, tích thêm 35 Nộ." },
       skills: [
@@ -84,7 +84,7 @@
 
     assassin: {
       id: "assassin", name: "Sát Thủ", icon: "🗡️",
-      base: { hp: 70, atk: 60, def: 10, spd: 60 },
+      base: { hp: 60, atk: 70, def: 10, spd: 60 },
       skills: [
         { id: "nimble", lvl: 1, name: "Thân thủ nhanh nhẹn", target: "self",
           desc: "Tăng 40 SPD trong 2 turn.",
@@ -189,7 +189,7 @@
           { t: "Thông cảm, nói chuyện nhẹ nhàng", c: "healer" },
           { t: "Rủ cả hội đi giải quyết cùng", c: "summoner" }] },
     { q: "Trong balo của bạn luôn có gì?",
-      a: [{ t: "Chai nước lớn, sẵn sàng chịu đựng", c: "fighter" },
+      a: [{ t: "Chai nước lớn.", c: "fighter" },
           { t: "Đúng một cây bút, gọn nhẹ", c: "assassin" },
           { t: "Sổ ghi đầy công thức và hình vẽ", c: "mage" },
           { t: "Túi thuốc, bánh kẹo để chia bạn", c: "healer" },
