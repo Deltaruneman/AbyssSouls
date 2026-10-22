@@ -84,7 +84,7 @@
 
     assassin: {
       id: "assassin", name: "Sát Thủ", icon: "🗡️",
-      base: { hp: 70, atk: 60, def: 10, spd: 60 },
+      base: { hp: 60, atk: 70, def: 10, spd: 60 },
       skills: [
         { id: "nimble", lvl: 1, name: "Trace on ", target: "self",
           desc: "Tăng 40 ATK trong 2 turn.",

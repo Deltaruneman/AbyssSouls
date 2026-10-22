@@ -65,7 +65,7 @@ window.DLG = {
         say(ME,"Mình chưa biết mình sẽ làm gì cả. Chưa biết nữa."),
         nar("(Và có lẽ đó là lý do mình vẫn còn đứng đây.)")])
     ]),
-    say(TIU,"Luật rất ngắn gọn. Mỗi người bước vào với 40 ĐRL."),
+    say(TIU,"Luật rất ngắn gọn. Mỗi người bước vào với 30 ĐRL."),
     say(TIU,"Thắng một trận, bạn lấy một phần tư ĐRL của đối thủ. Thua, bạn mất một nửa ĐRL của chính mình."),
     say(TIU,"Hết mỗi đêm, người có ĐRL thấp nhất bị gạch tên khỏi danh sách tốt nghiệp. Và nhớ tránh mặt The TIU — chúng tôi cũng đang đi tuần."),
     say(TIU,"Còn lại thì tùy các bạn. Hợp tác, đối đầu, hay cả hai."),
