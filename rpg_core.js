@@ -20,7 +20,7 @@
   /* ============================ 1) CẤU HÌNH ============================ */
   const CFG = {
     MAX_LEVEL: 5,
-    EXP_TABLE: [0, 0, 30, 80, 130, 200], // EXP_TABLE[lv] = EXP tích lũy cần để đạt lv
+    EXP_TABLE: [0, 0, 30, 80, 150, 220], // EXP_TABLE[lv] = EXP tích lũy cần để đạt lv
     GROWTH_LEVELS: [2, 4],               // Lv không có skill -> cộng chỉ số
     GROWTH_PCT: 0.10,                    // +10% chỉ số gốc mỗi mốc
     ULT_UNLOCK_LEVEL: 1,                 // Ultimate dùng được từ Lv1 (chỉ cần đầy Nộ)

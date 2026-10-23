@@ -501,8 +501,81 @@ function eventLabel(ev){
   return {stage:'Kiểm tra sân khấu', floors:'Bật/tắt các tầng', wire:'Nối dây điện', quiz:'Trả lời câu hỏi', wibu:'Bắt Wibu Việt Nhật', books:'Sắp xếp lại sách', bikes:'Dắt xe về đúng hàng', ball:'Tìm quả bóng lạc'}[ev]||ev;
 }
 /* ============== MODAL DÙNG CHUNG (tái dùng #mgModal) ============== */
+/* ============== ĐIỀU KHIỂN BÀN PHÍM CHO MENU ==============
+   ↑↓←→ / W A S D: chọn · Enter / Space / J / E: xác nhận · 1-9: chọn nhanh · Esc / Backspace / X: quay lại (hoặc "Rời đi") · F: tăng tốc hội thoại chiến đấu */
+var KB = { cur:null };
+function kbScope(){
+  if(isVNOpen() || isPauseMenuOpen()) return null;
+  if(isBattleActive()){
+    if(!$('mgModal').classList.contains('hidden') || !$('dodgeArena').classList.contains('hidden')) return null;
+    if(BATTLE.say) return 'say';
+    if($('pkMenu').querySelector('button')) return 'menu';
+    return null;
+  }
+  const mg = $('mgModal');
+  if(!mg.classList.contains('hidden') && mg.dataset.kb==='1' && $('mgFooter').querySelector('button')) return 'modal';
+  return null;
+}
+function kbButtons(scope){
+  const root = (scope==='modal') ? $('mgFooter') : $('pkMenu');
+  return Array.from(root.querySelectorAll('button'));
+}
+function kbSelect(btn, how){          // how: 'init' | 'key' | 'mouse'
+  const prev = KB.cur;
+  if(prev && prev !== btn){ prev.classList.remove('kb'); if(prev.onmouseleave) prev.onmouseleave(); }
+  KB.cur = btn || null;
+  if(!btn) return;
+  btn.classList.add('kb');
+  if(how==='key'){ btn.scrollIntoView({ block:'nearest' }); if(btn.onmouseenter) btn.onmouseenter(); }
+  else if(how==='init' && btn.dataset.hover && btn.onmouseenter) btn.onmouseenter();
+}
+function kbReset(scope){
+  KB.cur = null;
+  const list = kbButtons(scope || (isBattleActive() ? 'menu' : 'modal'));
+  list.forEach(b=>b.classList.remove('kb'));
+  const first = list.find(b=>!b.disabled);
+  if(first) kbSelect(first, 'init');
+}
+document.addEventListener('keydown', (e)=>{
+  if(isTypingTarget(e.target) || e.ctrlKey || e.metaKey || e.altKey) return;
+  const scope = kbScope();
+  if(!scope) return;
+  const k = (e.key || '').toLowerCase();
+  const eat = ()=>{ e.preventDefault(); e.stopImmediatePropagation(); if(document.activeElement && document.activeElement.blur) document.activeElement.blur(); };
+  const confirmKey = (k==='enter' || k===' ' || k==='j' || k==='e');
+
+  if(scope==='say'){
+    if(confirmKey){ eat(); if(!e.repeat) $('pkTextBox').click(); }
+    else if(k==='f'){ eat(); if(!e.repeat) $('pkFast').click(); }
+    return;
+  }
+  const list = kbButtons(scope);
+  const enabled = list.filter(b=>!b.disabled);
+  if(!enabled.length) return;
+  const move = (d)=>{
+    let i = enabled.indexOf(KB.cur);
+    i = i < 0 ? 0 : (i + d + enabled.length) % enabled.length;
+    kbSelect(enabled[i], 'key');
+  };
+  if(k==='arrowdown' || k==='s' || k==='arrowright' || k==='d'){ eat(); move(1); }
+  else if(k==='arrowup' || k==='w' || k==='arrowleft' || k==='a'){ eat(); move(-1); }
+  else if(confirmKey){ eat(); if(!e.repeat){ const b = enabled.includes(KB.cur) ? KB.cur : enabled[0]; b.click(); } }
+  else if(k>='1' && k<='9'){
+    eat();
+    const b = list[parseInt(k,10)-1];
+    if(b && !b.disabled && !e.repeat) b.click();
+  }
+  else if(k==='escape' || k==='backspace' || k==='x'){
+    const back = scope==='modal' ? list[list.length-1] : list.find(b=>b.classList.contains('fgoBack'));
+    if(back && !back.disabled){ eat(); if(!e.repeat) back.click(); }
+  }
+  else if(k==='f' && scope==='menu'){ eat(); if(!e.repeat) $('pkFast').click(); }
+}, true);
+
 function showModal(title, html, buttons){
   const modal = $('mgModal');
+  modal.dataset.kb = '';
+  KB.cur = null;
   modal.classList.remove('hidden');
   $('mgTitle').textContent = title;
   $('mgTimer').textContent = '';
@@ -521,6 +594,8 @@ function showModal(title, html, buttons){
 }
 function closeModal(keepPaused){
   $('mgModal').classList.add('hidden');
+  $('mgModal').dataset.kb = '';
+  KB.cur = null;
   if(S && !keepPaused && !isBattleActive() && !VN_ACTIVE){
     S.paused = false;
     S.lastTick = performance.now();
@@ -1156,7 +1231,8 @@ function openNPCMenu(meta){
   const heldHtml = (f.pieces||[]).length ? `<br>💠 Đang giữ: <b style="color:var(--amber);">${f.pieces.map(k=>RPG.LAPEACE_PIECES[k].name).join(', ')}</b> (đánh bại để cướp)` : '';
   const hearts = '♥'.repeat(f.trust)+'♡'.repeat(Math.max(0,RPG.CFG.TRUST_MAX-f.trust));
   const body = `<p style="font-size:13px;"><b>${f.name}</b><br><span style="color:var(--text-dim);font-size:12px;">${f.title}</span></p>
-    <p style="font-size:12px;">${info}<br>Tin tưởng: <span style="color:var(--amber);">${hearts}</span>${heldHtml}</p>`;
+    <p style="font-size:12px;">${info}<br>Tin tưởng: <span style="color:var(--amber);">${hearts}</span>${heldHtml}</p>
+    <p style="font-size:11px;color:var(--text-dim);">↑↓ chọn · Enter xác nhận · 1-4 chọn nhanh · Esc rời đi</p>`;
   const rc = RPG.canRecruit(f);
   const recruitLabel = rc.ok ? '🤝 Mời vào đội'
     : rc.reason==='trust' ? '🤝 Mời vào đội (cần Tin tưởng '+RPG.CFG.RECRUIT_TRUST+')'
@@ -1169,6 +1245,9 @@ function openNPCMenu(meta){
     { label: recruitLabel, disabled:!rc.ok, onClick:()=> npcRecruit(f) },
     { label:'Rời đi', onClick:()=>closeModal() }
   ]);
+  $('mgModal').dataset.kb = '1';
+  Array.from($('mgFooter').querySelectorAll('button')).forEach(b=>b.addEventListener('mouseenter', ()=>kbSelect(b,'mouse')));
+  kbReset('modal');
 }
 /* Chọn cảnh nói chuyện: 4 cảnh chính theo thứ tự cốt truyện, sau đó xoay vòng TALK_REPEAT */
 function pickTalkLines(f){
@@ -1302,9 +1381,10 @@ function jumpscare(){
   };
 }
 
-/* ============== BATTLE UI — kiểu Pokemon (dùng RPGCombat) ==============
-   Bố cục: sân đấu phía trên (đối thủ trên-phải, phe mình dưới-trái, hộp thông tin HP kiểu Pokemon),
-   phía dưới là hộp thoại gõ chữ dần (trái) + menu 2x2 (phải): CHIẾN ĐẤU / TÚI ĐỒ / PHÒNG THỦ / ULTIMATE.
+/* ============== BATTLE UI — thẻ bài kiểu Master Duel (dùng RPGCombat) ==============
+   Bố cục: thanh HP đỏ của địch ở góc trên-trái, bảng TRẬN/ĐỊCH/LƯỢT ở góc trên-phải, địch đứng giữa sân,
+   phe mình là các thẻ nhân vật ở dưới-trái; dưới-phải là nút ATTACK tròn (CHIẾN ĐẤU) + thẻ ULTIMATE + TÚI ĐỒ/PHÒNG THỦ,
+   bấm CHIẾN ĐẤU sẽ xòe các lá bài lệnh (Tấn công / kỹ năng). Chọn mục tiêu bằng cách bấm thẳng vào địch.
    Mỗi trận tốn RPG.CFG.BATTLE_MINUTES (60 phút) đồng hồ game và HP được giữ lại sau trận. */
 const STATUS_ICON = { burn:'🔥', poison:'☠️', freeze:'❄️', paralyze:'⚡', stun:'💫', stealth:'👁️', immune:'🛡️', reflect:'🔁' };
 const SUMMON_GLYPH = { sword:'🗡️', guard:'🛡️', swordsman:'⚔️' };
@@ -1341,6 +1421,7 @@ function startBattle(opts){
   $('pkEnemyInfo').innerHTML = ''; $('pkAllyInfo').innerHTML = '';
   $('pkMenu').innerHTML = ''; $('pkText').textContent = '';
   $('pkFast').classList.remove('on');
+  $('pkBattleNo').textContent = opts.final ? 'CUỐI' : '1/1';
   const _pcs = (me.pieces||[]).map(k=>RPG.LAPEACE_PIECES[k]).filter(Boolean);
   $('pkSB').textContent = '✦ '+_pcs.map(p=>p.name.toUpperCase()).join(' · ');
   $('pkSB').classList.toggle('hidden', !_pcs.length);
@@ -1356,6 +1437,8 @@ function pkSay(text, done){
   const el = $('pkText'), bt = BATTLE;
   if(!bt) return;
   clearTimeout(bt.sayTimer);
+  pkActive(null);
+  KB.cur = null;
   $('pkMenu').dataset.mode = 'say';
   $('pkMenu').innerHTML = '';
   el.textContent = '';
@@ -1410,25 +1493,45 @@ function ensureUnitView(u){
   if(bt.sprites[u.uid]) return;
   const enemy = u.side==='E';
   const look = unitLook(u);
-  const spr = document.createElement('div');
-  spr.className = 'pkSpr '+(enemy?'enemy':'ally')+(u.isSummon?' summon':'')+' enter';
-  spr.style.setProperty('--c', look.bg);
-  spr.innerHTML = `<span class="glyph">${look.glyph}</span>` + iconTag(look.meta, 'pkImg');
-  $(enemy ? 'pkEnemySprites' : 'pkAllySprites').appendChild(spr);
-  bt.sprites[u.uid] = spr;
-  const box = document.createElement('div');
-  box.className = 'pkBox'+(u.isSummon?' small':'')+(enemy?' enemy':' ally');
   const cdef = u.isSummon ? null : RPG.CLASSES[u.f.classId];
   const showExp = !u.isSummon && u.f.isPlayer;
-  box.innerHTML = `<div class="pkRow1"><span class="pkName">${u.isSummon ? u.name : cdef.icon+' '+u.name}</span><span class="pkLv"></span></div>
-    <div class="pkHpRow"><span class="pkHpLbl">HP</span><div class="pkTrack"><div class="pkHpFill"></div></div></div>
-    <div class="pkNum"></div>
-    ${u.isSummon && !u.hasRage ? '' : '<div class="pkRageRow"><span class="pkMini">NỘ</span><div class="pkTrack thin"><div class="pkRageFill"></div></div></div>'}
-    ${showExp ? '<div class="pkRageRow"><span class="pkMini">EXP</span><div class="pkTrack thin"><div class="pkExpFill"></div></div></div>' : ''}
-    <div class="pkSt"></div>`;
-  $(enemy ? 'pkEnemyInfo' : 'pkAllyInfo').appendChild(box);
-  bt.boxes[u.uid] = box;
-  setTimeout(()=>spr.classList.remove('enter'), 450);
+  const card = document.createElement('div');
+  card.className = 'duelCard '+(enemy?'enemy':'ally')+(u.isSummon?' summon':'')+' enter';
+  card.style.setProperty('--c', look.bg);
+  card.innerHTML = `<div class="dcName"><span class="pkName">${u.name}</span><span class="fgoClass">${cdef ? cdef.icon : look.glyph}</span></div>
+    <div class="dcStars"><span class="pkLv"></span></div>
+    <div class="dcArt"><span class="glyph">${look.glyph}</span>${iconTag(look.meta, 'pkImg')}<span class="pkSt"></span></div>
+    <div class="dcText">${cdef ? cdef.name : 'Triệu hồi'}</div>
+    <div class="dcBars">
+      <div class="pkHpRow"><span class="pkHpLbl">HP</span><div class="pkTrack"><div class="pkHpFill"></div></div><span class="pkNum"></span></div>
+      ${u.isSummon && !u.hasRage ? '' : '<div class="pkRageRow"><span class="pkMini">NỘ</span><div class="pkTrack thin"><div class="pkRageFill"></div></div><span class="pkPct">0%</span></div>'}
+      ${showExp ? '<div class="pkRageRow"><span class="pkMini">EXP</span><div class="pkTrack thin"><div class="pkExpFill"></div></div></div>' : ''}
+    </div>`;
+  (enemy ? $('pkEnemySprites') : $('pkAllySprites')).appendChild(card);
+  bt.sprites[u.uid] = card; bt.boxes[u.uid] = card;
+  setTimeout(()=>card.classList.remove('enter'), 450);
+}
+/* Bảng HP tổng (kiểu LP): địch trên-trái, phe mình dưới-trái */
+function pkRenderLp(){
+  const bt = BATTLE; if(!bt) return;
+  [['E','pkEnemyInfo'],['A','pkAllyInfo']].forEach(([side,id])=>{
+    const us = bt.B.units.filter(u=>u.side===side && !u.isSummon);
+    const el = $(id);
+    if(!us.length || !el) return;
+    let cur = 0, max = 0;
+    us.forEach(u=>{ cur += Math.max(0, bt.disp[u.uid]!=null ? bt.disp[u.uid] : u.hp); max += u.maxHp; });
+    const pct = Math.round(cur/Math.max(1,max)*100);
+    if(!el.querySelector('.lpBar')) el.innerHTML = '<div class="lpTop"><span class="lpName"></span><span class="lpNum"></span></div><div class="lpBar"><i></i></div>';
+    el.querySelector('.lpName').textContent = side==='A' ? us[0].name : us[0].name + (us.length>1 ? ' +'+(us.length-1) : '');
+    el.querySelector('.lpNum').textContent = side==='A' ? cur : pct+'%';
+    const bar = el.querySelector('.lpBar i');
+    bar.style.width = pct+'%';
+    bar.className = hpClass(pct);
+  });
+}
+function pkActive(uid){
+  if(!BATTLE) return;
+  Object.keys(BATTLE.sprites).forEach(k=>BATTLE.sprites[k].classList.toggle('active', k===String(uid)));
 }
 function updateUnitView(u){
   const bt = BATTLE, box = bt.boxes[u.uid], spr = bt.sprites[u.uid];
@@ -1443,6 +1546,9 @@ function updateUnitView(u){
   box.querySelector('.pkNum').textContent = (u.side==='A' || u.isSummon) ? hp+'/'+u.maxHp : '';
   const rf = box.querySelector('.pkRageFill');
   if(rf) rf.style.width = Math.round(u.rage/RPG.CFG.RAGE_MAX*100)+'%';
+  const rp = box.querySelector('.pkPct');
+  if(rp) rp.textContent = Math.round(u.rage/RPG.CFG.RAGE_MAX*100)+'%';
+  if(u.side==='A') spr.classList.toggle('npReady', u.alive && u.rage>=RPG.CFG.RAGE_MAX);
   const ef = box.querySelector('.pkExpFill');
   if(ef){
     const f = u.f, lo = RPG.CFG.EXP_TABLE[f.level];
@@ -1460,12 +1566,15 @@ function updateUnitView(u){
   }
   spr.classList.toggle('faint', gone && hp<=0);
   box.classList.toggle('dead', gone && hp<=0);
+  pkRenderLp();
 }
 function renderBattle(){
   const bt = BATTLE;
   if(!bt) return;
   bt.B.units.forEach(u=>{ if(u.alive || !u.isSummon) ensureUnitView(u); });
   bt.B.units.forEach(u=>updateUnitView(u));
+  pkRenderLp();
+  $('pkEnemyLeft').textContent = bt.B.units.filter(u=>u.side==='E' && u.alive).length;
 }
 function snapDisp(){ BATTLE.B.units.forEach(u=>{ BATTLE.disp[u.uid] = u.hp; }); }
 function sprFx(uid, cls, ms){
@@ -1473,6 +1582,18 @@ function sprFx(uid, cls, ms){
   if(!s) return;
   s.classList.remove(cls); void s.offsetWidth; s.classList.add(cls);
   setTimeout(()=>{ s && s.classList.remove(cls); }, ms || 520);
+}
+function pkPop(uid, text, cls){
+  const s = BATTLE && BATTLE.sprites[uid], f = $('pkField');
+  if(!s || !f) return;
+  const r = s.getBoundingClientRect(), fr = f.getBoundingClientRect();
+  const el = document.createElement('div');
+  el.className = 'pkPop '+(cls||'');
+  el.textContent = text;
+  el.style.left = (r.left - fr.left + r.width/2)+'px';
+  el.style.top = (r.top - fr.top + r.height*0.3)+'px';
+  f.appendChild(el);
+  setTimeout(()=>el.remove(), 1000);
 }
 function applyEventFx(ev){
   const bt = BATTLE, D = bt.disp;
@@ -1482,10 +1603,12 @@ function applyEventFx(ev){
   } else if(ev.type==='damage'){
     if(D[ev.dst] != null) D[ev.dst] = Math.max(0, D[ev.dst] - ev.amount);
     sprFx(ev.dst, 'hit', 520);
+    pkPop(ev.dst, Math.round(ev.amount).toLocaleString('en-US'));
   } else if(ev.type==='heal'){
     const u = RPGCombat.unit(bt.B, ev.dst);
     if(u && D[ev.dst] != null) D[ev.dst] = Math.min(u.maxHp, D[ev.dst] + ev.amount);
     sprFx(ev.dst, 'healfx', 600);
+    pkPop(ev.dst, '+'+ev.amount, 'heal');
   } else if(ev.type==='death'){
     D[ev.dst] = 0;
   } else if(ev.type==='revive'){
@@ -1498,12 +1621,15 @@ function applyEventFx(ev){
 /* ---- Menu phía dưới (2 cột) ---- */
 function pkMenuSet(mode, items){
   const m = $('pkMenu');
+  if(BATTLE) clearTargeted();
   m.innerHTML = '';
   m.dataset.mode = mode;
-  items.forEach(it=>{
+  const nCmd = items.filter(x=>/fgoCmd/.test(x.cls||'')).length;
+  items.forEach((it,i)=>{
     const b = document.createElement('button');
-    b.className = 'pkBtn'+(it.cls?' '+it.cls:'')+(it.span?' span2':'');
-    b.innerHTML = `<span class="pkBtnLbl">${it.label}</span>`+(it.sub ? `<span class="pkBtnSub">${it.sub}</span>` : '');
+    b.className = 'pkBtn'+(it.cls?' '+it.cls:'');
+    b.style.setProperty('--i', i); b.style.setProperty('--n', nCmd);
+    b.innerHTML = (it.icon ? `<span class="pkBtnIco">${it.icon}</span>` : '')+`<span class="pkBtnLbl">${it.label}</span>`+(it.sub ? `<span class="pkBtnSub">${it.sub}</span>` : '');
     if(it.disabled) b.disabled = true;
     b.onclick = it.onClick;
     if(it.hint) b.onmouseenter = ()=>{ if(BATTLE && !BATTLE.say) $('pkText').textContent = it.hint; };
@@ -1511,10 +1637,19 @@ function pkMenuSet(mode, items){
       b.onmouseenter = ()=>{ const s = BATTLE.sprites[it.hoverUid]; if(s) s.classList.add('targeted'); };
       b.onmouseleave = ()=>{ const s = BATTLE.sprites[it.hoverUid]; if(s) s.classList.remove('targeted'); };
     }
+    if(it.hoverUid) b.dataset.hover = '1';
+    b.addEventListener('mouseenter', ()=>kbSelect(b,'mouse'));
     m.appendChild(b);
   });
+  kbReset('menu');
 }
-function clearTargeted(){ Object.keys(BATTLE.sprites).forEach(k=>BATTLE.sprites[k].classList.remove('targeted')); }
+function clearTargeted(){
+  Object.keys(BATTLE.sprites).forEach(k=>{
+    const s = BATTLE.sprites[k];
+    s.classList.remove('targeted','pickable');
+    s.onclick = s.onmouseenter = s.onmouseleave = null;
+  });
+}
 
 function battleNextRound(){
   const B = BATTLE.B;
@@ -1534,26 +1669,27 @@ function showBattleMenu(uid){
   const B = BATTLE.B, u = RPGCombat.unit(B, uid), op = RPGCombat.options(B, u);
   const ult = op.ultimate;
   pkPrompt(u.name+' sẽ làm gì?');
+  pkActive(uid);
   pkMenuSet('main', [
-    { label:'CHIẾN ĐẤU', hint:'Tấn công thường hoặc dùng kỹ năng.', onClick:()=>showFightMenu(uid) },
-    { label:'TÚI ĐỒ', hint:'Dùng vật phẩm trong túi.', disabled:!op.items.length, onClick:()=>showBagMenu(uid) },
-    { label:'PHÒNG THỦ', hint:'Giảm 50% sát thương nhận trong lượt này.', onClick:()=>commit(uid,{type:'defend'}) },
-    { label:'ULTIMATE', cls:'ult', sub:ult.rage+'/'+ult.rageMax+' Nộ', hint:ult.name+': '+ult.desc, disabled:!ult.ready,
+    { label:'CHIẾN ĐẤU', cls:'fgoAtk', icon:'⚔️', hint:'Tấn công thường hoặc dùng kỹ năng.', onClick:()=>showFightMenu(uid) },
+    { label:'TÚI ĐỒ', cls:'fgoSmall', icon:'🎒', hint:'Dùng vật phẩm trong túi.', disabled:!op.items.length, onClick:()=>showBagMenu(uid) },
+    { label:'PHÒNG THỦ', cls:'fgoSmall', icon:'🛡️', hint:'Giảm 50% sát thương nhận trong lượt này.', onClick:()=>commit(uid,{type:'defend'}) },
+    { label:'ULTIMATE', cls:'ult fgoNP', icon:'✦', sub:ult.rage+'/'+ult.rageMax+' Nộ', hint:ult.name+': '+ult.desc, disabled:!ult.ready,
       onClick:()=>castWithQte(uid,'ultimate',ult) }
   ]);
 }
 function showFightMenu(uid){
   const B = BATTLE.B, u = RPGCombat.unit(B, uid), op = RPGCombat.options(B, u);
   pkPrompt('Chọn đòn đánh.');
-  const items = [{ label:'Tấn công', sub:'Thường · +'+RPG.CFG.RAGE_ON_ATTACK+' Nộ', hint:'Đòn đánh thường lên 1 mục tiêu.',
+  const items = [{ label:'Tấn công', cls:'fgoCmd buster', icon:'⚔️', sub:'Thường · +'+RPG.CFG.RAGE_ON_ATTACK+' Nộ', hint:'Đòn đánh thường lên 1 mục tiêu.',
                    onClick:()=>pickTarget(u,'single',t=>commit(uid,{type:'attack',target:t}),()=>showFightMenu(uid)) }];
-  op.skills.forEach(s=>{
-    items.push({ label:s.name,
+  op.skills.forEach((s,k)=>{
+    items.push({ label:s.name, cls:'fgoCmd '+(k%2 ? 'quick' : 'arts'), icon:(k%2 ? '💨' : '✨'),
       sub: s.unlocked ? ((TARGET_LABEL[s.target]||'')+(s.cd>0?' · hồi '+s.cd:'')) : 'Mở ở Lv'+s.lvl,
       hint:s.desc, disabled:!s.ready,
       onClick:()=>castWithQte(uid,'skill',s) });
   });
-  items.push({ label:'◀ Quay lại', span:true, onClick:()=>showBattleMenu(uid) });
+  items.push({ label:'◀ Quay lại', cls:'fgoBack', onClick:()=>showBattleMenu(uid) });
   pkMenuSet('fight', items);
 }
 function showBagMenu(uid){
@@ -1561,7 +1697,7 @@ function showBagMenu(uid){
   pkPrompt('Dùng vật phẩm nào?');
   const items = op.items.map(it=>({ label:it.icon+' '+it.name, sub:'x'+it.count, hint:it.desc,
     onClick:()=>pickTarget(u, it.target==='enemy'?'single':'none', t=>commit(uid,{type:'item',id:it.id,target:t}), ()=>showBagMenu(uid)) }));
-  items.push({ label:'◀ Quay lại', span:true, onClick:()=>showBattleMenu(uid) });
+  items.push({ label:'◀ Quay lại', cls:'fgoBack', onClick:()=>showBattleMenu(uid) });
   pkMenuSet('bag', items);
 }
 function pickTarget(u, kind, cb, back){
@@ -1571,8 +1707,16 @@ function pickTarget(u, kind, cb, back){
   pkPrompt('Chọn mục tiêu.');
   const items = legal.map(t=>({ label:t.name, sub:'HP '+t.hp+'/'+t.maxHp, hoverUid:t.uid,
     onClick:()=>{ clearTargeted(); cb(t.uid); } }));
-  items.push({ label:'◀ Quay lại', span:true, onClick:()=>{ clearTargeted(); back ? back() : showBattleMenu(u.uid); } });
+  items.push({ label:'◀ Quay lại', cls:'fgoBack', onClick:()=>{ clearTargeted(); back ? back() : showBattleMenu(u.uid); } });
   pkMenuSet('target', items);
+  legal.forEach(t=>{
+    const sp = BATTLE.sprites[t.uid];
+    if(!sp) return;
+    sp.classList.add('pickable');
+    sp.onclick = ()=>{ clearTargeted(); cb(t.uid); };
+    sp.onmouseenter = ()=>sp.classList.add('targeted');
+    sp.onmouseleave = ()=>sp.classList.remove('targeted');
+  });
 }
 
 /* Skill/Ultimate: chạy QTE mũi tên rồi mới nộp lệnh (quality = độ chính xác 0..1) */

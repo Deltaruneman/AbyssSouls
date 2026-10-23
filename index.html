@@ -6,7 +6,7 @@
 <title>THE TIU</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Roboto+Condensed:wght@400;700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Roboto+Condensed:wght@400;700;900&family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -185,10 +185,14 @@
     <div id="battleBg"></div>
     <div id="pkEnemyZone"><div class="pkPlat"></div><div id="pkEnemySprites" class="pkSprites"></div></div>
     <div id="pkAllyZone"><div class="pkPlat"></div><div id="pkAllySprites" class="pkSprites"></div></div>
-    <div id="pkEnemyInfo" class="pkInfo"></div>
-    <div id="pkAllyInfo" class="pkInfo"></div>
+    <div id="pkEnemyInfo" class="pkInfo pkLp"></div>
+    <div id="pkAllyInfo" class="pkInfo pkLp"></div>
     <div id="pkSB" class="hidden">✦ SPELL BREAKER</div>
-    <div id="pkTurn">LƯỢT <span id="battleTurnNum">1</span></div>
+    <div id="pkTurn">
+      <div class="pkTr"><span class="pkTk">TRẬN</span><b id="pkBattleNo">1/1</b></div>
+      <div class="pkTr"><span class="pkTk">ĐỊCH</span>Còn lại: <b id="pkEnemyLeft">1</b></div>
+      <div class="pkTr"><span class="pkTk">LƯỢT</span><b id="battleTurnNum">1</b> Lượt</div>
+    </div>
     <button id="pkFast" class="btn" title="Tăng tốc hội thoại">⏩ NHANH</button>
   </div>
   <div id="pkBottom">

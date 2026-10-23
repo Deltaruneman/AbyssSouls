@@ -467,12 +467,12 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
 .npcImg,.pkImg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%;pointer-events:none;user-select:none;}
 .pkSpr{overflow:hidden;}
 /* ---------- portrait trong hội thoại ---------- */
-#vnPortrait{position:absolute;left:max(0px, calc(50% - 430px - 190px));bottom:100px;height:min(72vh,600px);width:auto;max-width:46vw;object-fit:contain;z-index:1;pointer-events:none;user-select:none;filter:drop-shadow(0 0 18px rgba(0,0,0,.75));transition:opacity .25s,filter .25s;}
+#vnPortrait{position:absolute;left:max(0px, calc(50% - 430px - 190px));bottom:70px;height:min(72vh,600px);width:auto;max-width:46vw;object-fit:contain;z-index:1;pointer-events:none;user-select:none;filter:drop-shadow(0 0 18px rgba(0,0,0,.75));transition:opacity .25s,filter .25s;}
 #vnPortrait.hidden{display:none;}
 #vnPortrait.dim{opacity:.5;filter:grayscale(.55) brightness(.6) drop-shadow(0 0 18px rgba(0,0,0,.75));}
 #vnPortrait.vnPortraitIn{animation:vnPortraitIn .3s ease-out;}
 @keyframes vnPortraitIn{from{opacity:0;transform:translateX(-24px);}to{opacity:1;transform:translateX(0);}}
-@media (max-width:500px){ #vnPortrait{left:0;height:min(48vh,380px);bottom:150px;} }
+@media (max-width:900px){ #vnPortrait{left:0;height:min(48vh,380px);bottom:150px;} }
 /* ---------- visual novel (kiểu Genshin) ---------- */
 #vnOverlay{position:fixed;inset:0;z-index:100;background:linear-gradient(180deg, rgba(4,3,2,0) 40%, rgba(4,3,2,0.72) 100%);display:flex;align-items:flex-end;justify-content:center;padding:24px;pointer-events:none;}
 #vnOverlay.hidden{display:none;}
@@ -696,82 +696,148 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
 @keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.15);}}
 @keyframes vhsDrift{0%,100%{top:38%;opacity:0.6;}45%{top:61%;opacity:0.9;}70%{top:20%;opacity:0.4;}}
 
-/* ===================== GIAO DIỆN TRẬN ĐẤU KIỂU POKEMON ===================== */
-#battleOverlay{position:fixed;inset:0;z-index:70;display:flex;flex-direction:column;background:#101018;font-family:'Roboto Condensed','Roboto',sans-serif;}
+/* ===================== GIAO DIỆN TRẬN ĐẤU — thẻ bài kiểu Master Duel ===================== */
+#battleOverlay{position:fixed;inset:0;z-index:70;display:block;background:#0c0e13;color:#e9ecf2;
+  font-family:'Chakra Petch','Be Vietnam Pro','Roboto Condensed',Arial,sans-serif;
+  --line:rgba(233,236,242,.4);--dim:#8b93a5;--accent:#e2b65c;--panel:rgba(10,12,18,.88);--foe:#c76a66;}
 #battleOverlay.hidden{display:none;}
-#pkField{position:relative;flex:1 1 auto;min-height:0;overflow:hidden;background:radial-gradient(ellipse at 50% 30%,#2e2c46 0%,#1a1928 60%,#100f1a 100%);}
-#battleBg{position:absolute;inset:0;background-size:cover;background-position:center;opacity:.4;filter:blur(2px) brightness(.7);pointer-events:none;}
-#pkTurn{position:absolute;left:50%;top:8px;transform:translateX(-50%);background:rgba(20,20,32,.8);color:#fff;font-weight:900;letter-spacing:3px;font-size:12px;padding:3px 12px;border-radius:12px;z-index:5;}
-#pkFast{position:absolute;right:10px;top:8px;z-index:6;font-size:11px;padding:4px 10px;}
-#pkFast.on{background:var(--amber);color:#111;}
+#battleOverlay button{font-family:inherit;}
 
-#pkEnemyZone{position:absolute;right:7%;top:14%;width:40%;height:34%;}
-#pkAllyZone{position:absolute;left:6%;bottom:5%;width:44%;height:42%;}
-.pkPlat{position:absolute;left:0;right:0;bottom:-4%;height:30%;border-radius:50%;background:radial-gradient(ellipse at 50% 40%,rgba(255,255,255,.2) 0%,rgba(255,255,255,.08) 60%,rgba(255,255,255,0) 66%);}
-.pkSprites{position:absolute;inset:0;display:flex;justify-content:center;align-items:flex-end;gap:10px;padding-bottom:6%;}
-.pkSpr{position:relative;width:clamp(56px,11vh,92px);height:clamp(56px,11vh,92px);border-radius:50%;background:var(--c,#555);border:3px solid rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;box-shadow:0 7px 0 rgba(0,0,0,.22),inset 0 -8px 14px rgba(0,0,0,.25);transition:transform .4s,opacity .5s,filter .5s;}
-.pkSpr .glyph{font-size:clamp(28px,6vh,50px);line-height:1;filter:drop-shadow(0 2px 2px rgba(0,0,0,.4));}
-.pkSpr.ally{width:clamp(70px,15vh,124px);height:clamp(70px,15vh,124px);}
-.pkSpr.ally .glyph{font-size:clamp(36px,8vh,64px);}
-.pkSpr.summon{width:clamp(40px,7.5vh,62px);height:clamp(40px,7.5vh,62px);}
-.pkSpr.summon .glyph{font-size:clamp(20px,4vh,32px);}
-.pkSpr.targeted{outline:4px solid #ffe14a;outline-offset:3px;animation:pkBob .5s infinite alternate;}
-.pkSpr.faint{transform:translateY(46px) scale(.55);opacity:0;filter:grayscale(1);}
-.pkSpr.enter{animation:pkEnter .45s ease-out;}
-.pkSpr.hit{animation:pkHit .5s steps(1);}
-.pkSpr.healfx{animation:pkHeal .6s;}
-.pkSpr.lungeA{animation:pkLungeA .42s ease-in-out;}
-.pkSpr.lungeE{animation:pkLungeE .42s ease-in-out;}
-@keyframes pkEnter{0%{transform:scale(.2) translateY(-30px);opacity:0}100%{transform:none;opacity:1}}
-@keyframes pkHit{0%,100%{opacity:1}15%,55%{opacity:.05}35%,75%{opacity:1}}
-@keyframes pkHeal{0%,100%{filter:none}50%{filter:brightness(1.6) drop-shadow(0 0 12px #6fff9a)}}
-@keyframes pkLungeA{0%,100%{transform:none}45%{transform:translate(46px,-34px)}}
-@keyframes pkLungeE{0%,100%{transform:none}45%{transform:translate(-46px,34px)}}
-@keyframes pkBob{from{transform:translateY(0)}to{transform:translateY(-6px)}}
+/* Sân đấu */
+#pkField{position:absolute;inset:0;overflow:hidden;background:radial-gradient(ellipse at 50% 46%,#1c2130 0%,#10131b 60%,#0a0c11 100%);}
+#battleBg{position:absolute;inset:0;z-index:0;background-size:cover;background-position:center;opacity:.16;filter:grayscale(.9) brightness(.7);pointer-events:none;}
+#pkField::after{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:linear-gradient(180deg,rgba(0,0,0,.4),rgba(0,0,0,0) 18%),linear-gradient(0deg,rgba(0,0,0,.5),rgba(0,0,0,0) 30%);}
 
-.pkInfo{position:absolute;display:flex;flex-direction:column;gap:6px;z-index:4;}
-#pkEnemyInfo{left:3%;top:9%;width:min(300px,42%);}
-#pkAllyInfo{right:3%;bottom:4%;width:min(330px,46%);}
-.pkBox{background:#f8f0d8;border:3px solid #4a4238;border-radius:10px 10px 10px 26px;color:#282018;padding:6px 12px 7px;box-shadow:0 3px 0 rgba(0,0,0,.35);}
-.pkBox.ally{border-radius:10px 26px 10px 10px;}
-.pkBox.small{padding:3px 10px 4px;font-size:11px;}
-.pkBox.dead{opacity:.55;filter:grayscale(.8);}
-.pkRow1{display:flex;justify-content:space-between;align-items:baseline;font-weight:900;font-size:15px;}
-.pkBox.small .pkRow1{font-size:12px;}
-.pkLv{font-size:12px;font-weight:700;}
-.pkHpRow,.pkRageRow{display:flex;align-items:center;gap:6px;margin-top:3px;}
-.pkHpLbl{background:#e8902c;color:#fff;font-size:10px;font-weight:900;padding:0 5px;border-radius:3px;letter-spacing:1px;}
-.pkMini{font-size:9px;font-weight:900;color:#665c4c;width:24px;}
-.pkTrack{flex:1;height:10px;background:#5a5248;border:2px solid #3a342c;border-radius:6px;overflow:hidden;}
-.pkTrack.thin{height:6px;border-width:1px;}
-.pkHpFill{height:100%;width:100%;background:#3fc34a;transition:width .8s ease-out,background-color .3s;}
-.pkHpFill.mid{background:#f2c21e;}
-.pkHpFill.low{background:#e24a3a;}
-.pkRageFill{height:100%;width:0;background:linear-gradient(90deg,#8e44ad,#ff7ad9);transition:width .4s;}
-.pkExpFill{height:100%;width:0;background:#4aa8ff;transition:width .6s;}
-.pkNum{text-align:right;font-family:monospace;font-weight:700;font-size:13px;min-height:0;}
-.pkNum:empty{display:none;}
-.pkSt{font-size:13px;min-height:0;}
+/* Hai hàng thẻ ở giữa: địch phía trên, ta phía dưới */
+#pkEnemyZone,#pkAllyZone{position:absolute;left:0;right:0;z-index:2;display:flex;justify-content:center;pointer-events:none;}
+#pkEnemyZone{bottom:calc(54% + 4px);align-items:flex-end;}
+#pkAllyZone{top:calc(46% + 4px);align-items:flex-start;}
+#pkEnemyZone::after{content:'';position:absolute;left:22%;right:22%;bottom:-4px;height:1px;background:linear-gradient(90deg,transparent,var(--line),transparent);}
+.pkPlat{display:none;}
+.pkSprites{display:flex;justify-content:center;align-items:flex-end;gap:clamp(8px,1.6vw,22px);pointer-events:auto;}
+#pkAllyZone .pkSprites{align-items:flex-start;}
+
+/* Thẻ bài (dùng chung cho địch và ta) */
+.duelCard{--w:clamp(90px,min(13vw,21vh),170px);position:relative;width:var(--w);aspect-ratio:59/86;flex:0 0 auto;display:flex;flex-direction:column;gap:2%;
+  padding:4% 5% 5%;font-size:calc(var(--w)*.085);line-height:1.25;color:#e9ecf2;
+  background:#1b2230;border:2px solid #8fa3c4;border-radius:4px;box-shadow:0 6px 14px rgba(0,0,0,.6);
+  transition:transform .25s,filter .4s,opacity .4s,border-color .15s,box-shadow .15s;}
+.duelCard.enemy{background:#2a1c20;border-color:#b98a88;}
+.duelCard.summon{--w:clamp(60px,min(9vw,14vh),112px);}
+.duelCard.summon .dcText,.duelCard.summon .dcStars{display:none;}
+.duelCard.dead{filter:grayscale(1);}
+.duelCard.faint{filter:grayscale(1);opacity:.35;}
+.duelCard.pickable{cursor:crosshair;}
+.duelCard.active{transform:translateY(-4px);border-color:var(--accent);box-shadow:0 10px 18px rgba(0,0,0,.65);}
+.duelCard.targeted{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),0 8px 18px rgba(0,0,0,.65);}
+.duelCard.targeted::after{content:'▼';position:absolute;left:50%;top:-1.9em;transform:translateX(-50%);color:var(--accent);font-size:1.7em;line-height:1;}
+.duelCard.npReady{border-color:var(--accent);}
+.duelCard.npReady::before{content:'ULT';position:absolute;top:-.8em;left:50%;transform:translateX(-50%);z-index:3;background:var(--accent);color:#14110a;
+  font-size:.9em;font-weight:700;letter-spacing:.15em;padding:0 .8em;}
+.dcName{display:flex;align-items:center;justify-content:space-between;gap:.4em;padding:.2em .4em;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);}
+.pkName{font-weight:700;font-size:1.05em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.fgoClass{width:1.7em;height:1.7em;flex:0 0 auto;display:grid;place-items:center;font-size:.95em;border:1px solid var(--line);border-radius:50%;background:rgba(0,0,0,.3);}
+.dcStars{text-align:right;color:var(--accent);font-size:.9em;min-height:1.1em;}
+.pkLv{font-weight:600;}
+.pkLv:not(:empty)::before{content:'★ ';}
+.dcArt{position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--c,#445) 50%,#141720),#0e1017);border:1px solid rgba(255,255,255,.28);}
+.dcArt .glyph{font-size:calc(var(--w)*.42);line-height:1;}
+.duelCard.summon .dcArt .glyph{font-size:calc(var(--w)*.4);}
+.dcArt .pkImg{border-radius:0;object-position:center top;}
+.pkSt{position:absolute;top:.2em;right:.3em;font-size:1em;text-shadow:0 1px 2px #000;}
 .pkSt:empty{display:none;}
+.dcText{padding:.15em .4em;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.15);font-size:.85em;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dcBars{display:flex;flex-direction:column;gap:.25em;}
+.pkHpRow,.pkRageRow{display:flex;align-items:center;gap:.4em;}
+.pkHpLbl,.pkMini{width:2em;font-size:.8em;font-weight:600;color:var(--dim);letter-spacing:.05em;}
+.pkTrack{flex:1;height:.6em;background:rgba(255,255,255,.14);overflow:hidden;}
+.pkTrack.thin{height:.35em;}
+.pkHpFill{height:100%;width:100%;background:#e9ecf2;transition:width .7s ease-out,background .3s;}
+.pkHpFill.mid{background:#e2b65c;}
+.pkHpFill.low{background:#d9534f;}
+.duelCard.enemy .pkHpFill,.duelCard.enemy .pkHpFill.mid,.duelCard.enemy .pkHpFill.low{background:var(--foe);}
+.pkRageFill{height:100%;width:0;background:var(--accent);transition:width .4s;}
+.pkExpFill{height:100%;width:0;background:#7aa2e0;transition:width .6s;}
+.pkPct{min-width:2.4em;text-align:right;font-size:.8em;font-weight:600;color:var(--dim);}
+.pkNum{font-size:.85em;font-weight:600;color:#e9ecf2;white-space:nowrap;}
+.pkNum:empty{display:none;}
+.duelCard.enter{animation:pkEnter .4s ease-out;}
+.duelCard.hit{animation:pkHit .5s linear;}
+.duelCard.healfx{animation:pkHeal .5s;}
+.duelCard.lungeA{animation:pkLungeA .4s ease-in-out;}
+.duelCard.lungeE{animation:pkLungeE .4s ease-in-out;}
+@keyframes pkEnter{0%{transform:scale(.6);opacity:0}100%{transform:none;opacity:1}}
+@keyframes pkHit{0%,100%{transform:none}20%{transform:translateX(-6px);filter:brightness(1.8)}45%{transform:translateX(6px)}70%{transform:translateX(-3px)}}
+@keyframes pkHeal{0%,100%{filter:none}50%{filter:brightness(1.4)}}
+@keyframes pkLungeA{0%,100%{transform:none}45%{transform:translateY(-34px)}}
+@keyframes pkLungeE{0%,100%{transform:none}45%{transform:translateY(34px)}}
 
-#pkBottom{flex:0 0 auto;height:min(36vh,236px);display:flex;gap:8px;padding:8px;background:#2a2438;border-top:4px solid #5a4a7a;}
-#pkTextBox{flex:1 1 auto;position:relative;min-width:0;background:#f8f8f0;border:5px solid #3b4a8c;border-radius:12px;padding:12px 18px;color:#282828;font-size:clamp(14px,2.3vw,21px);font-weight:700;line-height:1.5;overflow:auto;cursor:pointer;box-shadow:inset 0 0 0 3px #f8f8f0,inset 0 0 0 5px #b8c0e0;}
+/* Bảng HP tổng kiểu LP: địch trên-trái, ta dưới-trái */
+.pkInfo{position:absolute;z-index:4;}
+.pkLp{min-width:clamp(170px,19vw,240px);padding:6px 12px 8px;background:var(--panel);border-left:3px solid var(--line);}
+#pkEnemyInfo{left:10px;top:8px;border-left-color:var(--foe);}
+#pkAllyInfo{left:10px;bottom:10px;border-left-color:#8fa3c4;}
+.lpTop{display:flex;justify-content:space-between;align-items:baseline;gap:12px;}
+.lpName{font-size:12px;font-weight:600;letter-spacing:.5px;color:var(--dim);text-transform:uppercase;}
+.lpNum{font-size:22px;font-weight:700;}
+.lpBar{height:5px;margin-top:4px;background:rgba(255,255,255,.14);}
+.lpBar i{display:block;height:100%;background:#e9ecf2;transition:width .7s ease-out;}
+.lpBar i.mid{background:#e2b65c;}
+.lpBar i.low{background:#d9534f;}
+#pkEnemyInfo .lpBar i{background:var(--foe);}
+
+/* Bảng lượt */
+#pkTurn{position:absolute;right:10px;top:8px;z-index:6;width:min(170px,42vw);padding:4px 10px;background:var(--panel);border-left:2px solid var(--accent);font-size:12px;letter-spacing:.5px;}
+.pkTr{display:flex;align-items:baseline;gap:8px;padding:1px 0;}
+.pkTk{color:var(--dim);font-size:10px;letter-spacing:1.5px;min-width:36px;font-weight:600;}
+.pkTr b{font-size:14px;font-weight:700;}
+#pkFast{position:absolute;right:10px;top:88px;z-index:6;font-size:11px;padding:3px 10px;background:transparent;border:1px solid var(--line);color:var(--dim);border-radius:0;letter-spacing:1px;}
+#pkFast.on{background:var(--accent);border-color:var(--accent);color:#14110a;}
+#pkSB{position:absolute;right:10px;top:118px;z-index:6;max-width:min(240px,60vw);text-align:right;color:var(--accent);font-size:11px;font-weight:600;letter-spacing:1.5px;}
+
+/* Số sát thương */
+.pkPop{position:absolute;z-index:12;pointer-events:none;font-weight:700;font-size:clamp(20px,3.6vh,32px);color:#fff;text-shadow:0 1px 4px #000;animation:pkPop .85s ease-out forwards;}
+.pkPop.heal{color:#8fe3a8;}
+@keyframes pkPop{0%{opacity:0;transform:translate(-50%,8px)}20%{opacity:1;transform:translate(-50%,-6px)}100%{opacity:0;transform:translate(-50%,-40px)}}
+
+/* Lời thoại (dưới giữa) */
+#pkBottom{position:absolute;inset:0;z-index:10;pointer-events:none;}
+#pkBottom>*{pointer-events:auto;}
+#pkTextBox{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);width:min(560px,86vw);min-height:40px;max-height:18vh;overflow:auto;
+  padding:8px 34px 8px 20px;cursor:pointer;text-align:center;font-weight:500;line-height:1.5;font-size:clamp(14px,1.8vw,17px);
+  background:linear-gradient(90deg,transparent,rgba(10,12,18,.88) 12%,rgba(10,12,18,.88) 88%,transparent);}
 #pkText{white-space:pre-wrap;}
-#pkArrow{position:absolute;right:14px;bottom:8px;color:#d03030;font-size:16px;opacity:0;}
-#pkArrow.on{opacity:1;animation:pkBob .5s infinite alternate;}
-#pkMenu{flex:0 0 min(46%,440px);display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:minmax(44px,1fr);gap:4px 6px;background:#f8f8f0;border:5px solid #b83a3a;border-radius:12px;padding:8px 10px;box-shadow:inset 0 0 0 3px #f8f8f0,inset 0 0 0 5px #e8b8b8;overflow:auto;}
-#pkMenu:empty,#pkMenu[data-mode="say"]{visibility:hidden;}
-.pkBtn{position:relative;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:1px;border:0;background:transparent;color:#282828;font-family:inherit;font-weight:900;font-size:clamp(13px,1.9vw,18px);letter-spacing:.5px;text-align:left;padding:4px 6px 4px 22px;cursor:pointer;border-radius:6px;}
-.pkBtn.span2{grid-column:1 / span 2;}
-.pkBtnSub{font-size:clamp(9px,1.2vw,12px);font-weight:700;color:#6a6258;letter-spacing:0;}
-.pkBtn:hover:not(:disabled){background:rgba(255,220,120,.45);}
-.pkBtn:hover:not(:disabled)::before{content:'▶';position:absolute;left:5px;top:50%;transform:translateY(-50%);color:#282828;font-size:13px;}
-.pkBtn:disabled{opacity:.32;cursor:not-allowed;}
-.pkBtn.ult{color:#9a2a8a;}
+#pkArrow{position:absolute;right:16px;bottom:6px;color:var(--accent);font-size:12px;opacity:0;}
+#pkArrow.on{opacity:1;animation:pkArrowBob .5s infinite alternate;}
+@keyframes pkArrowBob{from{transform:translateY(0)}to{transform:translateY(-3px)}}
+
+/* Menu lệnh dạng danh sách dọc (giống menu thẻ của Master Duel) */
+#pkMenu{position:absolute;right:20px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;width:min(290px,46vw);max-height:72vh;overflow:auto;
+  background:var(--panel);border:1px solid var(--line);}
+#pkMenu:empty{display:none;}
+.pkBtn{display:flex;align-items:center;gap:10px;padding:10px 14px;border:0;border-left:3px solid transparent;border-bottom:1px solid rgba(255,255,255,.08);
+  background:none;color:inherit;cursor:pointer;text-align:left;font-size:15px;}
+.pkBtn:last-child{border-bottom:0;}
+.pkBtn:disabled{opacity:.35;cursor:not-allowed;}
+.pkBtn.kb:not(:disabled),.pkBtn:hover:not(:disabled){background:linear-gradient(90deg,rgba(226,182,92,.25),rgba(226,182,92,.04));border-left-color:var(--accent);}
+.pkBtnIco{width:1.4em;text-align:center;flex:0 0 auto;}
+.pkBtnLbl{flex:1;font-weight:600;}
+.pkBtnSub{font-size:11px;color:var(--dim);text-align:right;}
+.fgoNP:not(:disabled) .pkBtnLbl{color:var(--accent);}
+.fgoBack{color:var(--dim);}
+#pkMenu:not(:empty)::after{content:'↑↓ chọn · Enter xác nhận · Esc quay lại';display:block;padding:6px 14px;font-size:10px;letter-spacing:.5px;color:var(--dim);border-top:1px solid rgba(255,255,255,.08);}
+#pkMenu[data-mode="main"]:not(:empty)::after{content:'↑↓ chọn · Enter xác nhận';}
+
 @media (max-width:700px){
-  #pkBottom{flex-direction:column;height:min(50vh,330px);}
-  #pkMenu{flex:1 1 auto;}
-  #pkTextBox{flex:0 0 auto;max-height:80px;}
+  #pkTurn{width:140px;font-size:11px;}
+  #pkFast{top:80px;}
+  #pkSB{top:108px;}
+  #pkMenu{right:6px;width:min(220px,52vw);}
+  .pkLp{min-width:130px;}
+  #pkTextBox{bottom:64px;}
 }
 
-#pkSB{position:absolute;left:10px;top:8px;z-index:6;background:linear-gradient(90deg,#5a2a8a,#8a3ab0);color:#fff;font-size:11px;font-weight:900;letter-spacing:2px;padding:3px 10px;border-radius:10px;box-shadow:0 0 10px rgba(160,80,220,.6);}
+/* Phím điều hướng trong modal */
+#mgFooter .btn.kb{outline:2px solid var(--amber);outline-offset:2px;}
