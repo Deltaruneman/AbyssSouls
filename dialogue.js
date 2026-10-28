@@ -31,7 +31,7 @@ window.DLG = {
      Người chơi / LOA TRƯỜNG / THE TIU không có portrait. Thiếu file ảnh → hội thoại vẫn chạy bình thường. */
   PORTRAITS: {
     "WIBU VIỆT NHẬT":     "assets/images/icons/wibu.png",
-    "CHÀNG LÍNH NGU LAM": "assets/images/icons/linh.png",
+    "CHÀNG LÍNH NGU LAM": "assets/images/icons/changlinh.png",
     "TRỌNG":              "assets/images/icons/trong.png",
     "TOBY":               "assets/images/icons/toby.png",
     "CHÓ CỦA TOBY":       "assets/images/icons/dog.png"
