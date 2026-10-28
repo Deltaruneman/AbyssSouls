@@ -681,6 +681,56 @@ window.DLG = {
   },
 
   /* Câu thoại trước trận khi Khiêu chiến */
+  /* ======================= THỂ LỰC: KIỆT SỨC & BỊ ÚP SỌT =======================
+     EXHAUSTED: mỗi lần cạn thể lực chọn ngẫu nhiên 1 đoạn.
+     AMBUSH[ID]: lời của đối thủ vừa úp sọt (sau đó vào trận, người chơi mất lượt đầu).
+     EXHAUSTED_BLOCKED: câu than hiện trong nhật ký khi cố đi tiếp lúc đã hết thể lực. */
+  EXHAUSTED: [
+    [
+      nar("Chân bạn nặng như đeo chì. Mỗi bước sang tòa nhà khác đều như kéo theo cả khuôn viên."),
+      say(ME,"Hộc... hộc... Không nhấc nổi chân nữa rồi. Cho tôi thở một chút thôi..."),
+      say(ME,"Mà đứng giữa trời thế này, lỡ có ai rình thì chết...")
+    ],
+    [
+      nar("Mắt bạn hoa lên, tim đập thình thịch trong lồng ngực."),
+      say(ME,"Sao UIT lại rộng thế này nhỉ... Mới đi có mấy tòa mà đã rã rời."),
+      say(ME,"Tôi cần ngồi xuống. Chỉ một phút thôi. ...Nhưng có gì đó không ổn, xung quanh yên ắng quá.")
+    ],
+    [
+      nar("Đầu gối bạn run bần bật. Bạn vịn tay vào tường để khỏi ngã."),
+      say(ME,"Điểm rèn luyện đâu không thấy, thấy mỗi cái chân muốn đình công."),
+      say(ME,"Đi tiếp là ngất thật. Phải nghỉ đã... cảm giác như đang bị theo dõi.")
+    ]
+  ],
+  EXHAUSTED_BLOCKED: [
+    "Chân tôi như đeo chì, không đi nổi nữa. Phải nghỉ thôi.",
+    "Hết hơi rồi... đợi lấy lại sức đã.",
+    "Bước thêm một bước nữa là ngã quỵ mất. Nghỉ đã.",
+    "Phổi đang đòi nghỉ việc. Chưa đi đâu được."
+  ],
+  AMBUSH: {
+    WIBU: [
+      nar("Một bóng người lao ra từ góc khuất, tay còn ôm chồng manga."),
+      say(W,"Ê-ê, {P}? Trông cậu thảm quá. ...Xin lỗi nhé, hôm nay tôi cần điểm hơn là cần lịch sự!"),
+      nar("Bạn đang kiệt sức nên không kịp phản ứng!")
+    ],
+    LINH: [
+      nar("Tiếng giày quân đội dậm xuống nền, dứt khoát và gần hơn bạn tưởng."),
+      say(L,"Ta đứng đây nãy giờ rồi, {P}. Quỷ Vương không bao giờ bỏ lỡ con mồi đang thở dốc."),
+      nar("Bạn loạng choạng lùi lại, tay chân không còn nghe lời!")
+    ],
+    TRONG: [
+      nar("Có tiếng vỗ tay chậm rãi vang lên sau lưng bạn."),
+      say(T,"Chà, đúng lúc quá nhỉ. Tôi không định chơi đẹp, nhưng thắng thì tôi vẫn sẽ thắng thật phong cách."),
+      nar("Bạn quay lại thì đã quá muộn, đối thủ đã áp sát!")
+    ],
+    TOBY: [
+      say(D,"Gâu! Gâu gâu!"),
+      say(B,"Sorry nha {P}! Nó đánh hơi thấy cậu đang mệt nên dẫn mình tới đây. Mình cũng cần điểm lắm, ready? ...Gâu!"),
+      nar("Con chó lao tới làm bạn vấp ngã, mất thế ngay từ đầu!")
+    ]
+  },
+
   CHALLENGE: {
     WIBU:  [
       say(W,"Cậu hứa là sẽ không bỏ tôi mà...",{when:'promised_WIBU'}),

@@ -52,7 +52,14 @@
     PARTY_MAX_ALLIES: 1,                 // tối đa 2 đồng đội + người chơi = 3 người (giống PARTY_DEF cũ)
 
     // hồi chiêu đề xuất (spec chưa nêu) — Ultimate không dùng CD mà dùng Nộ đầy
-    SKILL_CD: { 1: 2, 3: 3, 5: 4 }
+    SKILL_CD: { 1: 2, 3: 3, 5: 4 },
+
+    // ---- Thể lực khi di chuyển giữa các khu vực ----
+    STAMINA_MAX: 100,
+    STAMINA_MOVE_COST: 20,               // mỗi lần đổi khu vực (5 lần thì cạn)
+    STAMINA_REGEN_PER_MIN: 0.4,          // hồi dần theo phút game (24/giờ)
+    STAMINA_REST_GAIN: 50,               // "Nghỉ ngơi 1 giờ" ở Căn tin
+    AMBUSH_REARM: 40                     // hồi tới mức này thì lần kiệt sức sau mới bị úp sọt tiếp
   };
 
   /* ============================ 2) CLASS ============================ */
@@ -416,6 +423,27 @@
     return { eliminated: out, playerEliminated: out.isPlayer, remaining: aliveFighters().length, droppedPieces: dropped };
   }
 
+  /* ============================ CÂN BẰNG CẤP ĐỘ ĐỐI THỦ ============================ */
+  /* Nâng Lv lên `lv` (không bao giờ hạ). Chỉ số/HP tính lại theo Lv mới, giữ nguyên tỉ lệ HP hiện tại. */
+  function setLevel(f, lv) {
+    lv = Math.min(CFG.MAX_LEVEL, lv);
+    if (lv <= f.level) return false;
+    const ratio = f.maxHp > 0 ? f.hp / f.maxHp : 1;
+    f.level = lv;
+    f.exp = Math.max(f.exp, CFG.EXP_TABLE[lv]);
+    f.maxHp = getStats(f).hp;
+    f.hp = Math.max(1, Math.round(f.maxHp * ratio));
+    return true;
+  }
+  /* Mọi đối thủ còn sống (không phải đồng đội) được nâng lên ít nhất = max(mốc theo đêm, Lv người chơi). Trả về danh sách đối thủ vừa được nâng. */
+  function scaleOpponents(floorLv) {
+    const me = state.fighters.PLAYER;
+    const target = Math.min(CFG.MAX_LEVEL, Math.max(floorLv || 1, me.level));
+    return aliveFighters().filter(function (f) {
+      return !f.isPlayer && !f.inParty && setLevel(f, target);
+    });
+  }
+
   /* ============================ LA PEACE (3 loại mảnh, mỗi loại 1 sức mạnh) ============================ */
   /* f.pieces = danh sách loại mảnh đang giữ. f.laPeace (số mảnh) và f.spellBreaker (bool) được đồng bộ để code cũ vẫn chạy. */
   function syncPieces(f) {
@@ -589,7 +617,7 @@
     addRage: addRage, rageOnAttack: rageOnAttack, rageOnSkill: rageOnSkill, canUseUltimate: canUseUltimate,
     heal: heal, healPct: healPct, regen: regen, healAll: healAll,
     expToNext: expToNext, expForWin: expForWin, addExp: addExp,
-    resolveDuel: resolveDuel, tiuPenalty: tiuPenalty, aliveFighters: aliveFighters,
+    resolveDuel: resolveDuel, setLevel: setLevel, scaleOpponents: scaleOpponents, tiuPenalty: tiuPenalty, aliveFighters: aliveFighters,
     rankAscending: rankAscending, eliminateLowest: eliminateLowest,
     addLaPeace: addLaPeace, hasPiece: hasPiece, pieceOwner: pieceOwner, unownedPieces: unownedPieces,
     transferPieces: transferPieces, giveToRandomOpponent: giveToRandomOpponent, syncPieces: syncPieces,
