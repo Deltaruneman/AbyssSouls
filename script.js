@@ -77,6 +77,48 @@ const SETTINGS = { masterVolume:_storedVol, shake:true, flash:true };
 const TIU_IMAGE = "assets/images/TIU.png";
 const TIU_JUMPSCARE_SFX = "assets/sfx/TIUAttack.mp3";
 
+/* ---- OST TRẬN ĐẤU: mỗi đối thủ có 1 bản nhạc riêng (đặt file vào assets/ost/). Trận cuối KHÔNG có OST. ----
+   Thiếu file thì trận vẫn chạy bình thường, chỉ không có nhạc. Muốn đổi bài chỉ cần sửa đường dẫn ở đây. */
+const BATTLE_OST = {
+  WIBU:  "assets/ost/battle.mp3",
+  LINH:  "assets/ost/battle.mp3",
+  TRONG: "assets/ost/battle.mp3",
+  TOBY:  "assets/ost/battle.mp3"
+};
+const BATTLE_OST_DEFAULT = "assets/ost/battle_default.mp3";   // dùng khi đối thủ chưa có bài riêng
+const BATTLE_OST_GAIN = 0.6;                                  // nhỏ hơn SFX để không át tiếng hiệu ứng
+let OST = { audio:null, src:null, fadeTimer:null, syncTimer:null };
+function ostVolume(){
+  return (window.UIT_SOUND_MUTED ? 0 : 1) * ((SETTINGS.masterVolume!=null ? SETTINGS.masterVolume : 100) / 100) * BATTLE_OST_GAIN;
+}
+function startBattleOst(enemyId){
+  stopBattleOst(false);
+  const src = BATTLE_OST[enemyId] || BATTLE_OST_DEFAULT;
+  if(!src) return;
+  try{
+    const a = new Audio(src);
+    a.loop = true;
+    a.volume = Math.max(0, Math.min(1, ostVolume()));
+    a.addEventListener('error', ()=>{});                       // thiếu file -> im lặng, không báo lỗi
+    const p = a.play(); if(p && p.catch) p.catch(()=>{});
+    OST.audio = a; OST.src = src;
+    // đồng bộ âm lượng/tắt tiếng theo thời gian thực (thanh Âm lượng tổng, nút 🔊)
+    OST.syncTimer = setInterval(()=>{ if(OST.audio && !OST.fadeTimer) OST.audio.volume = Math.max(0, Math.min(1, ostVolume())); }, 250);
+  }catch(e){}
+}
+function stopBattleOst(fade){
+  clearInterval(OST.syncTimer); OST.syncTimer = null;
+  clearInterval(OST.fadeTimer); OST.fadeTimer = null;
+  const a = OST.audio; OST.audio = null; OST.src = null;
+  if(!a) return;
+  if(!fade){ try{ a.pause(); }catch(e){} return; }
+  OST.fadeTimer = setInterval(()=>{
+    const v = a.volume - 0.08;
+    if(v <= 0.01){ try{ a.pause(); }catch(e){} clearInterval(OST.fadeTimer); OST.fadeTimer = null; }
+    else a.volume = v;
+  }, 60);
+}
+
 /* ---- Thời gian: 1 giây thực = 1 phút game. 1 đêm = 00:00 -> 07:30 (450 phút game) = 7 phút 30 giây thực ---- */
 const GAME_MINUTES_TOTAL = 7.5*60;
 const NIGHT_REAL_MS = GAME_MINUTES_TOTAL*1000;   // 1 phút game = 1000ms
@@ -232,6 +274,7 @@ function readSaveGame(){ return readSlot(SAVE_KEY); }
 function hasSaveGame(){ return !!readSaveGame(); }
 function deleteSaveGame(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} }
 function restoreFrom(data){
+  stopBattleOst(false);
   S = data.state;
   if(typeof S.stamina!=='number') S.stamina = RPG.CFG.STAMINA_MAX;
   if(S.ambushArmed==null) S.ambushArmed = true;
@@ -1504,6 +1547,7 @@ function startBattle(opts){
   $('battleBg').style.backgroundImage = img ? `url('${img}')` : '';
   renderBattle();
   const foe = enemies[0];
+  if(opts.final) stopBattleOst(false); else startBattleOst(foe.id);   // mỗi trận 1 bản OST, trừ trận cuối
   pkSay(opts.final ? '★ TRẬN QUYẾT ĐỊNH! '+foe.name+' chặn đường bạn!' : (opts.ambush ? '🪤 '+foe.name+' úp sọt bạn! Bạn bị choáng và mất lượt đầu!' : foe.name+' muốn đấu với bạn!'), battleNextRound);
 }
 
@@ -1890,6 +1934,7 @@ function battleFinish(){
   opts.enemyIds.forEach(id=>{ S.duelDone[id] = true; });
   const won = sum.winner==='A';
   BATTLE.closed = true;
+  stopBattleOst(true);
   clearTimeout(BATTLE.sayTimer);
   $('battleOverlay').classList.add('hidden');
 
@@ -2009,6 +2054,7 @@ function refreshAll(){
 }
 function beginNight(chapter, night, opts){
   opts = opts || {};
+  stopBattleOst(false);
   S = freshState(night, chapter, {});
   if(RPG.getState()) RPG.healAll();   // nghỉ ngơi qua ngày: HP hồi đầy khi bắt đầu đêm mới
   if(RPG.getState()) RPG.scaleOpponents(oppLevelFloor(chapter, night));   // đối thủ mạnh lên theo đêm / theo Lv người chơi
@@ -2037,6 +2083,7 @@ function hideAllOverlays(){
   });
 }
 function showTitle(){
+  stopBattleOst(false);
   hideAllOverlays();
   $('mgModal').classList.add('hidden');
   $('titleScreen').classList.remove('hidden');
