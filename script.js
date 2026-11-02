@@ -2907,25 +2907,21 @@ function startMinigame(room){
       });
     }
     markCurrent();
-    function onKey(e){
-      if(!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) return;
-      e.preventDefault();
-      if(e.key === pattern[idx].key){
+    function submitArrow(key){
+      if(key === pattern[idx].key){
         idx++;
-        if(idx>=pattern.length){
-          document.removeEventListener('keydown', onKey);
-          markCurrent();
-          finish(true);
-        } else {
-          markCurrent();
-        }
+        if(idx>=pattern.length){ document.removeEventListener('keydown', onKey); markCurrent(); finish(true); }
+        else markCurrent();
       } else {
         document.removeEventListener('keydown', onKey);
-        boxes[idx].style.borderColor='var(--blood-bright)';
-        boxes[idx].style.background='#2a1013';
-        finish(false);
+        boxes[idx].style.borderColor='var(--blood-bright)'; boxes[idx].style.background='#2a1013'; finish(false);
       }
     }
+    function onKey(e){
+      if(!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) return;
+      e.preventDefault(); submitArrow(e.key);
+    }
+    addTouchArrowPad(body,submitArrow);
     document.addEventListener('keydown', onKey);
     startTimer(patternLen*2.6, ()=>{ document.removeEventListener('keydown', onKey); finish(false); });
   }
@@ -3007,6 +3003,16 @@ const QTE_KEYMAP = {
   w:'ArrowUp', s:'ArrowDown', a:'ArrowLeft', d:'ArrowRight',
   W:'ArrowUp', S:'ArrowDown', A:'ArrowLeft', D:'ArrowRight'
 };
+function addTouchArrowPad(parent,onDirection){
+  const pad=document.createElement('div'); pad.className='touchArrowPad';
+  [['ArrowUp','▲'],['ArrowLeft','◀'],['ArrowDown','▼'],['ArrowRight','▶']].forEach(([key,label])=>{
+    const b=document.createElement('button'); b.type='button'; b.className='touchArrow'; b.textContent=label;
+    b.setAttribute('aria-label','Bấm '+label);
+    b.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();onDirection(key);});
+    pad.appendChild(b);
+  });
+  parent.appendChild(pad);
+}
 // Số mũi tên QTE của kỹ năng theo độ phức tạp từng nhân vật
 let QTE = null;
 function qteEnsureHost(){
@@ -3061,13 +3067,15 @@ function runArrowQte(opts){
     </div>
     <div id="qteFeedback" style="font-size:18px;font-weight:800;min-height:24px;letter-spacing:2px;"></div>
     <div style="font-size:11px;color:#aaa;">Phím mũi tên (hoặc W A S D) — bấm khi con trỏ nằm trong vùng sáng để ${opts.mode==='attack'?'tăng hiệu quả':'PARRY (đỡ 100%) — ngoài vùng sáng chỉ đỡ 50%'}</div>
-    ${opts.allowSkip ? '<button type="button" id="qteSkipBtn" class="btn" style="margin-top:8px;">BỎ QTE · THI TRIỂN Ở 70%</button>' : ''}`;
+    ${opts.allowSkip ? '<button type="button" id="qteSkipBtn" class="btn" style="margin-top:8px;">BỎ QTE · THI TRIỂN Ở 70%</button>' : ''}
+    <div id="qteTouchPad"></div>`;
 
   const elProg = host.querySelector('#qteProgress');
   const elArrow = host.querySelector('#qteArrow');
   const elZone = host.querySelector('#qteZone');
   const elCursor = host.querySelector('#qteCursor');
   const elFb = host.querySelector('#qteFeedback');
+  const touchPad = host.querySelector('#qteTouchPad');
   const dodgeHitNum = document.getElementById('dodgeHitNum');
   if(dodgeHitNum) dodgeHitNum.textContent = '0';
 
@@ -3185,6 +3193,10 @@ function runArrowQte(opts){
     if(q.done || q.locked || !q.target) return;
     resolveStrike(k === q.target ? 'ok' : 'wrong');
   }
+  addTouchArrowPad(touchPad,key=>{
+    if(q.done || q.locked || !q.target) return;
+    resolveStrike(key===q.target?'ok':'wrong');
+  });
   const skipBtn = host.querySelector('#qteSkipBtn');
   if(skipBtn) skipBtn.onclick = ()=>endAll(0.4); // ngưỡng an toàn tương ứng 70% hiệu lực kỹ năng
   document.addEventListener('keydown', onKey, true);
@@ -3563,6 +3575,17 @@ document.addEventListener('keydown', (e)=>{
   }
 });
 document.addEventListener('keyup', (e)=>{ delete TD.keys[(e.key||'').toLowerCase()]; });
+document.querySelectorAll('#tdTouchControls [data-dir]').forEach(btn=>{
+  const dir=btn.dataset.dir;
+  const release=()=>{delete TD.keys[dir];btn.classList.remove('pressed');};
+  btn.addEventListener('pointerdown',e=>{
+    if(!tdCanControl()) return;
+    e.preventDefault();btn.setPointerCapture(e.pointerId);TD.keys[dir]=true;btn.classList.add('pressed');
+  });
+  ['pointerup','pointercancel','lostpointercapture'].forEach(type=>btn.addEventListener(type,release));
+});
+const tdTouchInteract=document.getElementById('tdTouchInteract');
+if(tdTouchInteract) tdTouchInteract.addEventListener('pointerdown',e=>{e.preventDefault();tdInteract();});
 window.addEventListener('blur', ()=>{ TD.keys = {}; });
 requestAnimationFrame(tdLoop);
 

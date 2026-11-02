@@ -854,3 +854,78 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
 .bigbtn.kb,.overlay .btn.kb,#pauseMenuBox .bigbtn.kb,#jsPanelBtnRow .bigbtn.kb{outline:3px solid var(--amber,#e2b65c);outline-offset:3px;}
 .settingRow.kb{outline:2px solid var(--amber,#e2b65c);outline-offset:2px;background:rgba(226,182,92,.08);}
 .room-node.kb .room-box{outline:3px solid var(--amber,#e2b65c);outline-offset:2px;}
+
+/* ---------- Mobile layout and touch controls ---------- */
+#tdTouchControls{display:none;}
+.touchArrowPad{display:none;}
+@media (max-width:700px){
+  html,body{height:100%;height:100dvh;overflow:hidden;overscroll-behavior:none;}
+  #app{width:100%;height:100%;height:100dvh;min-height:0;border-width:2px;}
+  #app::before,#app::after{display:none;}
+  #hud{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;padding:8px 8px 10px;}
+  .hud-block{min-width:0;gap:2px;}
+  .hud-label{font-size:8px;letter-spacing:1px;}
+  #clockVal{font-size:20px;letter-spacing:1px;}
+  #meterOuter{grid-column:span 2;min-width:0;max-width:none;}
+  #staminaOuter,#energyOuter{min-width:0;max-width:none;}
+  #tiuLastSeen{font-size:12px;}
+  #bagArea{justify-content:flex-end;}
+  #nightBadge{grid-column:1/-1;margin:0;padding:3px 8px;font-size:14px;letter-spacing:2px;}
+  #soundToggleBtn,#bagBtn{height:38px;min-width:40px;}
+  #main{min-height:0;overscroll-behavior:contain;}
+  #sidePane{min-width:0;width:100%;max-width:none;}
+  #roomBanner{height:36dvh;min-height:190px;max-height:46dvh;flex:0 0 auto;}
+  #roomBanner.td-on{height:42dvh;min-height:230px;max-height:50dvh;}
+  #actionInner{padding:10px 10px calc(72px + env(safe-area-inset-bottom));}
+  #roomDesc{font-size:13px;line-height:1.5;}
+  .actionGroupRow{gap:8px;}
+  .actionGroupRow .btn,#resolveBtn,.btn{min-height:44px;touch-action:manipulation;}
+  .panelToggleBtn{bottom:calc(10px + env(safe-area-inset-bottom));}
+  #logToggleBtn{right:62px;}
+  #miniMapWrap,#logPane{right:8px;bottom:calc(64px + env(safe-area-inset-bottom));width:min(90vw,340px);}
+  #logPane{max-height:42dvh;}
+  #mapModal{padding:8px;}
+  #mapModalWrap{width:min(94vw,calc(100dvh - 90px));max-height:94dvh;overflow:auto;}
+  #mgModal{padding:10px;align-items:center;}
+  #mgBox{width:min(96vw,560px);max-height:92dvh;overflow-y:auto;padding:14px;}
+  #mgBody{max-height:66dvh;overflow-y:auto;}
+  #vnOverlay{padding:8px 8px calc(8px + env(safe-area-inset-bottom));}
+  #vnBox{width:100%;margin-bottom:0;max-height:72dvh;overflow-y:auto;}
+  #vnFooter{gap:8px;flex-wrap:wrap;}
+  #vnNextBtn{min-height:44px;}
+  #titleScreen,.overlay{padding:14px;overflow-y:auto;}
+  .bigbtn{max-width:100%;padding:12px 18px;font-size:16px;letter-spacing:2px;}
+  #battleOverlay{height:100dvh;overflow:hidden;}
+  #pkField{height:100%;}
+  #pkBottom{position:absolute;}
+  #pkMenu{right:6px;bottom:12px;width:min(210px,55vw);max-height:44dvh;overflow-y:auto;}
+  #pkTextBox{left:6px;bottom:12px;transform:none;width:calc(100% - min(230px,58vw));max-height:35dvh;padding:8px 10px;font-size:13px;}
+  #pkTurn{top:8px;left:8px;width:124px;}
+  #pkFast{top:8px;right:8px;}
+  #pkSB{top:48px;left:8px;}
+}
+@media (pointer:coarse), (max-width:700px){
+  #roomBanner.td-on #tdTouchControls{display:flex;position:absolute;z-index:8;left:10px;right:10px;bottom:10px;align-items:flex-end;justify-content:space-between;pointer-events:none;}
+  .touchDpad{display:grid;grid-template:repeat(2,54px)/repeat(3,54px);gap:3px;pointer-events:auto;touch-action:none;}
+  .touchDpad [data-dir="w"]{grid-area:1/2;}
+  .touchDpad [data-dir="a"]{grid-area:2/1;}
+  .touchDpad [data-dir="s"]{grid-area:2/2;}
+  .touchDpad [data-dir="d"]{grid-area:2/3;}
+  .touchDpad button,.touchArrow{border:1px solid rgba(201,150,47,.7);border-radius:8px;background:rgba(8,10,12,.82);color:#f3d58f;font-size:20px;font-weight:800;touch-action:none;user-select:none;-webkit-user-select:none;}
+  .touchDpad button.pressed{background:rgba(201,150,47,.65);}
+  #tdTouchInteract{pointer-events:auto;min-height:52px;padding:0 16px;border:1px solid var(--scan);border-radius:8px;background:rgba(5,18,12,.9);color:var(--scan);font-weight:800;touch-action:manipulation;}
+  .touchArrowPad{display:grid;grid-template:repeat(2,54px)/repeat(3,54px);gap:4px;justify-content:center;touch-action:none;}
+  .touchArrowPad .touchArrow:nth-child(1){grid-area:1/2;}
+  .touchArrowPad .touchArrow:nth-child(2){grid-area:2/1;}
+  .touchArrowPad .touchArrow:nth-child(3){grid-area:2/2;}
+  .touchArrowPad .touchArrow:nth-child(4){grid-area:2/3;}
+  #qteHost .touchArrowPad{display:grid;}
+  #mgBody .touchArrowPad{display:grid;margin:10px auto;}
+}
+@media (max-width:380px){
+  #hud{grid-template-columns:repeat(3,minmax(0,1fr));}
+  #meterOuter{grid-column:span 2;}
+  #roomBanner{height:32dvh;min-height:170px;}
+  #pkMenu{width:52vw;}
+  #pkTextBox{width:calc(100% - 54vw);font-size:12px;}
+}

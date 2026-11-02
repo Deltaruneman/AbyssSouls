@@ -57,6 +57,7 @@ Game chạy trực tiếp trên trình duyệt, không cần bước build riên
 - **Di chuyển trong khuôn viên:** dùng các nút phòng kề nhau hoặc bấm phòng có viền hợp lệ trên bản đồ.
 - **Thông tin ca đêm:** thẻ mục tiêu cho biết thứ hạng ĐRL, sự cố gần nhất, La Peace chưa nhặt và nơi The TIU được thấy lần cuối. Trước khi đấu NPC, game báo trước chi phí thời gian.
 - **Trong khu vực dạng top-down:** dùng WASD hoặc phím mũi tên để đi; nhấn **E** để tương tác.
+- **Trên điện thoại:** dùng D-pad cảm ứng và nút tương tác khi đi trong khu vực top-down; dùng cụm phím mũi tên trên màn hình cho QTE chiến đấu và minigame truy đuổi.
 - **QTE:** nhấn hướng mũi tên hiện trên màn hình bằng phím mũi tên hoặc WASD; vùng sáng cho kết quả tốt nhất.
 - **Hội thoại:** nhấn **J** hoặc Enter để tiếp tục.
 - **Tạm dừng:** nhấn **Esc** khi không có cửa sổ tương tác đang mở.

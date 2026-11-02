@@ -43,6 +43,15 @@
       <div id="actionPane">
         <div id="roomBanner">
           <canvas id="tdCanvas"></canvas>
+          <div id="tdTouchControls" aria-label="Điều khiển di chuyển">
+            <div class="touchDpad">
+              <button type="button" data-dir="w" aria-label="Đi lên">▲</button>
+              <button type="button" data-dir="a" aria-label="Đi trái">◀</button>
+              <button type="button" data-dir="s" aria-label="Đi xuống">▼</button>
+              <button type="button" data-dir="d" aria-label="Đi phải">▶</button>
+            </div>
+            <button type="button" id="tdTouchInteract">TƯƠNG TÁC · E</button>
+          </div>
 
           <div id="npcSprite" class="hidden">
             <div id="npcAvatar"></div>
