@@ -64,16 +64,54 @@
 
     // ---- The TIU là boss: bị bắt = đấu với TIU (hiện thân của mọi skill) ----
     TIU_TAINTED_WIN: 8,                  // thắng TIU: +8 ĐRL vấy bẩn
-    TIU_HP_BASE: 200, TIU_HP_PER_LV: 45, // HP TIU = base + perLv * Lv người chơi
-    TIU_ATK_BASE: 15, TIU_ATK_PER_LV: 2,
+    TIU_HP_BASE: 190, TIU_HP_PER_LV: 42, // HP TIU = base + perLv * Lv người chơi
+    TIU_ATK_BASE: 13, TIU_ATK_PER_LV: 1.5,
     TIU_DEF_BASE: 12, TIU_DEF_PER_LV: 2,
     TIU_SPD: 45,
 
     // ---- Đồng đội bỏ đội nếu người chơi không kiếm thêm ĐRL ----
     PARTY_CHECK_MIN: 120,                // cứ mỗi 120 phút game kiểm tra 1 lần
     PARTY_MIN_GAIN: 5,                   // phải kiếm thêm ít nhất 5 ĐRL trong mỗi kỳ
-    PARTY_LEAVE_AMBUSH: 0.25             // 25% đồng đội rời đội sẽ đánh lén người chơi
+    PARTY_LEAVE_AMBUSH: 0.25,            // 25% đồng đội rời đội sẽ đánh lén người chơi
+
+    // ---- Hệ thuộc tính & chí mạng ----
+    WEAK_MULT: 1.3,                      // đánh trúng YẾU ĐIỂM: x1.3 sát thương, +WEAK_RAGE Nộ cho người đánh
+    RESIST_MULT: 0.7,                    // đánh vào hệ KHÁNG: x0.7
+    WEAK_RAGE: 10,
+    CRIT_BASE: 0.05, CRIT_PER_SPD: 0.0015, CRIT_WEAK_BONUS: 0.15, CRIT_CAP: 0.60,   // tỉ lệ chí mạng = base + SPD*perSpd (+15% nếu trúng yếu điểm)
+    CRIT_MULT: 1.5
   };
+
+  /* ------------------------- HỆ THUỘC TÍNH ------------------------- */
+  const ELEMENTS = {
+    slash:   { name: "Chém",      icon: "⚔️" },
+    fire:    { name: "Hỏa",       icon: "🔥" },
+    ice:     { name: "Băng",      icon: "❄️" },
+    thunder: { name: "Lôi",       icon: "⚡" },
+    poison:  { name: "Độc",       icon: "☠️" },
+    void:    { name: "Hư Không",  icon: "🌀" }
+  };
+  /* Vòng khắc chế: Chém > Pháp sư · Lôi > Đấu sĩ · Băng > Sát thủ · Độc > Triệu hồi · Hỏa > Hộ tế · Hư Không > The TIU */
+  const AFFINITY = {
+    fighter:  { weak: "thunder", resist: "slash",   basic: "slash" },
+    assassin: { weak: "ice",     resist: "void",    basic: "slash" },
+    mage:     { weak: "slash",   resist: "thunder", basic: "fire" },
+    healer:   { weak: "fire",    resist: "poison",  basic: "poison" },
+    summoner: { weak: "poison",  resist: "fire",    basic: "void" }
+  };
+  const SKILL_ELEMENT = {
+    // skill gây sát thương -> hệ
+    fireball: "fire", iceWall: "ice", toxicBlast: "poison", finisher: "slash",
+    // Ultimate
+    lastStopper: "slash", perfectKill: "slash", thunder: "thunder", bitterMedicine: "poison", voidSummon: "void"
+  };
+  function affinityOf(f) {
+    if (!f) return {};
+    if (f.tiu) return { weak: "void", resist: null, basic: "void" };
+    return AFFINITY[f.classId] || {};
+  }
+  function basicElement(f) { return affinityOf(f).basic || null; }
+  function elementLabel(key) { const e = ELEMENTS[key]; return e ? e.icon + " " + e.name : "—"; }
 
   /* ============================ 2) CLASS ============================ */
   // effects: danh sách mô tả hiệu ứng cho combat engine.
@@ -663,7 +701,7 @@
     addRage: addRage, rageOnAttack: rageOnAttack, rageOnSkill: rageOnSkill, canUseUltimate: canUseUltimate,
     heal: heal, healPct: healPct, regen: regen, healAll: healAll,
     expToNext: expToNext, expForWin: expForWin, addExp: addExp,
-    resolveDuel: resolveDuel, setLevel: setLevel, scaleOpponents: scaleOpponents, tiuPenalty: tiuPenalty, makeTiu: makeTiu, addTainted: addTainted, aliveFighters: aliveFighters,
+    resolveDuel: resolveDuel, setLevel: setLevel, scaleOpponents: scaleOpponents, tiuPenalty: tiuPenalty, makeTiu: makeTiu, ELEMENTS: ELEMENTS, SKILL_ELEMENT: SKILL_ELEMENT, affinityOf: affinityOf, basicElement: basicElement, elementLabel: elementLabel, addTainted: addTainted, aliveFighters: aliveFighters,
     rankAscending: rankAscending, eliminateLowest: eliminateLowest,
     addLaPeace: addLaPeace, hasPiece: hasPiece, pieceOwner: pieceOwner, unownedPieces: unownedPieces,
     transferPieces: transferPieces, giveToRandomOpponent: giveToRandomOpponent, syncPieces: syncPieces,

@@ -1645,7 +1645,9 @@ function startBattle(opts){
   RPG.scaleOpponents(oppLevelFloor());   // đối thủ luôn có Lv >= Lv người chơi và >= mốc theo đêm
   const allies = [me].concat(opts.final ? [] : RPG.partyAllies());
   const enemies = opts.enemyFighters || opts.enemyIds.map(id=>RPG.get(id));
-  const B = RPGCombat.create({ allies, enemies, dodge:!!opts.final, controlAllies:false });
+  const knownEl = {};
+  enemies.forEach(f=>{ if((f.trust||0)>=1 || (S.knownElements && S.knownElements[f.id])) knownEl[f.id] = true; });   // đã quen / đã khám phá từ trận trước
+  const B = RPGCombat.create({ allies, enemies, dodge:!!opts.final, controlAllies:false, known:knownEl });
   // Bẫy gài đã trúng: -HP và mất lượt đầu
   enemies.forEach(f=>{
     const d = S.npcDebuff && S.npcDebuff[f.id];
@@ -1925,6 +1927,17 @@ function battlePromptNext(){
   showBattleMenu(BATTLE.pending[0]);
 }
 
+/* ---- Hệ thuộc tính ---- */
+function elAffinityText(x){
+  const B = BATTLE.B, a = RPG.affinityOf(x.f);
+  if(!B.known[x.f.id]) return x.name+': hệ ❓ (đánh thử hoặc dùng Máy ảnh để lộ)';
+  return x.name+': yếu '+RPG.elementLabel(a.weak)+(a.resist ? ' · kháng '+RPG.elementLabel(a.resist) : '');
+}
+function elMatchTag(t, el){   // gắn nhãn khi chọn mục tiêu: hệ đòn đánh có trúng yếu điểm / bị kháng không
+  if(!el || !t.f || t.isSummon || !BATTLE.B.known[t.f.id]) return '';
+  const a = RPG.affinityOf(t.f);
+  return a.weak===el ? ' · 💥 YẾU' : (a.resist===el ? ' · 🛡 KHÁNG' : '');
+}
 function showBattleMenu(uid){
   const B = BATTLE.B, u = RPGCombat.unit(B, uid), op = RPGCombat.options(B, u);
   const ult = op.ultimate;
@@ -1935,25 +1948,26 @@ function showBattleMenu(uid){
     if(skills.length) return `${x.name}: có thể dùng ${skills.map(s=>s.name).join(', ')}`;
     return `${x.name}: Nộ ${x.rage}/${RPG.CFG.RAGE_MAX}`;
   });
-  pkPrompt(u.name+' sẽ làm gì?'+(signs.length?'\nDẤU HIỆU ĐỊCH · '+signs.join(' · '):''));
+  const elInfo = B.units.filter(x=>x.side==='E' && x.alive && !x.isSummon && x.f).map(elAffinityText);
+  pkPrompt(u.name+' sẽ làm gì?'+(signs.length?'\nDẤU HIỆU ĐỊCH · '+signs.join(' · '):'')+(elInfo.length?'\nHỆ ĐỊCH · '+elInfo.join(' · '):''));
   pkActive(uid);
   pkMenuSet('main', [
     { label:'CHIẾN ĐẤU', cls:'fgoAtk', icon:'⚔️', hint:'Tấn công thường hoặc dùng kỹ năng.', onClick:()=>showFightMenu(uid) },
     { label:'TÚI ĐỒ', cls:'fgoSmall', icon:'🎒', hint:'Dùng vật phẩm trong túi.', disabled:!op.items.length, onClick:()=>showBagMenu(uid) },
     { label:'PHÒNG THỦ', cls:'fgoSmall', icon:'🛡️', hint:'Giảm 50% sát thương nhận trong lượt này.', onClick:()=>commit(uid,{type:'defend'}) },
-    { label:'ULTIMATE', cls:'ult fgoNP', icon:'✦', sub:ult.rage+'/'+ult.rageMax+' Nộ', hint:ult.name+': '+ult.desc, disabled:!ult.ready,
+    { label:'ULTIMATE', cls:'ult fgoNP', icon:'✦', sub:(ult.el?RPG.ELEMENTS[ult.el].icon+' ':'')+ult.rage+'/'+ult.rageMax+' Nộ', hint:ult.name+': '+ult.desc+(ult.el?' (Hệ '+RPG.elementLabel(ult.el)+')':''), disabled:!ult.ready,
       onClick:()=>castWithQte(uid,'ultimate',ult) }
   ]);
 }
 function showFightMenu(uid){
   const B = BATTLE.B, u = RPGCombat.unit(B, uid), op = RPGCombat.options(B, u);
   pkPrompt('Chọn đòn đánh.');
-  const items = [{ label:'Tấn công', cls:'fgoCmd buster', icon:'⚔️', sub:'Thường · +'+RPG.CFG.RAGE_ON_ATTACK+' Nộ', hint:'Đòn đánh thường lên 1 mục tiêu.',
-                   onClick:()=>pickTarget(u,'single',t=>commit(uid,{type:'attack',target:t}),()=>showFightMenu(uid)) }];
+  const items = [{ label:'Tấn công', cls:'fgoCmd buster', icon:'⚔️', sub:(op.basicEl?RPG.ELEMENTS[op.basicEl].icon+' ':'')+'Thường · +'+RPG.CFG.RAGE_ON_ATTACK+' Nộ', hint:'Đòn đánh thường lên 1 mục tiêu'+(op.basicEl?' (Hệ '+RPG.elementLabel(op.basicEl)+')':'')+'.',
+                   onClick:()=>pickTarget(u,'single',t=>commit(uid,{type:'attack',target:t}),()=>showFightMenu(uid), op.basicEl) }];
   op.skills.forEach((s,k)=>{
     items.push({ label:s.name, cls:'fgoCmd '+(k%2 ? 'quick' : 'arts'), icon:(k%2 ? '💨' : '✨'),
-      sub: s.unlocked ? ((TARGET_LABEL[s.target]||'')+(s.cd>0?' · hồi '+s.cd:'')) : 'Mở ở Lv'+s.lvl,
-      hint:s.desc, disabled:!s.ready,
+      sub: s.unlocked ? ((s.el?RPG.ELEMENTS[s.el].icon+' ':'')+(TARGET_LABEL[s.target]||'')+(s.cd>0?' · hồi '+s.cd:'')) : 'Mở ở Lv'+s.lvl,
+      hint:s.desc+(s.el?' (Hệ '+RPG.elementLabel(s.el)+')':''), disabled:!s.ready,
       onClick:()=>castWithQte(uid,'skill',s) });
   });
   items.push({ label:'◀ Quay lại', cls:'fgoBack', onClick:()=>showBattleMenu(uid) });
@@ -1967,12 +1981,12 @@ function showBagMenu(uid){
   items.push({ label:'◀ Quay lại', cls:'fgoBack', onClick:()=>showBattleMenu(uid) });
   pkMenuSet('bag', items);
 }
-function pickTarget(u, kind, cb, back){
+function pickTarget(u, kind, cb, back, el){
   if(kind!=='single'){ cb(null); return; }
   const legal = RPGCombat.legalTargets(BATTLE.B, u, false);
   if(legal.length<=1){ cb(legal[0] ? legal[0].uid : null); return; }
   pkPrompt('Chọn mục tiêu.');
-  const items = legal.map(t=>({ label:t.name, sub:'HP '+t.hp+'/'+t.maxHp, hoverUid:t.uid,
+  const items = legal.map(t=>({ label:t.name, sub:'HP '+t.hp+'/'+t.maxHp+elMatchTag(t, el), hoverUid:t.uid,
     onClick:()=>{ clearTargeted(); cb(t.uid); } }));
   items.push({ label:'◀ Quay lại', cls:'fgoBack', onClick:()=>{ clearTargeted(); back ? back() : showBattleMenu(u.uid); } });
   pkMenuSet('target', items);
@@ -2003,7 +2017,7 @@ function castWithQte(uid, type, def){
       count, windowMs: 1500-(count-3)*60, feintChance:0, parryWidth:0.5, shake:0, drift:0, allowSkip:true,
       onDone:(r)=>commit(uid, {type, id:def.id, target:tgt, quality:r.accuracy})
     });
-  }, back);
+  }, back, def.el);
 }
 function commit(uid, action){
   const r = RPGCombat.submit(BATTLE.B, uid, action);
@@ -2083,6 +2097,8 @@ function battleFinish(){
   const B = BATTLE.B, opts = BATTLE.opts;
   const sum = RPGCombat.settle(B);
   opts.enemyIds.forEach(id=>{ S.duelDone[id] = true; });
+  S.knownElements = S.knownElements || {};
+  Object.keys((BATTLE && BATTLE.B && BATTLE.B.known) || {}).forEach(id=>{ S.knownElements[id] = true; });
   if(opts.tiu) S.paused = true;
   const won = sum.winner==='A';
   BATTLE.closed = true;

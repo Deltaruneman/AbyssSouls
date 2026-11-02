@@ -68,6 +68,7 @@
       nextUid: 1, settled: false, playerUnit: null
     };
     B.dodge = !!B.opts.dodge;
+    B.known = Object.assign({}, B.opts.known || {});   // id địch mà người chơi đã biết hệ (thuộc tính)
     opts.allies.forEach(function (f, i) {
       const u = makeUnit(B, f, "A");
       u.controller = B.opts.autoPlayer ? "ai" : (f.isPlayer || B.opts.controlAllies) ? "player" : "ai";
@@ -153,7 +154,7 @@
     }
     emit(B, (src && !o.dot ? src.name + " gây " : dst.name + " nhận ") + d + " sát thương" +
             (o.dot ? " (" + (o.label || "hiệu ứng") + ")" : " lên " + dst.name) +
-            (dst.st.freeze ? " (Đóng băng +50%)" : "") + ".",
+            (dst.st.freeze ? " (Đóng băng +50%)" : "") + (o.tag ? " " + o.tag : "") + ".",
          "atk", { type: "damage", src: src && src.uid, dst: dst.uid, amount: d });
     if (dst.hp <= 0) kill(B, dst);
     return d;
@@ -283,7 +284,19 @@
         return;
       }
     }
-    hit(B, src, dst, calcDamage(src, dst, power, o) * mult, o);
+    let dmg = calcDamage(src, dst, power, o) * mult;
+    const tags = [];
+    // ----- Hệ thuộc tính (yếu điểm / kháng) & chí mạng theo SPD -----
+    const el = ctx.element || null;
+    const aff = RPG.affinityOf(dst.f && !dst.isSummon ? dst.f : null);
+    let isWeak = false;
+    if (el && aff.weak === el)        { isWeak = true; dmg *= RPG.CFG.WEAK_MULT; tags.push("💥 YẾU ĐIỂM " + RPG.ELEMENTS[el].icon); }
+    else if (el && aff.resist === el) { dmg *= RPG.CFG.RESIST_MULT; tags.push("🛡 KHÁNG " + RPG.ELEMENTS[el].icon); }
+    if (el && (isWeak || aff.resist === el) && dst.f && src.side === "A") B.known[dst.f.id] = true;   // người chơi "khám phá" hệ của địch
+    const critChance = Math.min(RPG.CFG.CRIT_CAP, RPG.CFG.CRIT_BASE + eff(src, "spd") * RPG.CFG.CRIT_PER_SPD + (isWeak ? RPG.CFG.CRIT_WEAK_BONUS : 0));
+    if (mult > 0 && rng() < critChance) { dmg *= RPG.CFG.CRIT_MULT; tags.push("✨ CHÍ MẠNG"); }
+    if (isWeak && src.f && !src.isSummon) src.rage = clamp(src.rage + RPG.CFG.WEAK_RAGE, 0, RPG.CFG.RAGE_MAX);
+    hit(B, src, dst, dmg, Object.assign({}, o, { tag: tags.join(" · ") }));
     yield* flush(B);
   }
 
@@ -372,6 +385,7 @@
           break;
         case "scout": {
           const t = targets[0];
+          if (t && t.f) B.known[t.f.id] = true;   // máy ảnh: lộ hệ thuộc tính của địch
           if (t) emit(B, "📷 " + t.name + " — " + RPG.CLASSES[t.f.classId].name + " Lv" + t.f.level + ", HP " + t.hp + "/" + t.maxHp + ", Nộ " + t.rage + ", ĐRL " + t.f.drl +
             ((t.f.pieces && t.f.pieces.length) ? ", 💠 " + t.f.pieces.map(function (p) { return RPG.LAPEACE_PIECES[p].name; }).join("/") : "") + ".", "skill", { type: "scout", dst: t.uid });
           break;
@@ -396,6 +410,7 @@
       const ts = pickTargets(B, u, "single", a.target);
       if (!ts.length) return;
       emit(B, u.name + " tấn công " + ts[0].name + "!", "atk", { type: "attack", src: u.uid, dst: ts[0].uid });
+      ctx.element = u.isSummon ? "void" : RPG.basicElement(u.f);
       yield* dmgGen(B, u, ts[0], 1.0, { basic: true }, ctx);
       if (!u.isSummon) u.rage = clamp(u.rage + RPG.CFG.RAGE_ON_ATTACK, 0, RPG.CFG.RAGE_MAX);
       else if (u.hasRage) {
@@ -428,7 +443,7 @@
       emit(B, u.name + " không thể dùng kỹ năng này — đành tấn công thường.", "");
       yield* execAction(B, u, { type: "attack", target: a.target }); return;
     }
-    ctx.ult = isUlt; ctx.skillName = def.name;
+    ctx.ult = isUlt; ctx.skillName = def.name; ctx.element = RPG.SKILL_ELEMENT[def.id] || null;
     if (isUlt && u.f && u.f.tiu) u.f.ultIdx = (u.f.ultIdx || 0) + 1;   // lần sau TIU tung Ultimate của class kế tiếp
     // MANA TRANSFER: sau khi tung Ultimate được hồi lại một phần Nộ thay vì về 0
     const manaRefund = isUlt && !u.isSummon && u.f && RPG.hasPiece(u.f, "manaTransfer");
@@ -491,7 +506,7 @@
   /* ----------------------------- MENU CHO UI ----------------------------- */
   function options(B, u) {
     const skills = RPG.getSkills(u.f).map(function (s) {
-      return { id: s.id, name: s.name, lvl: s.lvl, target: s.target, desc: s.desc, unlocked: s.unlocked,
+      return { id: s.id, name: s.name, lvl: s.lvl, target: s.target, desc: s.desc, unlocked: s.unlocked, el: RPG.SKILL_ELEMENT[s.id] || null,
                cd: u.cds[s.id] > 0 ? u.cds[s.id] - 1 : 0, ready: s.unlocked && skillReady(u, s) };
     });
     const ult = RPG.getUltimate(u.f);
@@ -500,7 +515,8 @@
     }).map(function (k) { return { id: k, name: RPG.ITEMS[k].name, icon: RPG.ITEMS[k].icon, count: u.f.items[k], target: RPG.ITEMS[k].target, desc: RPG.ITEMS[k].desc }; });
     return {
       attack: true, defend: true, skills: skills, items: items,
-      ultimate: { id: ult.id, name: ult.name, target: ult.target, desc: ult.desc, unlocked: ult.unlocked,
+      basicEl: u.isSummon ? "void" : RPG.basicElement(u.f),
+      ultimate: { id: ult.id, name: ult.name, target: ult.target, desc: ult.desc, unlocked: ult.unlocked, el: RPG.SKILL_ELEMENT[ult.id] || null,
                   rage: u.rage, rageMax: RPG.CFG.RAGE_MAX, ready: ult.unlocked && u.rage >= RPG.CFG.RAGE_MAX },
       targets: legalTargets(B, u, false).map(function (t) { return { uid: t.uid, name: t.name, hp: t.hp, maxHp: t.maxHp }; })
     };
