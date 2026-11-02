@@ -429,6 +429,7 @@
       yield* execAction(B, u, { type: "attack", target: a.target }); return;
     }
     ctx.ult = isUlt; ctx.skillName = def.name;
+    if (isUlt && u.f && u.f.tiu) u.f.ultIdx = (u.f.ultIdx || 0) + 1;   // lần sau TIU tung Ultimate của class kế tiếp
     // MANA TRANSFER: sau khi tung Ultimate được hồi lại một phần Nộ thay vì về 0
     const manaRefund = isUlt && !u.isSummon && u.f && RPG.hasPiece(u.f, "manaTransfer");
     if (isUlt) u.rage = manaRefund ? Math.round(RPG.CFG.RAGE_MAX * RPG.CFG.MANA_TRANSFER_PCT) : 0;
@@ -468,9 +469,9 @@
     if (!en.length) return { type: "defend" };
     const ult = RPG.getUltimate(f);
     const ultOk = ult.unlocked && u.rage >= RPG.CFG.RAGE_MAX &&
-      (f.classId !== "fighter" || u.hp > u.maxHp * 0.4) &&
+      (f.tiu || ((f.classId !== "fighter" || u.hp > u.maxHp * 0.4) &&
       (f.classId !== "summoner" || hasSummon(B, u)) &&
-      (f.classId !== "healer" || en.some(function (t) { return t.st.poison; }));
+      (f.classId !== "healer" || en.some(function (t) { return t.st.poison; }))));
     if (ultOk) return { type: "ultimate", quality: q };
     if (u.hp < u.maxHp * 0.35 && RPG.countItem(f, "bimbim") > 0) return { type: "item", id: "bimbim" };
     if (Object.keys(u.st).some(function (k) { return ["burn", "poison", "freeze"].indexOf(k) >= 0; }) && RPG.countItem(f, "antidote") > 0) return { type: "item", id: "antidote" };
@@ -627,12 +628,24 @@
     const out = { winner: B.winner, duels: [], allyExp: [] };
     if (B.winner === "A") {
       foes.forEach(function (e) {
+        if (e.tiu) {   // thắng The TIU: không cướp ĐRL, nhận ĐRL VẤY BẨN + EXP
+          const exp = RPG.addExp(pf, 40 + 15 * pf.level);
+          RPG.addTainted(pf, RPG.CFG.TIU_TAINTED_WIN);
+          out.duels.push({ tiu: true, winnerId: pf.id, loserId: "TIU", drl: 0, lost: 0, tainted: RPG.CFG.TIU_TAINTED_WIN, exp: exp, pieces: [], loot: null });
+          return;
+        }
         const r = RPG.resolveDuel(pf, e); r.loot = RPG.lootRandomItem(e, pf); out.duels.push(r);
       });
       const gain = out.duels.reduce(function (a, d) { return a + d.exp.gained; }, 0);
       mates.forEach(function (m) { out.allyExp.push({ id: m.id, exp: RPG.addExp(m, gain) }); });
     } else {
-      foes.forEach(function (e) { out.duels.push(RPG.resolveDuel(e, pf)); });
+      foes.forEach(function (e) {
+        if (e.tiu) {   // thua The TIU: mất ĐRL như cũ (TIU_PENALTY)
+          out.duels.push({ tiu: true, winnerId: "TIU", loserId: pf.id, drl: 0, lost: RPG.tiuPenalty(pf), tainted: 0, exp: { gained: 0, unlocked: [], levelsGained: [] }, pieces: [] });
+          return;
+        }
+        out.duels.push(RPG.resolveDuel(e, pf));
+      });
     }
     return out;
   }

@@ -59,7 +59,20 @@
     STAMINA_MOVE_COST: 20,               // mỗi lần đổi khu vực (5 lần thì cạn)
     STAMINA_REGEN_PER_MIN: 0.4,          // hồi dần theo phút game (24/giờ)
     STAMINA_REST_GAIN: 50,               // "Nghỉ ngơi 1 giờ" ở Căn tin
-    AMBUSH_REARM: 40                     // hồi tới mức này thì lần kiệt sức sau mới bị úp sọt tiếp
+    AMBUSH_REARM: 40,                    // (cũ) không còn dùng
+    EXHAUST_HP_PCT: 0.5,                 // đi khi thiếu thể lực -> bị đánh lén: vào trận chỉ còn tối đa 50% HP, mọi skill đang hồi chiêu
+
+    // ---- The TIU là boss: bị bắt = đấu với TIU (hiện thân của mọi skill) ----
+    TIU_TAINTED_WIN: 8,                  // thắng TIU: +8 ĐRL vấy bẩn
+    TIU_HP_BASE: 200, TIU_HP_PER_LV: 45, // HP TIU = base + perLv * Lv người chơi
+    TIU_ATK_BASE: 15, TIU_ATK_PER_LV: 2,
+    TIU_DEF_BASE: 12, TIU_DEF_PER_LV: 2,
+    TIU_SPD: 45,
+
+    // ---- Đồng đội bỏ đội nếu người chơi không kiếm thêm ĐRL ----
+    PARTY_CHECK_MIN: 120,                // cứ mỗi 120 phút game kiểm tra 1 lần
+    PARTY_MIN_GAIN: 5,                   // phải kiếm thêm ít nhất 5 ĐRL trong mỗi kỳ
+    PARTY_LEAVE_AMBUSH: 0.25             // 25% đồng đội rời đội sẽ đánh lén người chơi
   };
 
   /* ============================ 2) CLASS ============================ */
@@ -233,6 +246,15 @@
     antidote:{ name: "Thuốc giải", icon: "💊", usable: ["combat", "map"], target: "self", price: 10,
                desc: "Xóa Cháy, Độc, Đóng băng, Tê liệt.",
                effects: [{ type: "cleanse", only: ["burn", "poison", "freeze", "paralyze"] }] },
+    tainted_bimbim: { name: "Bim Bim Nhiễm Bẩn", icon: "🖤", usable: ["combat", "map"], target: "self", price: null, taintedPrice: 3, special: true,
+               desc: "Hồi 60% HP tối đa và +30 Nộ.",
+               effects: [{ type: "healPct", pct: 0.60 }, { type: "rage", amount: 30 }] },
+    tainted_core:    { name: "Lõi Hận Thù", icon: "🔮", usable: ["combat"], target: "self", price: null, taintedPrice: 6, special: true,
+               desc: "Lập tức đầy thanh Nộ (Ultimate sẵn sàng).",
+               effects: [{ type: "rage", amount: 100 }] },
+    tainted_shroud:  { name: "Áo Choàng Vấy Bẩn", icon: "🧥", usable: ["combat"], target: "self", price: null, taintedPrice: 5, special: true,
+               desc: "+45 DEF và +20 ATK trong 3 turn.",
+               effects: [{ type: "buff", stat: "def", amount: 45, turns: 3 }, { type: "buff", stat: "atk", amount: 20, turns: 3 }] },
     armor:   { name: "Áo giáp bìa carton", icon: "📦", usable: ["combat"], target: "self", price: null,
                desc: "+20 DEF trong 3 turn.",
                effects: [{ type: "buff", stat: "def", amount: 20, turns: 3 }] }
@@ -290,6 +312,7 @@
 
   /* ============================ FIGHTER / STATS ============================ */
   function getStats(f) {
+    if (f.statsOverride) return Object.assign({}, f.statsOverride);   // The TIU
     const b = CLASSES[f.classId].base;
     let mult = 1;
     CFG.GROWTH_LEVELS.forEach(function (lv) { if (f.level >= lv) mult += CFG.GROWTH_PCT; });
@@ -313,13 +336,23 @@
   }
 
   /* ============================ SKILL ============================ */
+  function allClassSkills() {
+    const out = [];
+    CLASS_IDS.forEach(function (cid) { CLASSES[cid].skills.forEach(function (s) { out.push(s); }); });
+    return out;
+  }
   function getSkills(f) {
+    if (f.tiu) return allClassSkills().map(function (s) { return Object.assign({ cd: CFG.SKILL_CD[s.lvl], unlocked: true }, s); });
     const c = CLASSES[f.classId];
     return c.skills.map(function (s) {
       return Object.assign({ cd: CFG.SKILL_CD[s.lvl], unlocked: f.level >= s.lvl }, s);
     });
   }
   function getUltimate(f) {
+    if (f.tiu) {   // TIU xoay vòng Ultimate của cả 5 class
+      const list = CLASS_IDS.map(function (cid) { return CLASSES[cid].ultimate; });
+      return Object.assign({ unlocked: true, rageCost: CFG.RAGE_MAX }, list[(f.ultIdx || 0) % list.length]);
+    }
     const u = CLASSES[f.classId].ultimate;
     return Object.assign({ unlocked: f.level >= CFG.ULT_UNLOCK_LEVEL, rageCost: CFG.RAGE_MAX }, u);
   }
@@ -398,6 +431,19 @@
     const pieces = loser.isPlayer ? [] : transferPieces(loser, winner);
     return { winnerId: winner.id, loserId: loser.id, drl: gain, lost: lost, exp: exp, pieces: pieces };
   }
+  /* The TIU: hiện thân của TẤT CẢ người từng tham gia — mang đủ skill của mọi class. Mạnh lên theo Lv người chơi. */
+  function makeTiu(playerLv) {
+    const lv = Math.max(1, playerLv || 1);
+    const hp = CFG.TIU_HP_BASE + CFG.TIU_HP_PER_LV * lv;
+    return {
+      id: "TIU", name: "The TIU", title: "Hiện thân của tất cả", isPlayer: false, tiu: true, classId: "assassin",
+      level: 5, exp: 0, hp: hp, maxHp: hp, rage: 0, pieces: [], laPeace: 0, spellBreaker: false,
+      drl: 0, trust: 0, inParty: false, alive: true, items: {}, components: {}, statuses: [], ultIdx: 0,
+      statsOverride: { hp: hp, atk: CFG.TIU_ATK_BASE + CFG.TIU_ATK_PER_LV * lv,
+                       def: CFG.TIU_DEF_BASE + CFG.TIU_DEF_PER_LV * lv, spd: CFG.TIU_SPD }
+    };
+  }
+  function addTainted(f, n) { f.taintedDrl = (f.taintedDrl || 0) + n; f.taintedEver = true; return f.taintedDrl; }
   function tiuPenalty(f, amount) {
     const a = Math.min(f.drl, amount != null ? amount : CFG.TIU_PENALTY);
     f.drl -= a;
@@ -617,7 +663,7 @@
     addRage: addRage, rageOnAttack: rageOnAttack, rageOnSkill: rageOnSkill, canUseUltimate: canUseUltimate,
     heal: heal, healPct: healPct, regen: regen, healAll: healAll,
     expToNext: expToNext, expForWin: expForWin, addExp: addExp,
-    resolveDuel: resolveDuel, setLevel: setLevel, scaleOpponents: scaleOpponents, tiuPenalty: tiuPenalty, aliveFighters: aliveFighters,
+    resolveDuel: resolveDuel, setLevel: setLevel, scaleOpponents: scaleOpponents, tiuPenalty: tiuPenalty, makeTiu: makeTiu, addTainted: addTainted, aliveFighters: aliveFighters,
     rankAscending: rankAscending, eliminateLowest: eliminateLowest,
     addLaPeace: addLaPeace, hasPiece: hasPiece, pieceOwner: pieceOwner, unownedPieces: unownedPieces,
     transferPieces: transferPieces, giveToRandomOpponent: giveToRandomOpponent, syncPieces: syncPieces,

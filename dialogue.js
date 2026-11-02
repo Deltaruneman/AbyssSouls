@@ -750,6 +750,53 @@ window.DLG = {
     ]
   },
 
+  /* ======================= ĐỒNG ĐỘI BỎ ĐỘI (người chơi không kiếm thêm ĐRL) =======================
+     PARTY_LEAVE[ID]: lời từ biệt. PARTY_LEAVE_AMBUSH[ID]: nếu trúng 25% — quay lại đánh lén. */
+  PARTY_LEAVE: {
+    WIBU: [
+      nar("Wibu Việt Nhật lôi cuốn sổ điểm ra, lật đi lật lại, rồi khẽ gấp nó lại."),
+      say(W,"{P}... bao nhiêu tiếng rồi mà điểm của cậu vẫn đứng yên. Tôi không trách, nhưng tôi không thể đứng đây chờ."),
+      say(W,"Tôi cũng cần điểm để thoát khỏi chỗ này. Xin lỗi nhé. Tôi đi trước.")
+    ],
+    LINH: [
+      nar("Chàng Lính Ngu Lam khoanh tay, nhìn bảng điểm của bạn rất lâu."),
+      say(L,"Quỷ Vương đi theo kẻ mạnh, {P}. Còn ngươi... không kiếm nổi một điểm."),
+      say(L,"Đội này đến đây là hết. Đừng trách ta.")
+    ],
+    TRONG: [
+      nar("Trọng chỉnh lại cổ áo, giọng điềm tĩnh đến lạnh người."),
+      say(T,"{P}, tôi chọn đồng đội cũng như chọn quần áo: phải có giá trị. Điểm của cậu thì chẳng thấy tăng."),
+      say(T,"Chúng ta dừng ở đây. Chúc cậu may mắn — nếu cậu cần.")
+    ],
+    TOBY: [
+      say(B,"Ừm... {P}, mình nói thẳng nhé. Cậu không kiếm thêm điểm gì cả, mình lo lắm."),
+      say(D,"Gâu..."),
+      say(B,"Nó cũng nghĩ vậy. Mình xin phép rời đội. Sorry nha.")
+    ]
+  },
+  PARTY_LEAVE_AMBUSH: {
+    WIBU: [
+      nar("Vừa quay lưng đi được vài bước, Wibu đột ngột khựng lại."),
+      say(W,"...Thật ra nếu tôi lấy hết điểm của cậu bây giờ thì sẽ nhanh hơn nhiều nhỉ."),
+      nar("Cậu ta lao tới khi bạn chưa kịp phòng bị!")
+    ],
+    LINH: [
+      nar("Bước chân của Chàng Lính Ngu Lam dừng lại giữa chừng."),
+      say(L,"Ta đổi ý. Một đối thủ yếu đứng ngay trước mặt mà không lấy điểm thì phí."),
+      nar("Lưỡi kiếm vung lên ngay sau lưng bạn!")
+    ],
+    TRONG: [
+      nar("Trọng quay lại, nụ cười không còn chút ấm áp nào."),
+      say(T,"Tôi nói rồi, thắng thì phải thắng thật phong cách. Lần này là đánh bất ngờ."),
+      nar("Cậu ta ra tay trước khi bạn kịp nhấc vũ khí!")
+    ],
+    TOBY: [
+      say(D,"Gâu! Gâu gâu gâu!"),
+      say(B,"Xin lỗi cậu, {P}! Nó đòi cắn, mà mình cũng đang cần điểm... Ready? Gâu!"),
+      nar("Cả người lẫn chó cùng lao vào bạn!")
+    ]
+  },
+
   /* Lời nhận lời vào đội */
   RECRUIT: {
     WIBU:  [

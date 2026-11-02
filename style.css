@@ -848,3 +848,9 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
 #energyFill{height:100%;width:100%;background:linear-gradient(90deg,#1f5a8a,#4fc3f7);transition:width .4s;}
 #energyFill.low{background:linear-gradient(90deg,#8a6a1f,#f0c040);}
 #energyFill.empty{background:linear-gradient(90deg,#5a1f1f,#e04040);}
+/* ===== Điều hướng bàn phím (kbnav.js) ===== */
+#mgBody button.kb,#mgBody .btn.kb{outline:2px solid var(--amber);outline-offset:2px;}
+.vnChoice.kb{background:linear-gradient(90deg,rgba(226,182,92,.3),rgba(226,182,92,.06));border-color:var(--amber,#e2b65c);box-shadow:0 0 0 2px var(--amber,#e2b65c) inset;}
+.bigbtn.kb,.overlay .btn.kb,#pauseMenuBox .bigbtn.kb,#jsPanelBtnRow .bigbtn.kb{outline:3px solid var(--amber,#e2b65c);outline-offset:3px;}
+.settingRow.kb{outline:2px solid var(--amber,#e2b65c);outline-offset:2px;background:rgba(226,182,92,.08);}
+.room-node.kb .room-box{outline:3px solid var(--amber,#e2b65c);outline-offset:2px;}
