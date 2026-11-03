@@ -245,6 +245,37 @@ window.DLG = {
   ],
 
 
+  /* ======================= NGUỒN GỐC SỨC MẠNH: Ý CHÍ ĐƯỢC THE TIU MÔ PHỎNG ======================= */
+  LORE_ORIGIN: [
+    say(TIU,"Trước khi tiếp tục, {P}, có một điều ban tổ chức chưa bao giờ nói với các bạn."),
+    say(TIU,"Không ai trong các bạn thực sự sở hữu sức mạnh. Kỹ năng, Nộ, Thể lực... tất cả đều là Ý CHÍ — quyết tâm tốt nghiệp của chính các bạn."),
+    say(TIU,"Tôi không ban phát sức mạnh. Tôi chỉ MÔ PHỎNG: lượng hóa ý chí thành con số, rồi dựng nó thành hình hài mà các bạn nhìn thấy."),
+    say(ME,"Vậy ĐRL...?"),
+    say(TIU,"ĐRL là thước đo ý chí mà tôi ghi nhận được. Mất điểm không phải bị trừ — đó là một phần quyết tâm của bạn bị bào mòn."),
+    nar("(Một cơn lạnh chạy dọc sống lưng. Vậy ra mọi đòn đánh, mọi tia sáng trong tay họ... đều là thứ bên trong con người này. Và The TIU đang nhìn thấy tất cả.)")
+  ],
+  LORE_PEACE_FINAL: [
+    nar("(Ba mảnh La Peace vang lên một âm thanh thật khẽ, như ba nhịp tim cùng đập.)"),
+    say(TIU,"Không thể nào... Đó là ý chí thật của người khác — thứ tôi không thể mô phỏng."),
+    say(ME,"Mình không đánh một mình. Mình chưa bao giờ phải làm vậy."),
+    nar("(Những cái bóng bên cạnh bạn trở nên rõ nét hơn. Những người bạn đã Gắn bó — đứng đó, tay nắm chặt.)"),
+    say(TIU,"Vậy thì hãy chứng minh. Hãy phá vỡ hình hài mà tôi đã dựng nên!")
+  ],
+  LORE_DARK_FINAL: [
+    nar("(Thứ ĐRL vấy bẩn trong tay bạn bốc lên như khói đen, ngấm vào từng sợi cơ.)"),
+    say(TIU,"Ý chí đã bị bóp méo... Bạn đang mượn chính sức mạnh của tôi để đánh lại tôi."),
+    say(ME,"Nếu cái giá của việc thắng là biến thành thứ giống mày, thì mình trả."),
+    say(TIU,"Vậy thì đến đây. Hãy xem ý chí của bạn còn là của bạn bao nhiêu phần.")
+  ],
+  LORE_TIPS: [
+    "📖 Nộ là ý chí dồn nén; đầy thanh Nộ nghĩa là quyết tâm đã chạm ngưỡng bùng nổ.",
+    "📖 Thể lực là sức bền của ý chí. Cạn thể lực, mô phỏng bắt đầu méo mó — và kẻ khác có thể đánh lén.",
+    "📖 Hệ thuộc tính là hình dạng của ý chí. Mỗi người mang một hình, và mỗi hình đều có điểm yếu.",
+    "📖 The TIU có đủ mọi kỹ năng vì nó chứa ý chí của tất cả những người từng bị loại.",
+    "📖 ĐRL vấy bẩn là ý chí bị bóp méo. Nó mạnh, nhưng không còn thuộc về bạn trọn vẹn.",
+    "📖 La Peace là ý chí thật được sinh ra giữa những người tin nhau — nó nằm ngoài mô phỏng."
+  ],
+
   /* ======================= NÓI CHUYỆN (mỗi lần nói chuyện = một cảnh, tăng dần theo cốt truyện) ======================= */
   TALK: {
 

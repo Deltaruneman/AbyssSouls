@@ -944,3 +944,11 @@ body.mod-midterm #nightBadge{color:var(--amber);}
   #mgBody{max-height:58vh;}
   #pkMenu{width:min(300px,64vw);}
 }
+
+/* ===== Màn hình kết thúc: mỗi kết thúc một sắc thái ===== */
+#winScreen.end-normal h1{color:#e8d9a8;}
+#winScreen.end-alone{filter:grayscale(.85);} #winScreen.end-alone h1{color:#9aa0a8;letter-spacing:6px;}
+#winScreen.end-together h1{color:#fff2c2;text-shadow:0 0 22px rgba(255,230,150,.75),0 0 60px rgba(255,210,120,.4);}
+#winScreen.end-tiu h1{color:#c69cff;text-shadow:0 0 22px rgba(150,70,255,.7);} #winScreen.end-tiu{background:radial-gradient(ellipse at 50% 40%,rgba(60,0,90,.55),rgba(5,0,10,.96));}
+#winScreen.end-all h1{background:linear-gradient(90deg,#ffe9a8,#9be7ff,#ffb6f0,#ffe9a8);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;}
+#winScreen.end-all{background:radial-gradient(ellipse at 50% 35%,rgba(255,240,200,.22),rgba(5,5,10,.95));}

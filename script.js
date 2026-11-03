@@ -1167,8 +1167,9 @@ function refreshBagBadge(){
   if(el && S) el.textContent = bagTotalCount();
 }
 /* ============== NHIỆM VỤ RIÊNG CỦA ĐỒNG ĐỘI ==============
-   Mỗi NPC có 1 chuỗi nhiệm vụ (cần Tin tưởng >= 1). Hoàn thành: +1 điểm Tài Năng, quà, và thành "Gắn bó"
+   Mỗi NPC có 1 chuỗi nhiệm vụ (cần Tin tưởng >= 2). Hoàn thành: +1 điểm Tài Năng, quà, và thành "Gắn bó"
    (không phản bội ở Chapter 2, không bỏ đội vì thiếu ĐRL, mở kết thúc tốt). */
+const QUEST_TRUST = 2;   // chỉ nhận nhiệm vụ riêng khi đạt 2 điểm Tin tưởng trở lên
 const QUESTS = {
   WIBU:  { title:'Chiếc máy chơi game hỏng', gift:{ items:{ bimbim:2 } }, steps:[
             { type:'comp',  need:{ wire:2, tape:1 }, text:'Mang cho Wibu 2 Dây điện + 1 Băng keo để sửa máy chơi game của cậu ta.' },
@@ -1212,6 +1213,7 @@ function getQuest(id){ const me = RPG.player(); me.quests = me.quests || {}; ret
 function openQuestModal(f){
   const q = QUESTS[f.id], me = RPG.player();
   if(!q){ addLog(f.name+' chưa có nhiệm vụ nào cho bạn.', ''); return; }
+  if(f.trust < QUEST_TRUST && !(me.quests && me.quests[f.id]) && !(me.bonds && me.bonds[f.id])){ addLog('💬 '+f.name+' chưa đủ tin tưởng để nhờ bạn việc riêng (cần '+QUEST_TRUST+').', 'warn'); return; }
   me.quests = me.quests || {}; me.bonds = me.bonds || {};
   let st = me.quests[f.id];
   if(me.bonds[f.id]){
@@ -1248,7 +1250,7 @@ function openQuestLog(){
     if(!f.alive) return `<div class="shopItem" style="opacity:.5;"><span>${f.name}: đã bị loại</span></div>`;
     if(me.bonds[n.id]) return `<div class="shopItem talentOn"><span>🤝 <b>${f.name}</b> — ${q.title}<br><span style="font-size:11px;color:var(--text-dim);">Hoàn thành · Gắn bó</span></span></div>`;
     const st = me.quests[n.id];
-    if(!st) return `<div class="shopItem"><span>❔ <b>${f.name}</b> — ${q.title}<br><span style="font-size:11px;color:var(--text-dim);">${f.trust>=1?'Nói chuyện với họ để nhận nhiệm vụ.':'Cần Tin tưởng >= 1 (nói chuyện thêm).'}</span></span></div>`;
+    if(!st) return `<div class="shopItem"><span>❔ <b>${f.name}</b> — ${q.title}<br><span style="font-size:11px;color:var(--text-dim);">${f.trust>=QUEST_TRUST?'Nói chuyện với họ để nhận nhiệm vụ.':'Cần Tin tưởng '+QUEST_TRUST+'/'+RPG.CFG.TRUST_MAX+' (hiện '+f.trust+') — nói chuyện thêm.'}</span></span></div>`;
     const step = q.steps[st.step];
     return `<div class="shopItem"><span>📜 <b>${f.name}</b> — ${q.title} (${st.step+1}/${q.steps.length})<br><span style="font-size:11px;color:var(--text-dim);">${step.text}<br>${questProgressText(step)}</span></span></div>`;
   }).join('');
@@ -1680,7 +1682,7 @@ function openNPCMenu(meta){
     { label: S.duelDone[f.id] ? '⚔ Khiêu chiến (hôm nay đã đấu)' : '⚔ Khiêu chiến', danger:true, disabled:!!S.duelDone[f.id],
       onClick:()=> npcChallenge(f) },
     { label: recruitLabel, disabled:!rc.ok, onClick:()=> npcRecruit(f) },
-    { label: (me.bonds && me.bonds[f.id]) ? '📜 Nhiệm vụ (đã Gắn bó)' : '📜 Nhiệm vụ riêng', disabled:!(f.trust>=1 && QUESTS[f.id]), onClick:()=>{ closeModal(true); openQuestModal(f); } },
+    { label: (me.bonds && me.bonds[f.id]) ? '📜 Nhiệm vụ (đã Gắn bó)' : (f.trust>=QUEST_TRUST ? '📜 Nhiệm vụ riêng' : '📜 Nhiệm vụ (cần Tin tưởng '+QUEST_TRUST+')'), disabled:!(f.trust>=QUEST_TRUST && QUESTS[f.id]), onClick:()=>{ closeModal(true); openQuestModal(f); } },
     { label:'Rời đi', onClick:()=>closeModal() }
   ]);
   $('mgModal').dataset.kb = '1';
@@ -1873,7 +1875,7 @@ function aiLevelNow(){
 function startBattle(opts){
   const me = RPG.player();
   RPG.scaleOpponents(oppLevelFloor());   // đối thủ luôn có Lv >= Lv người chơi và >= mốc theo đêm
-  const allies = [me].concat(opts.final ? [] : RPG.partyAllies());
+  const allies = [me].concat(opts.allyFighters || (opts.final ? [] : RPG.partyAllies()));
   const enemies = opts.enemyFighters || opts.enemyIds.map(id=>RPG.get(id));
   const aiL = aiLevelNow();
   enemies.forEach(f=>{   // NPC thật: random cấp theo tỉ lệ (trận cuối: giữ cấp cao); tài năng tự học theo cấp + đêm
@@ -2195,12 +2197,12 @@ function showBattleMenu(uid){
     return `${x.name}: Nộ ${x.rage}/${RPG.CFG.RAGE_MAX}`;
   });
   const elInfo = B.units.filter(x=>x.side==='E' && x.alive && !x.isSummon && x.f).map(elAffinityText);
-  pkPrompt(u.name+' sẽ làm gì? · Tinh Lực '+Math.round(u.sp)+'/'+RPG.CFG.SP_MAX+(signs.length?'\nDẤU HIỆU ĐỊCH · '+signs.join(' · '):'')+(elInfo.length?'\nHỆ ĐỊCH · '+elInfo.join(' · '):''));
+  pkPrompt(u.name+' sẽ làm gì? · Thể Lực '+Math.round(u.sp)+'/'+RPG.CFG.SP_MAX+(signs.length?'\nDẤU HIỆU ĐỊCH · '+signs.join(' · '):'')+(elInfo.length?'\nHỆ ĐỊCH · '+elInfo.join(' · '):''));
   pkActive(uid);
   pkMenuSet('main', [
     { label:'CHIẾN ĐẤU', cls:'fgoAtk', icon:'⚔️', hint:'Tấn công thường hoặc dùng kỹ năng.', onClick:()=>showFightMenu(uid) },
     { label:'TÚI ĐỒ', cls:'fgoSmall', icon:'🎒', hint:'Dùng vật phẩm trong túi.', disabled:!op.items.length, onClick:()=>showBagMenu(uid) },
-    { label:'PHÒNG THỦ', cls:'fgoSmall', icon:'🛡️', hint:'Hồi +'+RPG.CFG.SP_ON_DEFEND+' Tinh Lực. Giảm 50% sát thương và +'+10+' Nộ khi bị đánh. Nếu địch tung ULTIMATE lượt này: giảm 70% và +25 Nộ ("Đỡ đúng lúc"). Để ý dấu hiệu "Nộ đầy" của địch!', onClick:()=>commit(uid,{type:'defend'}) },
+    { label:'PHÒNG THỦ', cls:'fgoSmall', icon:'🛡️', hint:'Hồi +'+RPG.CFG.SP_ON_DEFEND+' Thể Lực. Giảm 50% sát thương và +'+10+' Nộ khi bị đánh. Nếu địch tung ULTIMATE lượt này: giảm 70% và +25 Nộ ("Đỡ đúng lúc"). Để ý dấu hiệu "Nộ đầy" của địch!', onClick:()=>commit(uid,{type:'defend'}) },
     { label:'ULTIMATE', cls:'ult fgoNP', icon:'✦', sub:(ult.el?RPG.ELEMENTS[ult.el].icon+' ':'')+ult.rage+'/'+ult.rageMax+' Nộ', hint:ult.name+': '+ult.desc+(ult.el?' (Hệ '+RPG.elementLabel(ult.el)+')':''), disabled:!ult.ready,
       onClick:()=>castWithQte(uid,'ultimate',ult) }
   ]);
@@ -2213,7 +2215,7 @@ function showFightMenu(uid){
   op.skills.forEach((s,k)=>{
     items.push({ label:s.name, cls:'fgoCmd '+(k%2 ? 'quick' : 'arts'), icon:(k%2 ? '💨' : '✨'),
       sub: s.unlocked ? ((s.el?RPG.ELEMENTS[s.el].icon+' ':'')+(TARGET_LABEL[s.target]||'')+(s.cost?' · '+s.cost+' TL':'')+(s.cd>0?' · hồi '+s.cd:'')) : 'Mở ở Lv'+s.lvl,
-      hint:s.desc+(s.el?' (Hệ '+RPG.elementLabel(s.el)+')':'')+(s.cost?' · Tốn '+s.cost+' Tinh Lực (đang có '+Math.round(u.sp)+')':''), disabled:!s.ready,
+      hint:s.desc+(s.el?' (Hệ '+RPG.elementLabel(s.el)+')':'')+(s.cost?' · Tốn '+s.cost+' Thể Lực (đang có '+Math.round(u.sp)+')':''), disabled:!s.ready,
       onClick:()=>castWithQte(uid,'skill',s) });
   });
   items.push({ label:'◀ Quay lại', cls:'fgoBack', onClick:()=>showBattleMenu(uid) });
@@ -2350,7 +2352,8 @@ function battleFinish(){
   { const mp = RPG.player();
     if(won && opts.tiu) mp.tiuKills = (mp.tiuKills||0) + 1;
     if(won && opts.mob){ mp.mobKills = (mp.mobKills||0) + 1; if(S.guardians[opts.guardianRoom]) S.guardians[opts.guardianRoom].defeated = true; }
-    if(!won && opts.mob) retreatFromRoom(); }
+    if(!won && opts.mob) retreatFromRoom();
+    if(opts.cleanup) opts.cleanup(); }
   BATTLE.closed = true;
   stopBattleOst(true);
   clearTimeout(BATTLE.sayTimer);
@@ -2397,7 +2400,7 @@ function battleFinish(){
   showModal(won ? '★ CHIẾN THẮNG!' : '✖ THẤT BẠI', html, [{ label:'Tiếp tục', primary:true, onClick:()=>{
     closeModal(true);
     const proceed = ()=>{
-      if(opts.final){ endFinal(won); return; }
+      if(opts.final){ endFinal(won, opts.path); return; }
       BATTLE = null;
       S.paused = false; S.lastTick = performance.now();
       if(opts.tiu){   // sau trận với TIU: nó bị đẩy đi chỗ khác, người chơi được yên một lúc
@@ -2476,35 +2479,115 @@ function beginChapter2(){
   chain();
 }
 
+function bondedFighters(){
+  const me = RPG.player();
+  return RPG.NPC_ROSTER.map(n=>RPG.get(n.id)).filter(f=>f && me.bonds && me.bonds[f.id]);
+}
+function finalTiu(mult){
+  const me = RPG.player(), tiu = RPG.makeTiu(me.level, 3), o = tiu.statsOverride;
+  const k = mult * (1 + 0.3*(S.ng||0));
+  o.hp = Math.round(o.hp*k); o.atk = Math.round(o.atk*k); o.def = Math.round(o.def*(1+(k-1)*0.5));
+  tiu.hp = tiu.maxHp = o.hp; tiu.name = 'The TIU · Hiện thân cuối cùng';
+  return tiu;
+}
+/* Nhánh HÒA BÌNH: dùng La Peace — đồng đội Gắn bó chiến đấu cùng bạn chống lại The TIU thật sự */
+function startPeaceFinal(){
+  const me = RPG.player(), allies = bondedFighters().slice(0,2);
+  allies.forEach(f=>{ RPG.forceLevel(f, me.level); RPG.autoTalents(f, 2); f.hp = f.maxHp; });
+  playDLG(DLG.LORE_PEACE_FINAL, ()=>startBattle({ enemyIds:['TIU'], enemyFighters:[finalTiu(1.15)], allyFighters:allies, final:true, path:'peace' }), {});
+}
+/* Nhánh SA ĐỌA: hấp thụ ĐRL vấy bẩn — mạnh lên rõ rệt nhưng một mình đối đầu The TIU thật sự */
+function startDarkFinal(){
+  const me = RPG.player(), base = RPG.getStats(me), stash = me.statsOverride;
+  const t = (me.taintedDrl||0) + (me.tiuKills||0);
+  const up = Math.min(0.9, 0.35 + 0.05*t);
+  me.statsOverride = { hp:Math.round(base.hp*(1+up)), atk:Math.round(base.atk*(1+up)), def:Math.round(base.def*(1+up*0.5)), spd:base.spd+8 };
+  me.maxHp = me.statsOverride.hp; me.hp = me.maxHp; me.taintedDrl = 0;
+  addLog('🖤 Bạn hấp thụ toàn bộ ĐRL vấy bẩn: sức mạnh tăng '+Math.round(up*100)+'% nhưng thứ gì đó bên trong đang thay đổi.', 'danger');
+  const cleanup = ()=>{ if(stash) me.statsOverride = stash; else delete me.statsOverride; const st = RPG.getStats(me); me.maxHp = st.hp; me.hp = Math.min(me.hp, st.hp); };
+  playDLG(DLG.LORE_DARK_FINAL, ()=>startBattle({ enemyIds:['TIU'], enemyFighters:[finalTiu(1.1)], final:true, path:'dark', cleanup }), {});
+}
 function startFinalBattle(){
-  const foe = RPG.aliveFighters().find(f=>!f.isPlayer);
-  if(!foe){ endFinal(true); return; }
-  const lines = (DLG.FINAL_BY && DLG.FINAL_BY[foe.id]) || DLG.INTRO_CH2_FINAL;
-  playDLG(lines, ()=>startBattle({ enemyIds:[foe.id], final:true }), { npcId:foe.id, vars:{ FOE:foe.name } });
+  const me = RPG.player(), foe = RPG.aliveFighters().find(f=>!f.isPlayer);
+  const canPeace = bondedFighters().length>=2 && (me.pieces||[]).length>=RPG.CFG.LAPEACE_NEEDED;
+  const canDark  = (me.tiuKills||0)>=2 && !!me.taintedEver;
+  const fightPath = ()=>{
+    if(!foe){ endFinal(true,'fight'); return; }
+    const lines = (DLG.FINAL_BY && DLG.FINAL_BY[foe.id]) || DLG.INTRO_CH2_FINAL;
+    playDLG(lines, ()=>startBattle({ enemyIds:[foe.id], final:true, path:'fight' }), { npcId:foe.id, vars:{ FOE:foe.name } });
+  };
+  if(!canPeace && !canDark){ fightPath(); return; }
+  // Có nhánh đặc biệt: người chơi chọn con đường dẫn tới kết thúc khác nhau
+  const btns = [];
+  if(canPeace) btns.push({ label:'💠 Dùng La Peace — từ chối luật mô phỏng', primary:true, onClick:()=>{ closeModal(true); startPeaceFinal(); } });
+  if(canDark)  btns.push({ label:'🖤 Hấp thụ ĐRL vấy bẩn — chấp nhận bị bóp méo', danger:true, onClick:()=>{ closeModal(true); startDarkFinal(); } });
+  btns.push({ label:'⚔ Chiến đấu theo luật giải đấu', onClick:()=>{ closeModal(true); fightPath(); } });
+  showModal('★ NGÃ BA CUỐI CÙNG', `<p style="font-size:14px;">Bảng ĐRL chỉ còn lại bạn và ${foe?foe.name:'The TIU'}. Nhưng những gì bạn mang theo mở ra những con đường khác:</p>
+    ${canPeace?`<p style="font-size:13px;">💠 <b>La Peace</b> — các đồng đội Gắn bó (${bondedFighters().map(f=>f.name).join(', ')}) sẽ chiến đấu <b>bên cạnh</b> bạn chống lại The TIU thật sự. Dẫn tới kết thúc <b>hòa bình</b>.</p>`:''}
+    ${canDark?`<p style="font-size:13px;">🖤 <b>ĐRL vấy bẩn</b> — bạn mạnh lên rất nhiều, nhưng một mình đối đầu The TIU thật sự. Dẫn tới kết thúc <b>sa đọa</b>.</p>`:''}
+    <p style="font-size:13px;">⚔ <b>Luật giải đấu</b> — đấu với ${foe?foe.name:'người cuối cùng'} như thường lệ.</p>`, btns);
 }
 /* ============== NHIỀU KẾT THÚC + NEW GAME+ ============== */
 const ENDINGS = {
-  normal:   { title:'TỐT NGHIỆP LOẠI GIỎI', tag:'Kết thúc thường',
-              lines:['Bảng ĐRL sáng lên duy nhất một cái tên. Tên bạn.','Suất duy nhất đã thuộc về bạn — nhưng khuôn viên UIT vẫn im lặng một cách đáng ngờ.'] },
-  alone:    { title:'NGƯỜI CUỐI CÙNG CÒN ĐỨNG', tag:'Kết thúc cô độc',
-              lines:['Bạn thắng. Không ai ở lại để chúc mừng, và bạn không còn nhớ nổi tên của ai.','Suất tốt nghiệp loại Giỏi lạnh như tấm bảng treo ở sảnh.'] },
-  together: { title:'CÙNG TỐT NGHIỆP', tag:'Kết thúc chân',
-              lines:['Ba mảnh La Peace chạm vào nhau. Ánh sáng tràn qua khuôn viên, xóa đi mọi luật của giải đấu.','Những người bạn Gắn bó bước ra khỏi bóng tối. Không còn suất duy nhất nào nữa — tất cả cùng nhận bằng.'] },
-  tiu:      { title:'KẺ HẠ THE TIU', tag:'Kết thúc bí mật',
-              lines:['Bạn đã hạ The TIU không chỉ một lần. Thứ ĐRL vấy bẩn trong tay bạn lặng lẽ thì thầm.','Giải đấu cần một người canh gác mới. Và bạn là ứng viên duy nhất còn sống sót.'] },
-  all:      { title:'LA PEACE THỰC SỰ', tag:'Kết thúc hoàn hảo',
-              lines:['La Peace hội tụ, ĐRL vấy bẩn tan vào ánh sáng, The TIU gục xuống lần cuối — và mỉm cười.','Mọi sinh viên trở lại. Không ai bị loại. Giải đấu chấm dứt, và bạn không còn là kẻ sống sót — bạn là người đã cứu tất cả.'] }
+  normal:   { title:'TỐT NGHIỆP LOẠI GIỎI', tag:'Kết thúc thường', cls:'end-normal' },
+  alone:    { title:'NGƯỜI CUỐI CÙNG CÒN ĐỨNG', tag:'Kết thúc cô độc', cls:'end-alone' },
+  together: { title:'CÙNG TỐT NGHIỆP', tag:'Kết thúc hòa bình', cls:'end-together' },
+  tiu:      { title:'THE TIU KẾ NHIỆM', tag:'Kết thúc sa đọa', cls:'end-tiu' },
+  all:      { title:'Ý CHÍ THỰC SỰ', tag:'Kết thúc hoàn hảo', cls:'end-all' }
 };
-function computeEnding(){
+/* Mỗi kết thúc là một chuỗi cảnh riêng, có nhân vật và sự thật riêng về The TIU */
+function endingScenes(key, me){
+  const B = bondedFighters().map(f=>f.name), n1 = B[0] || 'Một người bạn', n2 = B[1] || 'Một người bạn khác';
+  const T = (t)=>({spk:'THE TIU', text:t}), N = (t)=>({spk:'', text:t}), M = (t)=>({spk:me.name, text:t}), A = (nm,t)=>({spk:nm, text:t});
+  switch(key){
+    case 'normal': return [
+      N('Bạn bước ra khỏi khuôn viên. Mỗi bước đi, cảm giác ấy nhạt dần: Nộ, Thể lực, những kỹ năng từng cuộn trong người.'),
+      T('Mô phỏng kết thúc. Ý chí của bạn được trả về — trừ phần tôi giữ lại.'),
+      M('Phần nào?'),
+      T('Phần đã dám thắng người khác để sống sót. Tôi lưu nó lại, cho đợt sinh viên sau.'),
+      N('Tấm bằng Giỏi nằm trong tay bạn. Nó có thật. Nhưng bạn không còn chắc người nhận nó có còn hoàn toàn là mình.')
+    ];
+    case 'alone': return [
+      N('Không ai chờ bên ngoài cổng. Không ai nhớ tên bạn, và bạn cũng không nhớ nổi tên của ai.'),
+      T('Tôi đã mô phỏng ý chí của năm người. Chỉ còn một bản sao chạy tới đích.'),
+      M('...'),
+      T('Ý chí không hướng về ai sẽ chỉ còn là con số. Tôi tiếc, bởi bạn là bản mô phỏng mạnh nhất tôi từng dựng.'),
+      N('Bạn nắm tấm bằng Giỏi. Nó lạnh. Cả khuôn viên UIT im lặng như thể chưa từng có ai ở đó.')
+    ];
+    case 'together': return [
+      N('Ba mảnh La Peace chạm vào nhau. Ánh sáng tràn qua khuôn viên và xóa những luật mà The TIU đã dựng.'),
+      T('Ý chí thật... không thể bị lượng hóa. Tôi đã mô phỏng sai ngay từ đầu.'),
+      A(n1,'Tôi nhớ rồi. Tôi nhớ mình thật sự là ai, không phải con số trên bảng điểm.'),
+      A(n2,'Cảm ơn cậu. Cậu đã không bỏ ai lại phía sau.'),
+      N('Không còn suất duy nhất nào nữa. Tất cả cùng bước qua cổng, cùng nhận tấm bằng, cùng quên đi ĐRL.'),
+      T('Mô phỏng chấm dứt. Hãy sống bằng chính sức mạnh của mình.')
+    ];
+    case 'tiu': return [
+      N('ĐRL vấy bẩn tan vào người bạn, và bóng tối thì thầm bằng chính giọng của bạn.'),
+      T('Tôi đã tìm người thay mình từ rất lâu. Ý chí dám bị bóp méo để thắng... chính là thứ tôi cần.'),
+      M('Mình... không muốn.'),
+      T('Không ai muốn. Nhưng tôi cũng đã từng là một sinh viên như bạn.'),
+      N('Khuôn viên UIT sáng đèn. Một khóa sinh viên mới bước vào, thiếu Điểm Rèn Luyện — và bạn, giờ là The TIU, bắt đầu mô phỏng ý chí của họ.')
+    ];
+    case 'all': return [
+      N('La Peace hội tụ. ĐRL vấy bẩn tan ra thành những đốm sáng, và The TIU gục xuống lần cuối — rồi mỉm cười.'),
+      T('Ra là vậy. Tôi chưa bao giờ là kẻ tạo ra sức mạnh. Tôi chỉ là nơi ý chí của những người bị loại không có chỗ để đi.'),
+      A(n1,'Cậu... đã đánh thức tất cả bọn mình.'),
+      A(n2,'Những người đã bị loại. Họ đang ở đây. Họ vẫn đứng ở đây.'),
+      N('Những bóng người trong The TIU lần lượt bước ra, từng người một, nhận lại hình hài của chính mình.'),
+      T('Mô phỏng khép lại. Tôi không còn là chương trình — tôi là lời cảm ơn gửi đến bạn.'),
+      N('Giải đấu chấm dứt. Không ai bị loại, không ai bị lãng quên. Bạn không còn là kẻ sống sót — bạn là người đã cứu tất cả.')
+    ];
+  }
+  return [];
+}
+function computeEnding(path){
   const me = RPG.player();
   const bonds = Object.keys(me.bonds||{}).filter(k=>me.bonds[k]).length;
-  const pieces = (me.pieces||[]).length >= RPG.CFG.LAPEACE_NEEDED;
-  const tiu = (me.tiuKills||0) >= 2 && !!me.taintedEver;
-  if(bonds>=2 && pieces && tiu) return 'all';
-  if(bonds>=2 && pieces) return 'together';
-  if(tiu) return 'tiu';
-  if(bonds===0) return 'alone';
-  return 'normal';
+  const tiuCond = (me.tiuKills||0) >= 2 && !!me.taintedEver;
+  if(path==='peace') return tiuCond ? 'all' : 'together';
+  if(path==='dark') return 'tiu';
+  return bonds===0 ? 'alone' : 'normal';
 }
 function recordEnding(key){
   try{
@@ -2513,33 +2596,49 @@ function recordEnding(key){
     return got.length;
   }catch(e){ return 1; }
 }
-function startNewGamePlus(){
+function startNewGamePlus(endKey){
   const old = RPG.player(), ng = (old.ngPlus||0) + 1;
   const keep = { name:old.name, classId:old.classId, level:old.level, exp:old.exp, talents:old.talents||{}, equip:old.equip||{},
                  bonusPoints:old.bonusPoints||0, taintedDrl:old.taintedDrl||0, taintedEver:!!old.taintedEver,
-                 items:Object.assign({}, old.items), components:Object.assign({}, old.components) };
+                 items:Object.assign({}, old.items), components:Object.assign({}, old.components),
+                 bondsKeep:Object.assign({}, old.bonds||{}) };
+  // Phần thưởng NG+ riêng cho từng kết thúc
+  let perkText = '';
+  if(endKey==='normal'){ keep.bonusPoints += 1; perkText = '+1 điểm Tài Năng.'; }
+  else if(endKey==='alone'){ keep.bonusPoints += 2; perkText = '+2 điểm Tài Năng (ý chí đơn độc sắc bén hơn), nhưng đồng đội không còn Gắn bó.'; keep.bondsKeep = {}; }
+  else if(endKey==='together'){ keep.bonusPoints += 1; perkText = '+1 điểm Tài Năng và giữ các đồng đội Gắn bó.'; }
+  else if(endKey==='tiu'){ keep.taintedDrl += 10; keep.taintedEver = true; keep.items.tainted_bimbim = (keep.items.tainted_bimbim||0) + 2; perkText = '+10 ĐRL vấy bẩn và 2 Bim Bim Nhiễm Bẩn, nhưng không giữ Gắn bó.'; keep.bondsKeep = {}; }
+  else if(endKey==='all'){ keep.bonusPoints += 2; keep.taintedDrl += 10; keep.taintedEver = true; perkText = '+2 điểm Tài Năng, +10 ĐRL vấy bẩn và giữ các đồng đội Gắn bó.'; }
+  else { keep.bondsKeep = {}; }
   RPG.init({ playerName:keep.name, playerClass:keep.classId });
   const me = RPG.player();
   Object.assign(me, { level:keep.level, exp:keep.exp, talents:keep.talents, equip:keep.equip, bonusPoints:keep.bonusPoints,
-                      taintedDrl:keep.taintedDrl, taintedEver:keep.taintedEver, items:keep.items, components:keep.components, ngPlus:ng });
+                      taintedDrl:keep.taintedDrl, taintedEver:keep.taintedEver, items:keep.items, components:keep.components, ngPlus:ng, bonds:keep.bondsKeep });
   const st = RPG.getStats(me); me.maxHp = st.hp; me.hp = st.hp;
   resetStory();
   beginNight(1, 1, {});
   addLog('♻ NEW GAME+ '+ng+': giữ level, tài năng, trang bị. Địch, mini-boss và The TIU mạnh hơn '+(ng*25)+'–'+(ng*30)+'%, đêm nào cũng có biến cố.', 'warn');
+  if(perkText) addLog('🎁 Phần thưởng kết thúc "'+(ENDINGS[endKey]?ENDINGS[endKey].tag:'')+'": '+perkText, 'good');
 }
-function endFinal(won){
+function endFinal(won, path){
   BATTLE = null;
   if(won){
     const me = RPG.player();
-    const key = computeEnding(), e = ENDINGS[key];
-    playDLG(DLG.WIN_FINAL, ()=>{
-      playDLG(e.lines.map(t=>({spk:'', text:t})), ()=>{
-        const n = recordEnding(key);
-        showWinScreen(e.title, '['+e.tag+' · đã mở '+n+'/'+Object.keys(ENDINGS).length+' kết thúc] '+me.name+' kết thúc với '+me.drl+' ĐRL (Lv'+me.level+'). Gợi ý: Gắn bó với ≥2 đồng đội + đủ 3 La Peace + hạ TIU ≥2 lần để thấy kết thúc hoàn hảo.', 'NEW GAME+ (giữ nhân vật)', startNewGamePlus);
-      });
-    });
+    const key = computeEnding(path), e = ENDINGS[key];
+    const winLines = (path==='peace' || path==='dark') ? [] : DLG.WIN_FINAL;
+    const showEnd = ()=>{
+      playDLG(endingScenes(key, me), ()=>{
+        const n = recordEnding(key), total = Object.keys(ENDINGS).length;
+        const hint = n<total ? ' Còn '+(total-n)+' kết thúc chưa mở — thử Gắn bó với đồng đội, gom đủ La Peace, hoặc hạ The TIU nhiều lần.' : ' Bạn đã mở tất cả kết thúc!';
+        const ws = $('winScreen');
+        Object.keys(ENDINGS).forEach(k=>ws.classList.remove(ENDINGS[k].cls));
+        ws.classList.add(e.cls);
+        showWinScreen(e.title, '['+e.tag+' · '+n+'/'+total+'] '+me.name+' kết thúc với '+me.drl+' ĐRL (Lv'+me.level+').'+hint, 'NEW GAME+ (giữ nhân vật)', ()=>startNewGamePlus(key));
+      }, {});
+    };
+    if(winLines.length) playDLG(winLines, showEnd); else showEnd();
   } else {
-    showGameOver('BẠN ĐÃ THUA CHUNG CUỘC', 'Suất tốt nghiệp loại Giỏi thuộc về người khác.', 'THỬ LẠI TRẬN CUỐI');
+    showGameOver('BẠN ĐÃ THUA CHUNG CUỘC', path==='peace' ? 'Ý chí chung chưa đủ mạnh để phá vỡ mô phỏng.' : (path==='dark' ? 'Bóng tối nuốt chửng bạn trước khi bạn kịp mạnh lên.' : 'Suất tốt nghiệp loại Giỏi thuộc về người khác.'), 'THỬ LẠI TRẬN CUỐI');
   }
 }
 
@@ -2567,7 +2666,12 @@ function beginNight(chapter, night, opts){
   persistSave();
   if(chapter===1){
     const lines = night===1 ? DLG.INTRO_CH1 : DLG.INTRO_CH1_NIGHT[night];
-    if(lines) playDLG(lines, ()=>{ S.lastTick = performance.now(); });
+    const tip = pick(DLG.LORE_TIPS || ['']);
+    if(tip) addLog(tip, '');
+    if(lines){
+      if(night===1 && !(S.ng>0)) playDLG(lines, ()=>playDLG(DLG.LORE_ORIGIN, ()=>{ S.lastTick = performance.now(); }));
+      else playDLG(lines, ()=>{ S.lastTick = performance.now(); });
+    }
   } else if(chapter===2 && night===2){
     S.tiuOn = false; S.final = true;
     startFinalBattle();

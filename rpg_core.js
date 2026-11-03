@@ -75,7 +75,7 @@
     PARTY_MIN_GAIN: 5,                   // phải kiếm thêm ít nhất 5 ĐRL trong mỗi kỳ
     PARTY_LEAVE_AMBUSH: 0.25,            // 25% đồng đội rời đội sẽ đánh lén người chơi
 
-    // ---- Tinh Lực (TL): tài nguyên thứ hai — mỗi skill thường tốn TL (Ultimate chỉ tốn Nộ) ----
+    // ---- Thể Lực (TL): tài nguyên thứ hai — mỗi skill thường tốn TL (Ultimate chỉ tốn Nộ) ----
     SP_MAX: 100, SP_START: 50,           // mỗi trận bắt đầu với 50/100 TL
     SP_COST: { 1: 20, 3: 30, 5: 40, 7: 50 }, // chi phí theo cấp skill (skill mở ở Lv1/3/5/7)
     SP_REGEN: 5,                         // hồi mỗi lượt
@@ -119,7 +119,7 @@
   const TALENT_BRANCHES = {
     atk: { name: "CÔNG KÍCH", icon: "⚔️", desc: "Chí mạng và khai thác yếu điểm" },
     def: { name: "BỀN BỈ",    icon: "🛡️", desc: "Trụ lâu, phòng thủ hiệu quả" },
-    sp:  { name: "TINH LỰC",  icon: "🔷", desc: "Dùng skill dày hơn, nhịp độ nhanh" }
+    sp:  { name: "THỂ LỰC",  icon: "🔷", desc: "Dùng skill dày hơn, nhịp độ nhanh" }
   };
   const TALENTS = {
     atk1: { branch: "atk", tier: 1, name: "Mắt Cáo",   icon: "🦅", short: "+10% chí mạng",                 desc: "+10% tỉ lệ chí mạng." },
@@ -128,8 +128,8 @@
     def1: { branch: "def", tier: 1, name: "Da Trâu",   icon: "🐂", short: "+15% HP",                       desc: "+15% HP tối đa." },
     def2: { branch: "def", tier: 2, name: "Gồng Mình", icon: "🧱", short: "Thủ giảm 65%",                  desc: "Phòng thủ giảm 65% sát thương (đỡ Ultimate giảm 80%), +10 Nộ thêm khi bị đánh." },
     def3: { branch: "def", tier: 3, name: "Bất Khuất", icon: "🔥", short: "1 lần trụ 1 HP / trận",         desc: "Mỗi trận 1 lần: đòn chí tử chỉ để lại 1 HP." },
-    sp1:  { branch: "sp",  tier: 1, name: "Điềm Tĩnh", icon: "🧘", short: "+TL đầu trận & mỗi lượt",       desc: "+15 Tinh Lực đầu trận, hồi thêm +3 Tinh Lực mỗi lượt." },
-    sp2:  { branch: "sp",  tier: 2, name: "Tiết Kiệm", icon: "💧", short: "Skill rẻ hơn 25%",              desc: "Skill tốn ít hơn 25% Tinh Lực." },
+    sp1:  { branch: "sp",  tier: 1, name: "Điềm Tĩnh", icon: "🧘", short: "+TL đầu trận & mỗi lượt",       desc: "+15 Thể Lực đầu trận, hồi thêm +3 Thể Lực mỗi lượt." },
+    sp2:  { branch: "sp",  tier: 2, name: "Tiết Kiệm", icon: "💧", short: "Skill rẻ hơn 25%",              desc: "Skill tốn ít hơn 25% Thể Lực." },
     sp3:  { branch: "sp",  tier: 3, name: "Dồn Nộ",    icon: "⚡", short: "Skill +15 Nộ, hồi chiêu −1",    desc: "Dùng skill: +15 Nộ thêm và hồi chiêu ngắn hơn 1 lượt." }
   };
 
@@ -303,7 +303,7 @@
           desc: "Hồi máu cho các vật triệu hồi.",
           effects: [{ type: "healSummons", pct: 0.4 }] },
         { id: "legion", lvl: 7, name: "Hiệu triệu quân đoàn", target: "self",
-          desc: "+50 ATK trong 3 turn, +30 Nộ và +20 Tinh Lực.",
+          desc: "+50 ATK trong 3 turn, +30 Nộ và +20 Thể Lực.",
           effects: [{ type: "buff", stat: "atk", amount: 50, turns: 3 }, { type: "rage", amount: 30 }, { type: "sp", amount: 20 }] }
       ],
       ultimate: { id: "voidSummon", name: "Triệu hồi Hư Không", target: "summon",
@@ -374,10 +374,10 @@
                desc: "Xóa Cháy, Độc, Đóng băng, Tê liệt.",
                effects: [{ type: "cleanse", only: ["burn", "poison", "freeze", "paralyze"] }] },
     tainted_bimbim: { name: "Bim Bim Nhiễm Bẩn", icon: "🖤", usable: ["combat", "map"], target: "self", price: null, taintedPrice: 3, special: true,
-               desc: "Hồi 60% HP tối đa, +30 Nộ và +30 Tinh Lực.",
+               desc: "Hồi 60% HP tối đa, +30 Nộ và +30 Thể Lực.",
                effects: [{ type: "healPct", pct: 0.60 }, { type: "rage", amount: 30 }, { type: "sp", amount: 30 }] },
     tainted_core:    { name: "Lõi Hận Thù", icon: "🔮", usable: ["combat"], target: "self", price: null, taintedPrice: 6, special: true,
-               desc: "Lập tức đầy thanh Nộ (Ultimate sẵn sàng) và đầy Tinh Lực.",
+               desc: "Lập tức đầy thanh Nộ (Ultimate sẵn sàng) và đầy Thể Lực.",
                effects: [{ type: "rage", amount: 100 }, { type: "sp", amount: 100 }] },
     tainted_shroud:  { name: "Áo Choàng Vấy Bẩn", icon: "🧥", usable: ["combat"], target: "self", price: null, taintedPrice: 5, special: true,
                desc: "+45 DEF và +20 ATK trong 3 turn.",

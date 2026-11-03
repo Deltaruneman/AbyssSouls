@@ -339,7 +339,7 @@
         case "stealth": setSt(u, "stealth", { turns: e.turns }); emit(B, u.name + " tàng hình!", "skill"); break;
         case "cleanse": cleanse(u, e.only); emit(B, u.name + " được thanh tẩy hiệu ứng xấu.", "good"); break;
         case "healPct": heal(B, u, u.maxHp * e.pct * scale); break;
-        case "sp": gainSp(u, e.amount); emit(B, u.name + " +" + e.amount + " Tinh Lực.", "skill"); break;
+        case "sp": gainSp(u, e.amount); emit(B, u.name + " +" + e.amount + " Thể Lực.", "skill"); break;
         case "rage": u.rage = clamp(u.rage + e.amount, 0, RPG.CFG.RAGE_MAX); emit(B, u.name + " +" + e.amount + " Nộ.", "skill"); break;
         case "selfCostCurHpPct": {
           const c = Math.min(u.hp - 1, Math.round(u.hp * e.pct));
@@ -417,7 +417,7 @@
   const qScale = q => { q = (q == null ? 1 : q); return q < CC.QTE_FAIL_BELOW ? 0 : 0.7 + 0.3 * clamp((q - CC.QTE_FAIL_BELOW) / (1 - CC.QTE_FAIL_BELOW), 0, 1); };
   const hasSummon = (B, u) => B.units.some(function (s) { return s.isSummon && s.alive && s.owner === u; });
 
-  /* Tinh Lực: skill thường tốn TL. Summon và The TIU không bị giới hạn. */
+  /* Thể Lực: skill thường tốn TL. Summon và The TIU không bị giới hạn. */
   function tal(u, id) { return !!(u && !u.isSummon && u.f && RPG.hasTalent(u.f, id)); }
   function ultAmp(u, ctx) {   // Ultimate: thức tỉnh Lv8 (+25%) và tài năng Sát Thần (+30%)
     if (!ctx || !ctx.ult || u.isSummon || !u.f) return 1;
@@ -434,7 +434,7 @@
 
   function* execAction(B, u, a) {
     const ctx = { dodge: null, ult: false, skillName: "" };
-    if (a.type === "defend") { gainSp(u, RPG.CFG.SP_ON_DEFEND); emit(B, u.name + " thủ thế, chuẩn bị chịu đòn" + (u.isSummon ? "" : " (+" + RPG.CFG.SP_ON_DEFEND + " Tinh Lực)") + ".", "def"); yield* flush(B); return; }
+    if (a.type === "defend") { gainSp(u, RPG.CFG.SP_ON_DEFEND); emit(B, u.name + " thủ thế, chuẩn bị chịu đòn" + (u.isSummon ? "" : " (+" + RPG.CFG.SP_ON_DEFEND + " Thể Lực)") + ".", "def"); yield* flush(B); return; }
 
     if (a.type === "attack") {
       const ts = pickTargets(B, u, "single", a.target);
@@ -508,7 +508,7 @@
     }
   }
   /* ---- AI thông minh dần theo đêm: B.opts.aiLevel 0..5 (đêm càng muộn / New Game+ càng cao). Đồng đội tối đa cấp 2. ----
-       L1: chọn mục tiêu & skill theo hệ yếu/kháng · L2: biết PHÒNG THỦ khi địch sắp tung Ultimate / để hồi Tinh Lực
+       L1: chọn mục tiêu & skill theo hệ yếu/kháng · L2: biết PHÒNG THỦ khi địch sắp tung Ultimate / để hồi Thể Lực
        L3: dè sẻn Ultimate cho thời điểm hiệu quả, dùng đồ hồi máu sớm hơn · L4+: ưu tiên kết liễu, chọn skill theo sát thương kỳ vọng */
   function aiLvl(B, u) { const L = B.opts.aiLevel || 0; return u.side === "E" ? L : (B.opts.allyAiLevel != null ? B.opts.allyAiLevel : Math.min(2, L)); }
   function foeMult(el, t) {
@@ -547,7 +547,7 @@
     const healAt = L >= 3 ? 0.5 : 0.35;
     if (u.hp < u.maxHp * healAt && RPG.countItem(f, "bimbim") > 0) return { type: "item", id: "bimbim" };
     if (Object.keys(u.st).some(function (k) { return ["burn", "poison", "freeze"].indexOf(k) >= 0; }) && RPG.countItem(f, "antidote") > 0) return { type: "item", id: "antidote" };
-    // L2+: biết thủ thế trước Ultimate của đối phương, hoặc để hồi Tinh Lực khi cạn
+    // L2+: biết thủ thế trước Ultimate của đối phương, hoặc để hồi Thể Lực khi cạn
     if (L >= 2) {
       const threat = en.some(function (t) { return !t.isSummon && t.rage >= RPG.CFG.RAGE_MAX; });
       if (threat && u.hp < u.maxHp * 0.85 && rng() < 0.55) return { type: "defend" };
