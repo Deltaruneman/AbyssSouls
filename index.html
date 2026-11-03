@@ -28,6 +28,7 @@
     </div>
     <div class="hud-block"><span class="hud-label" id="tiuLastSeenLabel">TIU LẦN CUỐI THẤY TẠI</span><span class="hud-value" id="tiuLastSeen" style="color:var(--blood-bright);">—</span></div>
     <div id="bagArea">
+      <button id="talentBtn" title="Tài năng [T]">⭐ <span id="talentBadge"></span></button>
       <button id="bagBtn" title="Túi đồ">🎒 <span id="bagCountBadge">0</span></button>
       <div id="hiddenStatsWrap">
         <button id="hiddenStatsBtn" title="Chỉ số ẩn">⋮</button>
@@ -43,15 +44,6 @@
       <div id="actionPane">
         <div id="roomBanner">
           <canvas id="tdCanvas"></canvas>
-          <div id="tdTouchControls" aria-label="Điều khiển di chuyển">
-            <div class="touchDpad">
-              <button type="button" data-dir="w" aria-label="Đi lên">▲</button>
-              <button type="button" data-dir="a" aria-label="Đi trái">◀</button>
-              <button type="button" data-dir="s" aria-label="Đi xuống">▼</button>
-              <button type="button" data-dir="d" aria-label="Đi phải">▶</button>
-            </div>
-            <button type="button" id="tdTouchInteract">TƯƠNG TÁC · E</button>
-          </div>
 
           <div id="npcSprite" class="hidden">
             <div id="npcAvatar"></div>

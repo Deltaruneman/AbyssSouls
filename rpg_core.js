@@ -19,9 +19,9 @@
 
   /* ============================ 1) CẤU HÌNH ============================ */
   const CFG = {
-    MAX_LEVEL: 5,
-    EXP_TABLE: [0, 0, 30, 80, 150, 220], // EXP_TABLE[lv] = EXP tích lũy cần để đạt lv
-    GROWTH_LEVELS: [2, 4],               // Lv không có skill -> cộng chỉ số
+    MAX_LEVEL: 8,
+    EXP_TABLE: [0, 0, 30, 80, 150, 220, 310, 420, 560], // EXP_TABLE[lv] = EXP tích lũy cần để đạt lv
+    GROWTH_LEVELS: [2, 4, 6, 8],               // Lv không có skill -> cộng chỉ số
     GROWTH_PCT: 0.10,                    // +10% chỉ số gốc mỗi mốc
     ULT_UNLOCK_LEVEL: 1,                 // Ultimate dùng được từ Lv1 (chỉ cần đầy Nộ)
 
@@ -52,7 +52,8 @@
     PARTY_MAX_ALLIES: 1,                 // tối đa 2 đồng đội + người chơi = 3 người (giống PARTY_DEF cũ)
 
     // hồi chiêu đề xuất (spec chưa nêu) — Ultimate không dùng CD mà dùng Nộ đầy
-    SKILL_CD: { 1: 2, 3: 3, 5: 4 },
+    SKILL_CD: { 1: 2, 3: 3, 5: 4, 7: 4 },
+    ULT_AWAKEN_LEVEL: 8, ULT_AWAKEN_MULT: 1.25,   // Lv8: Ultimate thức tỉnh +25% sát thương
 
     // ---- Thể lực khi di chuyển giữa các khu vực ----
     STAMINA_MAX: 100,
@@ -73,6 +74,13 @@
     PARTY_CHECK_MIN: 120,                // cứ mỗi 120 phút game kiểm tra 1 lần
     PARTY_MIN_GAIN: 5,                   // phải kiếm thêm ít nhất 5 ĐRL trong mỗi kỳ
     PARTY_LEAVE_AMBUSH: 0.25,            // 25% đồng đội rời đội sẽ đánh lén người chơi
+
+    // ---- Tinh Lực (TL): tài nguyên thứ hai — mỗi skill thường tốn TL (Ultimate chỉ tốn Nộ) ----
+    SP_MAX: 100, SP_START: 50,           // mỗi trận bắt đầu với 50/100 TL
+    SP_COST: { 1: 20, 3: 30, 5: 40, 7: 50 }, // chi phí theo cấp skill (skill mở ở Lv1/3/5/7)
+    SP_REGEN: 5,                         // hồi mỗi lượt
+    SP_ON_ATTACK: 5,                     // đánh thường: +5 TL
+    SP_ON_DEFEND: 25,                    // phòng thủ: +25 TL (hồi sức)
 
     // ---- Hệ thuộc tính & chí mạng ----
     WEAK_MULT: 1.3,                      // đánh trúng YẾU ĐIỂM: x1.3 sát thương, +WEAK_RAGE Nộ cho người đánh
@@ -101,13 +109,57 @@
   };
   const SKILL_ELEMENT = {
     // skill gây sát thương -> hệ
-    fireball: "fire", iceWall: "ice", toxicBlast: "poison", finisher: "slash",
+    fireball: "fire", iceWall: "ice", toxicBlast: "poison", finisher: "slash", shadowStep: "slash", meteor: "fire", plague: "poison",
     // Ultimate
     lastStopper: "slash", perfectKill: "slash", thunder: "thunder", bitterMedicine: "poison", voidSummon: "void"
   };
+  /* ------------------------- TÀI NĂNG (Talent) -------------------------
+     Điểm tài năng = Level hiện tại + điểm thưởng từ nhiệm vụ đồng đội (Lv8 = 8 điểm + tối đa 4). Mỗi tài năng tốn 1 điểm.
+     3 nhánh x 3 bậc; bậc sau cần bậc trước cùng nhánh. Chỉ có 5 điểm cho 9 tài năng -> phải chọn build. */
+  const TALENT_BRANCHES = {
+    atk: { name: "CÔNG KÍCH", icon: "⚔️", desc: "Chí mạng và khai thác yếu điểm" },
+    def: { name: "BỀN BỈ",    icon: "🛡️", desc: "Trụ lâu, phòng thủ hiệu quả" },
+    sp:  { name: "TINH LỰC",  icon: "🔷", desc: "Dùng skill dày hơn, nhịp độ nhanh" }
+  };
+  const TALENTS = {
+    atk1: { branch: "atk", tier: 1, name: "Mắt Cáo",    icon: "🦅", desc: "+10% tỉ lệ chí mạng." },
+    atk2: { branch: "atk", tier: 2, name: "Đột Phá",    icon: "💥", desc: "Đánh trúng YẾU ĐIỂM: sát thương ×1.45 (thay vì ×1.3)." },
+    atk3: { branch: "atk", tier: 3, name: "Sát Ý",      icon: "🩸", desc: "Chí mạng gây ×2.0 sát thương (thay vì ×1.5)." },
+    def1: { branch: "def", tier: 1, name: "Da Trâu",    icon: "🐂", desc: "+15% HP tối đa." },
+    def2: { branch: "def", tier: 2, name: "Gồng Mình",  icon: "🧱", desc: "Phòng thủ giảm 65% sát thương (thay vì 50%), đỡ Ultimate giảm 80%; +10 Nộ thêm khi bị đánh lúc phòng thủ." },
+    def3: { branch: "def", tier: 3, name: "Bất Khuất",  icon: "🔥", desc: "Mỗi trận 1 lần: đòn chí tử chỉ để lại 1 HP." },
+    sp1:  { branch: "sp",  tier: 1, name: "Điềm Tĩnh",  icon: "🧘", desc: "Bắt đầu trận +15 Tinh Lực, hồi thêm +3 Tinh Lực mỗi lượt." },
+    sp2:  { branch: "sp",  tier: 2, name: "Tiết Kiệm",  icon: "💧", desc: "Skill tốn ít hơn 25% Tinh Lực." },
+    sp3:  { branch: "sp",  tier: 3, name: "Dồn Nộ",     icon: "⚡", desc: "Dùng skill: +15 Nộ thêm và hồi chiêu ngắn hơn 1 lượt." },
+    atk4: { branch: "atk", tier: 4, name: "Sát Thần",   icon: "☄️", desc: "Ultimate gây thêm 30% sát thương." },
+    def4: { branch: "def", tier: 4, name: "Bất Tử",     icon: "💗", desc: "Hồi 8% HP tối đa vào cuối mỗi lượt." },
+    sp4:  { branch: "sp",  tier: 4, name: "Mạch Nguồn", icon: "🌊", desc: "Hồi thêm +4 Tinh Lực mỗi lượt và đánh thường +5 Tinh Lực thêm." }
+  };
+  function ultAwakened(f) { return !!(f && !f.tiu && f.level >= CFG.ULT_AWAKEN_LEVEL); }
+  function hasTalent(f, id) { return !!(f && !f.tiu && f.talents && f.talents[id]); }
+  function talentSpent(f) { return Object.keys(f.talents || {}).length; }
+  function talentPoints(f) { return f && f.isPlayer ? Math.max(0, f.level + (f.bonusPoints || 0) - talentSpent(f)) : 0; }
+  function canTakeTalent(f, id) {
+    const t = TALENTS[id]; if (!t || !f.isPlayer || hasTalent(f, id)) return false;
+    if (talentPoints(f) < 1) return false;
+    if (t.tier > 1 && !hasTalent(f, t.branch + (t.tier - 1))) return false;
+    return true;
+  }
+  function takeTalent(f, id) {
+    if (!canTakeTalent(f, id)) return false;
+    f.talents = f.talents || {}; f.talents[id] = true;
+    syncMaxHp(f); return true;
+  }
+  function resetTalents(f) { f.talents = {}; syncMaxHp(f); }
+  function syncMaxHp(f) {
+    const st = getStats(f), old = f.maxHp || st.hp;
+    f.maxHp = st.hp;
+    f.hp = Math.min(f.maxHp, Math.max(1, (f.hp || old) + Math.max(0, f.maxHp - old)));
+  }
+
   function affinityOf(f) {
     if (!f) return {};
-    if (f.tiu) return { weak: "void", resist: null, basic: "void" };
+    if (f.tiu) return { weak: f.tiuWeak || "void", resist: null, basic: "void" };
     return AFFINITY[f.classId] || {};
   }
   function basicElement(f) { return affinityOf(f).basic || null; }
@@ -127,13 +179,16 @@
           desc: "Tăng 40 DEF trong 2 turn.",
           effects: [{ type: "buff", stat: "def", amount: 40, turns: 2 }] },
         { id: "counter", lvl: 3, name: "Phản đòn", target: "self",
-          desc: "Miễn nhiễm sát thương 1 turn, phản lại 50% sát thương địch vừa gây ra.",
-          effects: [{ type: "immune", turns: 1 }, { type: "reflect", pct: 0.5, turns: 1 }] },
+          desc: "Miễn nhiễm sát thương 1 turn. Nếu địch ra ĐÒN THƯỜNG: phản lại 100% sát thương; skill/Ultimate thì không phản được.",
+          effects: [{ type: "immune", turns: 1 }, { type: "reflect", pct: 1.0, turns: 1 }] },
         { id: "lastStand", lvl: 5, name: "Cửu mệnh", target: "self",
           desc: "Xóa mọi debuff, tăng 20 ATK và 20 DEF trong 3 turn.",
           effects: [{ type: "cleanse" },
                     { type: "buff", stat: "atk", amount: 20, turns: 3 },
-                    { type: "buff", stat: "def", amount: 20, turns: 3 }] }
+                    { type: "buff", stat: "def", amount: 20, turns: 3 }] },
+        { id: "bulwark", lvl: 7, name: "Thành lũy bất khuất", target: "self",
+          desc: "+60 DEF trong 3 turn, hồi 15% HP tối đa và +25 Nộ.",
+          effects: [{ type: "buff", stat: "def", amount: 60, turns: 3 }, { type: "healPct", pct: 0.15 }, { type: "rage", amount: 25 }] }
       ],
       ultimate: { id: "lastStopper", name: "Chốt chặn cuối cùng", target: "aoe",
         desc: "Mất 25% HP hiện tại, gây sát thương cực lớn lên toàn bộ kẻ địch.",
@@ -152,7 +207,10 @@
           effects: [{ type: "damage", power: 1.3 }] },
         { id: "instinct", lvl: 5, name: "Hòa vào màn đêm", target: "self",
           desc: "Tàng hình 2 turn (không thể bị chỉ định, chỉ nhận sát thương từ skill AoE).",
-          effects: [{ type: "stealth", turns: 2 }] }
+          effects: [{ type: "stealth", turns: 2 }] },
+        { id: "shadowStep", lvl: 7, name: "Ảnh trảm", target: "single",
+          desc: "Chém cực nhanh gây sát thương rất lớn và +30 SPD trong 2 turn.",
+          effects: [{ type: "damage", power: 1.9 }, { type: "buff", stat: "spd", amount: 30, turns: 2 }] }
       ],
       ultimate: { id: "perfectKill", name: "Vô hạn kiếm giới", target: "single",
         desc: "Gây sát thương cực lớn, 30% tỉ lệ kết liễu (Execute) mục tiêu ngay lập tức.",
@@ -175,7 +233,10 @@
         { id: "windSpirit", lvl: 5, name: "Phong khởi", target: "aoe",
           desc: "Triệu hồi Tinh linh gió: đánh thường +25% sức mạnh, +50% SPD. Cast lần 2: Tinh linh phát nổ AoE theo số turn đã tồn tại.",
           effects: [{ type: "summon", summon: "windSpirit", atkMult: 1.25, spdMult: 1.5 },
-                    { type: "recastExplode", powerPerTurn: 0.5 }] }
+                    { type: "recastExplode", powerPerTurn: 0.5 }] },
+        { id: "meteor", lvl: 7, name: "Thiên thạch vẫn lạc", target: "aoe",
+          desc: "Mưa thiên thạch gây sát thương lớn lên toàn bộ kẻ địch, giảm 15 DEF của chúng trong 2 turn.",
+          effects: [{ type: "damage", power: 1.3 }, { type: "debuff", stat: "def", amount: 15, turns: 2 }] }
       ],
       ultimate: { id: "thunder", name: "Lôi thần giáng thế", target: "aoe",
         desc: "Sát thương lớn, 50% tỉ lệ gây Tê liệt (bỏ qua turn).",
@@ -195,7 +256,10 @@
           effects: [{ type: "healPct", pct: 0.25 }] },
         { id: "toxicBlast", lvl: 5, name: "Vụ nổ độc hại", target: "aoe",
           desc: "Gây sát thương Độc lên toàn bộ mục tiêu.",
-          effects: [{ type: "poisonDamage", powerPerStack: 0.6, baseStacks: 1 }] }
+          effects: [{ type: "poisonDamage", powerPerStack: 0.6, baseStacks: 1 }] },
+        { id: "plague", lvl: 7, name: "Đại dịch hạch", target: "single",
+          desc: "Chồng ngay 3 tầng độc lên 1 mục tiêu (độc mạnh hơn).",
+          effects: [{ type: "poisonStack", amount: 3, max: 3, dotPower: 0.7 }] }
       ],
       ultimate: { id: "bitterMedicine", name: "Thuốc đắng giã tật", target: "aoe",
         desc: "Gây sát thương tức thì theo số stack độc hiện có, sau đó nhân đôi stack độc trên kẻ địch.",
@@ -215,7 +279,10 @@
                     { type: "fuse", from: ["sword", "guard"], into: "swordsman", atkPct: 1.0 }] },
         { id: "manaTransfer", lvl: 5, name: "Truyền Mana", target: "summon",
           desc: "Hồi máu cho các vật triệu hồi.",
-          effects: [{ type: "healSummons", pct: 0.4 }] }
+          effects: [{ type: "healSummons", pct: 0.4 }] },
+        { id: "legion", lvl: 7, name: "Hiệu triệu quân đoàn", target: "self",
+          desc: "+50 ATK trong 3 turn, +30 Nộ và +20 Tinh Lực.",
+          effects: [{ type: "buff", stat: "atk", amount: 50, turns: 3 }, { type: "rage", amount: 30 }, { type: "sp", amount: 20 }] }
       ],
       ultimate: { id: "voidSummon", name: "Triệu hồi Hư Không", target: "summon",
         desc: "Ma Kiếm → Hỗn Mang Kiếm (+75% DMG); Hộ Vệ → Giáp Hư Không (+50% HP); Ma Kiếm Sĩ → Hỗn Mang Kiếm Sĩ (có thanh Nộ và dùng Nộ như Đấu Sĩ).",
@@ -285,11 +352,11 @@
                desc: "Xóa Cháy, Độc, Đóng băng, Tê liệt.",
                effects: [{ type: "cleanse", only: ["burn", "poison", "freeze", "paralyze"] }] },
     tainted_bimbim: { name: "Bim Bim Nhiễm Bẩn", icon: "🖤", usable: ["combat", "map"], target: "self", price: null, taintedPrice: 3, special: true,
-               desc: "Hồi 60% HP tối đa và +30 Nộ.",
-               effects: [{ type: "healPct", pct: 0.60 }, { type: "rage", amount: 30 }] },
+               desc: "Hồi 60% HP tối đa, +30 Nộ và +30 Tinh Lực.",
+               effects: [{ type: "healPct", pct: 0.60 }, { type: "rage", amount: 30 }, { type: "sp", amount: 30 }] },
     tainted_core:    { name: "Lõi Hận Thù", icon: "🔮", usable: ["combat"], target: "self", price: null, taintedPrice: 6, special: true,
-               desc: "Lập tức đầy thanh Nộ (Ultimate sẵn sàng).",
-               effects: [{ type: "rage", amount: 100 }] },
+               desc: "Lập tức đầy thanh Nộ (Ultimate sẵn sàng) và đầy Tinh Lực.",
+               effects: [{ type: "rage", amount: 100 }, { type: "sp", amount: 100 }] },
     tainted_shroud:  { name: "Áo Choàng Vấy Bẩn", icon: "🧥", usable: ["combat"], target: "self", price: null, taintedPrice: 5, special: true,
                desc: "+45 DEF và +20 ATK trong 3 turn.",
                effects: [{ type: "buff", stat: "def", amount: 45, turns: 3 }, { type: "buff", stat: "atk", amount: 20, turns: 3 }] },
@@ -324,6 +391,36 @@
     camera:  { wire: 2, tape: 1 }
   };
 
+  /* ------------------------- TRANG BỊ (chế tạo từ linh kiện, 3 ô: vũ khí / giáp / bùa) -------------------------
+     Chế tạo ở bàn chế tạo (Căn tin) -> tự động mang vào ô tương ứng, thay món cũ. */
+  const EQUIP_SLOTS = { weapon: { name: "Vũ khí", icon: "🗡️" }, armor: { name: "Giáp", icon: "🦺" }, charm: { name: "Bùa", icon: "🍀" } };
+  const EQUIPMENT = {
+    bat:    { slot: "weapon", name: "Gậy Bóng Chày Gắn Đinh", icon: "🏏", recipe: { pipe: 2, tape: 1 },           bonus: { atk: 8 } },
+    laser:  { slot: "weapon", name: "Kiếm Pin Laser",          icon: "🔦", recipe: { pin: 3, pipe: 2, wire: 1 },   bonus: { atk: 16, crit: 0.05 } },
+    vest:   { slot: "armor",  name: "Áo Giáp Ống Thép",        icon: "🦺", recipe: { pipe: 3, tape: 2 },           bonus: { def: 10, hp: 15 } },
+    plate:  { slot: "armor",  name: "Giáp Phế Liệu Gia Cố",    icon: "🛡️", recipe: { pipe: 4, tape: 3, wire: 1 },  bonus: { def: 20, hp: 30 } },
+    lucky:  { slot: "charm",  name: "Bùa Sinh Viên May Mắn",   icon: "🍀", recipe: { wire: 2, pin: 1, tape: 1 },   bonus: { crit: 0.08, spd: 5 } },
+    core:   { slot: "charm",  name: "Lõi Pin Cộng Hưởng",      icon: "🔋", recipe: { pin: 3, wire: 2 },            bonus: { sp: 3, spd: 5 } }
+  };
+  function equipBonus(f, key) {
+    let t = 0;
+    if (!f || f.tiu || !f.equip) return 0;
+    Object.keys(f.equip).forEach(function (slot) { const e = EQUIPMENT[f.equip[slot]]; if (e && e.bonus[key]) t += e.bonus[key]; });
+    return t;
+  }
+  function canCraftEquip(f, id) {
+    const e = EQUIPMENT[id]; if (!e || (f.equip && f.equip[e.slot] === id)) return false;
+    return Object.keys(e.recipe).every(function (k) { return (f.components[k] || 0) >= e.recipe[k]; });
+  }
+  function craftEquip(f, id) {
+    if (!canCraftEquip(f, id)) return false;
+    const e = EQUIPMENT[id];
+    Object.keys(e.recipe).forEach(function (k) { f.components[k] -= e.recipe[k]; });
+    f.equip = f.equip || {}; f.equip[e.slot] = id;
+    const st = getStats(f); f.maxHp = st.hp; f.hp = Math.min(st.hp, f.hp + (e.bonus.hp || 0));
+    return true;
+  }
+
   /* ============================ 5) DANH SÁCH NHÂN VẬT ============================ */
   const DEFAULT_PLAYER_NAME = "Tôi Yêu UIT";
   // legacyKey: khoá cũ trong script.js (S.npc.B / S.npc.E) để dễ nối code về sau
@@ -355,8 +452,8 @@
     let mult = 1;
     CFG.GROWTH_LEVELS.forEach(function (lv) { if (f.level >= lv) mult += CFG.GROWTH_PCT; });
     return {
-      hp: Math.round(b.hp * mult), atk: Math.round(b.atk * mult),
-      def: Math.round(b.def * mult), spd: Math.round(b.spd * mult)
+      hp: Math.round(b.hp * mult * (hasTalent(f, "def1") ? 1.15 : 1)) + equipBonus(f, "hp"), atk: Math.round(b.atk * mult) + equipBonus(f, "atk"),
+      def: Math.round(b.def * mult) + equipBonus(f, "def"), spd: Math.round(b.spd * mult) + equipBonus(f, "spd")
     };
   }
 
@@ -470,17 +567,46 @@
     return { winnerId: winner.id, loserId: loser.id, drl: gain, lost: lost, exp: exp, pieces: pieces };
   }
   /* The TIU: hiện thân của TẤT CẢ người từng tham gia — mang đủ skill của mọi class. Mạnh lên theo Lv người chơi. */
-  function makeTiu(playerLv) {
+  const TIU_VARIANTS = [
+    { weak: "void",    name: "The TIU",              title: "Hiện thân của tất cả" },
+    { weak: "ice",     name: "The TIU · Bóng Băng",  title: "Cái lạnh của những người đã bị loại" },
+    { weak: "thunder", name: "The TIU · Thần Lôi",   title: "Cơn giận của những người đã bị loại" },
+    { weak: "fire",    name: "The TIU · Hỏa Ngục",   title: "Hiện thân cuối cùng" }
+  ];
+  function makeTiu(playerLv, variantIdx) {
+    const v = TIU_VARIANTS[Math.max(0, Math.min(TIU_VARIANTS.length - 1, variantIdx || 0))];
     const lv = Math.max(1, playerLv || 1);
     const hp = CFG.TIU_HP_BASE + CFG.TIU_HP_PER_LV * lv;
     return {
-      id: "TIU", name: "The TIU", title: "Hiện thân của tất cả", isPlayer: false, tiu: true, classId: "assassin",
+      id: "TIU", name: v.name, title: v.title, tiuWeak: v.weak, isPlayer: false, tiu: true, classId: "assassin",
       level: 5, exp: 0, hp: hp, maxHp: hp, rage: 0, pieces: [], laPeace: 0, spellBreaker: false,
       drl: 0, trust: 0, inParty: false, alive: true, items: {}, components: {}, statuses: [], ultIdx: 0,
       statsOverride: { hp: hp, atk: CFG.TIU_ATK_BASE + CFG.TIU_ATK_PER_LV * lv,
                        def: CFG.TIU_DEF_BASE + CFG.TIU_DEF_PER_LV * lv, spd: CFG.TIU_SPD }
     };
   }
+  /* ------------------------- QUÁI / MINI-BOSS TRONG PHÒNG ------------------------- */
+  const MOB_KINDS = {
+    guard:     { name: "Bảo vệ Căn tin",      icon: "👮", classId: "fighter",  hp: 120, hpLv: 30, atk: 12, atkLv: 1.8, def: 16, defLv: 2,   spd: 18, drl: 4, drops: { pin: 1, tape: 1 } },
+    librarian: { name: "Thủ thư ma",           icon: "👻", classId: "mage",     hp: 90,  hpLv: 26, atk: 16, atkLv: 2.2, def: 10, defLv: 1.5, spd: 26, drl: 4, drops: { wire: 1, pin: 1 } },
+    janitor:   { name: "Lao công bóng đêm",    icon: "🧹", classId: "assassin", hp: 100, hpLv: 28, atk: 18, atkLv: 2.4, def: 8,  defLv: 1.2, spd: 40, drl: 5, drops: { pipe: 1, tape: 1 } },
+    club:      { name: "Hội trưởng CLB ma",    icon: "🎭", classId: "summoner", hp: 110, hpLv: 30, atk: 14, atkLv: 2,   def: 12, defLv: 1.6, spd: 22, drl: 5, drops: { wire: 1, pipe: 1 } },
+    nurse:     { name: "Y tá phòng y tế",      icon: "🩺", classId: "healer",   hp: 110, hpLv: 28, atk: 12, atkLv: 1.8, def: 14, defLv: 1.8, spd: 28, drl: 4, drops: { tape: 1, pin: 1 } }
+  };
+  let _mobSeq = 0;
+  function makeMob(kind, lv, minion) {
+    const k = MOB_KINDS[kind] || MOB_KINDS.guard; lv = Math.max(1, lv || 1);
+    const hp = minion ? Math.round(34 + 9 * lv) : Math.round(k.hp + k.hpLv * lv);
+    return {
+      id: "MOB" + (++_mobSeq), name: minion ? "Sinh viên bóng ma" : k.name, title: minion ? "Tay sai" : "Mini-boss", mob: true, minion: !!minion, mobKind: kind, mobIcon: minion ? "👤" : k.icon,
+      isPlayer: false, classId: minion ? "assassin" : k.classId, level: minion ? 1 : Math.min(CFG.MAX_LEVEL, Math.max(3, lv)), exp: 0, hp: hp, maxHp: hp, rage: 0,
+      pieces: [], laPeace: 0, spellBreaker: false, drl: 0, trust: 0, inParty: false, alive: true, items: {}, components: {}, statuses: [],
+      statsOverride: minion ? { hp: hp, atk: Math.round(7 + 1.2 * lv), def: Math.round(5 + lv), spd: 24 }
+                            : { hp: hp, atk: Math.round(k.atk + k.atkLv * lv), def: Math.round(k.def + k.defLv * lv), spd: k.spd },
+      rewardDrl: minion ? 0 : k.drl + Math.floor(lv / 3), drops: minion ? {} : k.drops
+    };
+  }
+  function makeMobGroup(kind, lv) { return [makeMob(kind, lv, false), makeMob(kind, lv, true), makeMob(kind, lv, true)]; }
   function addTainted(f, n) { f.taintedDrl = (f.taintedDrl || 0) + n; f.taintedEver = true; return f.taintedDrl; }
   function tiuPenalty(f, amount) {
     const a = Math.min(f.drl, amount != null ? amount : CFG.TIU_PENALTY);
@@ -684,6 +810,8 @@
     state = data ? JSON.parse(JSON.stringify(data)) : null;
     if (state) Object.keys(state.fighters).forEach(function (id) {   // tương thích save cũ (chỉ có bộ đếm laPeace)
       const f = state.fighters[id];
+      if (!f.talents) f.talents = {};
+      if (!f.equip) f.equip = {};
       if (!f.pieces) { f.pieces = []; for (let i = 0; i < (f.laPeace || 0) && i < LAPEACE_ORDER.length; i++) f.pieces.push(LAPEACE_ORDER[i]); }
       syncPieces(f);
     });
@@ -701,7 +829,7 @@
     addRage: addRage, rageOnAttack: rageOnAttack, rageOnSkill: rageOnSkill, canUseUltimate: canUseUltimate,
     heal: heal, healPct: healPct, regen: regen, healAll: healAll,
     expToNext: expToNext, expForWin: expForWin, addExp: addExp,
-    resolveDuel: resolveDuel, setLevel: setLevel, scaleOpponents: scaleOpponents, tiuPenalty: tiuPenalty, makeTiu: makeTiu, ELEMENTS: ELEMENTS, SKILL_ELEMENT: SKILL_ELEMENT, affinityOf: affinityOf, basicElement: basicElement, elementLabel: elementLabel, addTainted: addTainted, aliveFighters: aliveFighters,
+    resolveDuel: resolveDuel, setLevel: setLevel, scaleOpponents: scaleOpponents, tiuPenalty: tiuPenalty, makeTiu: makeTiu, TIU_VARIANTS: TIU_VARIANTS, makeMob: makeMob, makeMobGroup: makeMobGroup, MOB_KINDS: MOB_KINDS, EQUIPMENT: EQUIPMENT, EQUIP_SLOTS: EQUIP_SLOTS, equipBonus: equipBonus, canCraftEquip: canCraftEquip, craftEquip: craftEquip, TALENTS: TALENTS, TALENT_BRANCHES: TALENT_BRANCHES, ultAwakened: ultAwakened, hasTalent: hasTalent, talentPoints: talentPoints, canTakeTalent: canTakeTalent, takeTalent: takeTalent, resetTalents: resetTalents, ELEMENTS: ELEMENTS, SKILL_ELEMENT: SKILL_ELEMENT, affinityOf: affinityOf, basicElement: basicElement, elementLabel: elementLabel, addTainted: addTainted, aliveFighters: aliveFighters,
     rankAscending: rankAscending, eliminateLowest: eliminateLowest,
     addLaPeace: addLaPeace, hasPiece: hasPiece, pieceOwner: pieceOwner, unownedPieces: unownedPieces,
     transferPieces: transferPieces, giveToRandomOpponent: giveToRandomOpponent, syncPieces: syncPieces,

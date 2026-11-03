@@ -121,6 +121,28 @@ function stopBattleOst(fade){
 
 /* ---- Thời gian: 1 giây thực = 1 phút game. 1 đêm = 00:00 -> 07:30 (450 phút game) = 7 phút 30 giây thực ---- */
 const GAME_MINUTES_TOTAL = 7.5*60;
+/* ---- Biến cố mỗi đêm ---- */
+const NIGHT_MODS = {
+  blackout:  { icon:'🔦', name:'Mất điện',        desc:'Cả khuôn viên chìm trong bóng tối: The TIU tuần tra nhanh hơn 30%.' },
+  midterm:   { icon:'📚', name:'Đêm thi giữa kỳ', desc:'Sự cố xảy ra thường xuyên hơn 25%, nhưng giải xong thưởng ĐRL x1.5.' },
+  fog:       { icon:'🌫️', name:'Sương mù dày',    desc:'Không thấy được vị trí The TIU lần cuối. Hãy tự dò đường.' },
+  bloodmoon: { icon:'🌕', name:'Trăng máu',       desc:'Đi lại tốn thể lực x1.5, nhưng có thêm điểm nhặt đồ và một mini-boss canh giữ.' }
+};
+function pickNightMod(chapter, night, ng){
+  if(chapter===2 && night===2) return null;            // trận cuối: không biến cố
+  if(!ng && chapter===1 && night===1) return null;     // đêm đầu: không biến cố (làm quen)
+  return pick(Object.keys(NIGHT_MODS));
+}
+function curNg(){ const p = RPG.getState() && RPG.player(); return (p && p.ngPlus) || 0; }
+function moveCost(){ return Math.round(RPG.CFG.STAMINA_MOVE_COST * (S && S.mod==='bloodmoon' ? 1.5 : 1)); }
+function tiuMoveRoll(night){
+  const r = TIU_MOVE_EVERY[night] || TIU_MOVE_EVERY[1], k = (S && S.mod==='blackout') ? 0.7 : 1;
+  return rand(Math.round(r[0]*k), Math.round(r[1]*k));
+}
+function eventRoll(night){
+  const r = EVENT_EVERY[night] || EVENT_EVERY[1], k = (S && S.mod==='midterm') ? 0.75 : 1;
+  return rand(Math.round(r[0]*k), Math.round(r[1]*k));
+}
 const NIGHT_REAL_MS = GAME_MINUTES_TOTAL*1000;   // 1 phút game = 1000ms
 function realMsPerGameMin(){
   return NIGHT_REAL_MS / ((S && S.nightTotalMin) || GAME_MINUTES_TOTAL);
@@ -128,7 +150,7 @@ function realMsPerGameMin(){
 const BASE_MOVE_COST_MIN = 10; // mỗi lượt đi giữa 2 tòa liền kề mất 10 phút game
 
 /* ---- Cấp độ tối thiểu của đối thủ theo chương/đêm (luôn được nâng thêm cho bằng Lv người chơi nếu người chơi cao hơn) ---- */
-const OPP_LEVEL_FLOOR = { 1:{1:1, 2:2, 3:2}, 2:{1:3, 2:4} };
+const OPP_LEVEL_FLOOR = { 1:{1:1, 2:3, 3:4}, 2:{1:5, 2:6} };
 function oppLevelFloor(ch, ni){
   ch = ch || (S && S.chapter) || 1; ni = ni || (S && S.night) || 1;
   return (OPP_LEVEL_FLOOR[ch] && OPP_LEVEL_FLOOR[ch][ni]) || 1;
@@ -209,7 +231,9 @@ function freshState(night, chapter, opts){
   const nonSafe = ROOM_KEYS.filter(r=>!ROOM_DEF[r].safe);
   const monsterRoom = pick(nonSafe.filter(r=>r!==startRoom));
   // Thu gom tài nguyên: Chapter 2 đêm 1 ("chuẩn bị đại chiến") rải nhiều hơn
-  const scavN = chapter===2 ? 8 : 4;
+  const ng = curNg();
+  const mod = pickNightMod(chapter, night, ng);
+  const scavN = (chapter===2 ? 8 : 4) + (mod==='bloodmoon' ? 2 : 0);
   const scavengeRooms = pickDistinctRooms(nonSafe, Math.min(scavN, nonSafe.length));
   const scavenge = {};
   const compIds = Object.keys(RPG.COMPONENTS);
@@ -225,16 +249,23 @@ function freshState(night, chapter, opts){
   }
   const npcRoom = {};
   RPG.NPC_ROSTER.forEach(n=>{ npcRoom[n.id] = n.homeRoom; });
+  // Mini-boss canh giữ một số phòng (đánh bại -> linh kiện + ĐRL + EXP)
+  const guardians = {};
+  let gCount = (chapter===1 ? ({1:1,2:2,3:2}[night] || 1) : (night===1 ? 3 : 0)) + (mod==='bloodmoon' ? 1 : 0) + (ng>0 && !(chapter===2 && night===2) ? 1 : 0);
+  const gKinds = shuffle(Object.keys(RPG.MOB_KINDS));
+  shuffle(nonSafe.filter(r=>r!==startRoom)).slice(0, gCount).forEach((r,i)=>{ guardians[r] = { kind:gKinds[i % gKinds.length], defeated:false }; });
+  const tiuVariant = chapter===1 ? Math.min(night-1, 2) : 3;
   return {
+    mod, guardians, tiuVariant, prevRoom:null, guardianPending:null, ng,
     chapter, night, standalone:false,
     gameMinutes:0, nightStartClockMin:0, nightTotalMin:GAME_MINUTES_TOTAL,
     running:true, paused:false, lastTick:performance.now(),
     playerRoom:startRoom,
-    tiuOn: chapter===1,
+    tiuOn: chapter===1 || (ng>0 && chapter===2 && night===1),
     monsterRoom, lastSeenRoom:null, lastSeenAt:0, invulnUntil:0,
-    nextMonsterMoveAt: rand(...(TIU_MOVE_EVERY[night] || TIU_MOVE_EVERY[1])),
+    nextMonsterMoveAt: (function(){ const r = TIU_MOVE_EVERY[night] || TIU_MOVE_EVERY[1], k = mod==='blackout' ? 0.7 : 1; return rand(Math.round(r[0]*k), Math.round(r[1]*k)); })(),
     nextNpcMoveAt: rand(...NPC_MOVE_EVERY),
-    activeEvents:{}, nextEventAt: rand(...(EVENT_EVERY[night] || EVENT_EVERY[1])),
+    activeEvents:{}, nextEventAt: (function(){ const r = EVENT_EVERY[night] || EVENT_EVERY[1], k = mod==='midterm' ? 0.75 : 1; return rand(Math.round(r[0]*k), Math.round(r[1]*k)); })(),
     scavenge, npcRoom,
     lapeaceDealt:false,
     talked:{}, duelDone:{}, scouted:{}, traps:{}, npcDebuff:{},
@@ -280,6 +311,10 @@ function restoreFrom(data){
   if(typeof S.stamina!=='number') S.stamina = RPG.CFG.STAMINA_MAX;
   if(S.ambushArmed==null) S.ambushArmed = true;
   if(S.exhaustPending==null) S.exhaustPending = false;
+  if(S.mod===undefined) S.mod = null;
+  if(!S.guardians) S.guardians = {};
+  if(S.tiuVariant==null) S.tiuVariant = 0;
+  if(S.ng==null) S.ng = 0;
   if(S.drlSpent==null) S.drlSpent = 0;
   if(S.partyRef===undefined) S.partyRef = null;
   RPG.load(data.rpg);
@@ -750,10 +785,12 @@ function refreshMap(){
 
 /* ============== HUD ============== */
 function refreshHud(){
+  updateTalentBadge();
+  ['blackout','midterm','fog','bloodmoon'].forEach(m=>document.body.classList.toggle('mod-'+m, !!S && S.mod===m && S.running));
   if(!S) return;
   const me = RPG.player();
   $('clockVal').textContent = formatClock(S.gameMinutes);
-  $('nightBadge').textContent = (S.chapter===2 ? 'CH.2 · ' : 'CH.1 · ') + nightName(S.chapter, S.night);
+  $('nightBadge').textContent = (S.chapter===2 ? 'CH.2 · ' : 'CH.1 · ') + nightName(S.chapter, S.night) + (S.mod ? ' · '+NIGHT_MODS[S.mod].icon+' '+NIGHT_MODS[S.mod].name : '') + (S.ng ? ' · NG+'+S.ng : '');
 
   // Khối "HP" cũ -> ĐRL của người chơi
   const hpWrap = $('hpWrap');
@@ -790,7 +827,7 @@ function refreshHud(){
     if(lab) lab.textContent = 'THỂ LỰC '+cur+'/'+mx;
     const ef = $('energyFill');
     ef.style.width = (cur/mx*100)+'%';
-    ef.classList.toggle('low', cur>0 && cur<=RPG.CFG.STAMINA_MOVE_COST);
+    ef.classList.toggle('low', cur>0 && cur<=moveCost());
     ef.classList.toggle('empty', cur<=0);
   }
 
@@ -801,7 +838,7 @@ function refreshHud(){
     tiuEl.textContent = 'Đang nghỉ';
     tiuEl.style.color = 'var(--text-dim)';
   } else {
-    tiuEl.textContent = S.lastSeenRoom ? ROOM_DEF[S.lastSeenRoom].name : '—';
+    tiuEl.textContent = S.mod==='fog' ? '??? (sương mù)' : (S.lastSeenRoom ? ROOM_DEF[S.lastSeenRoom].name : '—');
     tiuEl.style.color = 'var(--blood-bright)';
   }
 }
@@ -944,9 +981,12 @@ function refreshNightBrief(){
   const nextEvent = events[0];
   const eventTip = nextEvent ? `Sự cố gần nhất: <b>${ROOM_DEF[nextEvent.room].name}</b> · còn ${nextEvent.left} phút · cách ${nextEvent.distance} chặng` : '';
   const peaceTip = (S.chapter===1 && unclaimed>0) ? `La Peace chưa nhặt: <b>${unclaimed}</b> · mảnh trên bản đồ chuyển cho đối thủ lúc 03:00` : '';
-  const tiuTip = S.tiuOn ? `The TIU lần cuối thấy tại: <b>${S.lastSeenRoom?ROOM_DEF[S.lastSeenRoom].name:'chưa rõ'}</b>` : 'The TIU không tuần tra';
+  const tiuTip = S.tiuOn ? `The TIU lần cuối thấy tại: <b>${S.mod==='fog' ? '??? (sương mù)' : (S.lastSeenRoom?ROOM_DEF[S.lastSeenRoom].name:'chưa rõ')}</b>` : 'The TIU không tuần tra';
+  const modTip = S.mod ? `${NIGHT_MODS[S.mod].icon} <b>${NIGHT_MODS[S.mod].name}</b> — ${NIGHT_MODS[S.mod].desc}` : '';
+  const gRooms = Object.keys(S.guardians||{}).filter(r=>!S.guardians[r].defeated);
+  const guardTip = gRooms.length ? `Mini-boss canh giữ: ${gRooms.map(r=>'<b>'+ROOM_DEF[r].name+'</b> ('+RPG.MOB_KINDS[S.guardians[r].kind].name+')').join(', ')}` : '';
   el.style.cssText = 'margin:0 0 10px;padding:9px 11px;border:1px solid rgba(201,150,47,.38);background:rgba(24,20,14,.72);border-radius:6px;font-size:11px;line-height:1.55;color:var(--text-dim);';
-  el.innerHTML = `<div style="color:var(--amber);font-weight:800;letter-spacing:.08em;margin-bottom:2px;">MỤC TIÊU · ${goal}</div><div>${detail}</div>${eventTip?`<div>⚠ ${eventTip}</div>`:''}${peaceTip?`<div>💠 ${peaceTip}</div>`:''}<div>${tiuTip}</div>`;
+  el.innerHTML = `<div style="color:var(--amber);font-weight:800;letter-spacing:.08em;margin-bottom:2px;">MỤC TIÊU · ${goal}</div><div>${detail}</div>${eventTip?`<div>⚠ ${eventTip}</div>`:''}${peaceTip?`<div>💠 ${peaceTip}</div>`:''}${modTip?`<div>${modTip}</div>`:''}${guardTip?`<div>⚔ ${guardTip}</div>`:''}<div>${tiuTip}</div>`;
 }
 
 /* ---- Chỉ số ẩn (nút ⋮): Tin tưởng + thông tin đã dò được của NPC ---- */
@@ -1028,7 +1068,19 @@ function openCraftBench(){
       const need = Object.keys(r).map(c=>RPG.COMPONENTS[c].name+' x'+r[c]).join(', ');
       return `<div class="shopItem"><span>${it.icon} ${it.name} <span style="font-size:11px;color:var(--text-dim);">(cần ${need})</span><br><span style="font-size:11px;color:var(--text-dim);">${it.desc}</span></span><button class="btn primary" data-craft="${id}" ${RPG.canCraft(me,id)?'':'disabled'}>${RPG.canCraft(me,id)?'Chế tạo':'Thiếu'}</button></div>`;
     }).join('');
-    showModal('🛠 BÀN CHẾ TẠO', `<p style="font-size:12px;color:var(--text-dim);">${compLine}</p>${rows}`, [{label:'Đóng', onClick:()=>closeModal()}]);
+    const eqRows = Object.keys(RPG.EQUIPMENT).map(id=>{
+      const e = RPG.EQUIPMENT[id], need = Object.keys(e.recipe).map(k=>RPG.COMPONENTS[k].name+' x'+e.recipe[k]).join(', ');
+      const bn = [e.bonus.atk?'+'+e.bonus.atk+' ATK':'', e.bonus.def?'+'+e.bonus.def+' DEF':'', e.bonus.hp?'+'+e.bonus.hp+' HP':'', e.bonus.spd?'+'+e.bonus.spd+' SPD':'', e.bonus.crit?'+'+Math.round(e.bonus.crit*100)+'% chí mạng':'', e.bonus.sp?'+'+e.bonus.sp+' TL/lượt':''].filter(Boolean).join(', ');
+      const worn = me.equip && me.equip[e.slot]===id, can = RPG.canCraftEquip(me,id);
+      return `<div class="shopItem ${worn?'talentOn':''}"><span>${e.icon} ${e.name} <span style="font-size:11px;color:var(--text-dim);">[${RPG.EQUIP_SLOTS[e.slot].name}]</span><br><span style="font-size:11px;color:var(--text-dim);">${bn} · cần ${need}</span></span>${worn?'<span style="color:var(--amber);">✓ Đang mang</span>':`<button class="btn primary" data-craftequip="${id}" ${can?'':'disabled'}>${can?'Chế tạo & mang':'Thiếu'}</button>`}</div>`;
+    }).join('');
+    showModal('🛠 BÀN CHẾ TẠO', `<p style="font-size:12px;color:var(--text-dim);">${compLine}</p>${rows}<div class="talentBranch">🧰 TRANG BỊ (tự mang vào ô, thay món cũ)</div>${eqRows}`, [{label:'Đóng', onClick:()=>closeModal()}]);
+    document.querySelectorAll('#mgBody [data-craftequip]').forEach(b=>{
+      b.onclick = ()=>{
+        const id = b.getAttribute('data-craftequip');
+        if(RPG.craftEquip(me, id)){ addLog('🧰 Bạn chế tạo và mang: '+RPG.EQUIPMENT[id].name+'.', 'good'); markActionDirty(); refreshAll(); render(); }
+      };
+    });
     document.querySelectorAll('#mgBody [data-craft]').forEach(b=>{
       b.onclick = ()=>{
         const id = b.getAttribute('data-craft');
@@ -1114,6 +1166,133 @@ function refreshBagBadge(){
   const el = $('bagCountBadge');
   if(el && S) el.textContent = bagTotalCount();
 }
+/* ============== NHIỆM VỤ RIÊNG CỦA ĐỒNG ĐỘI ==============
+   Mỗi NPC có 1 chuỗi nhiệm vụ (cần Tin tưởng >= 1). Hoàn thành: +1 điểm Tài Năng, quà, và thành "Gắn bó"
+   (không phản bội ở Chapter 2, không bỏ đội vì thiếu ĐRL, mở kết thúc tốt). */
+const QUESTS = {
+  WIBU:  { title:'Chiếc máy chơi game hỏng', gift:{ items:{ bimbim:2 } }, steps:[
+            { type:'comp',  need:{ wire:2, tape:1 }, text:'Mang cho Wibu 2 Dây điện + 1 Băng keo để sửa máy chơi game của cậu ta.' },
+            { type:'tiu',   need:1,                  text:'Hạ The TIU ít nhất 1 lần để chứng minh bạn không phải kẻ yếu.' } ] },
+  LINH:  { title:'Lời thề Quỷ Vương', gift:{ items:{ antidote:1, water:1 } }, steps:[
+            { type:'drl',   need:35,                 text:'Có ít nhất 35 ĐRL — Quỷ Vương chỉ theo kẻ mạnh.' },
+            { type:'mob',   need:2,                  text:'Hạ gục 2 mini-boss canh phòng.' } ] },
+  TRONG: { title:'Phong thái chuẩn mực', gift:{ items:{ water:2 } }, steps:[
+            { type:'item',  need:{ water:1, bimbim:1 }, text:'Mang cho Trọng 1 Nước + 1 Bim bim cho bữa tối "đúng chuẩn".' },
+            { type:'drl',   need:55,                 text:'Có ít nhất 55 ĐRL.' } ] },
+  TOBY:  { title:'Chú chó đi lạc', gift:{ items:{ bimbim:1, water:1 } }, steps:[
+            { type:'visit', room:'FIELD',            text:'Tìm chú chó ở Sân bóng (đến Sân bóng).' },
+            { type:'visit', room:'PARK',             text:'Chú chó chạy tới Chỗ gửi xe (đến Chỗ gửi xe).' },
+            { type:'mob',   need:1,                  text:'Hạ gục 1 mini-boss đã dọa chú chó.' } ] }
+};
+function questStepDone(step){
+  const me = RPG.player();
+  switch(step.type){
+    case 'comp': return Object.keys(step.need).every(k=>(me.components[k]||0) >= step.need[k]);
+    case 'item': return Object.keys(step.need).every(k=>RPG.countItem(me,k) >= step.need[k]);
+    case 'drl':  return me.drl >= step.need;
+    case 'tiu':  return (me.tiuKills||0) >= step.need;
+    case 'mob':  return (me.mobKills||0) >= step.need;
+    case 'visit':return !!(me.visited && me.visited[step.room]);
+  }
+  return false;
+}
+function questProgressText(step){
+  const me = RPG.player();
+  switch(step.type){
+    case 'comp': return Object.keys(step.need).map(k=>RPG.COMPONENTS[k].name+' '+Math.min(me.components[k]||0, step.need[k])+'/'+step.need[k]).join(', ');
+    case 'item': return Object.keys(step.need).map(k=>RPG.ITEMS[k].name+' '+Math.min(RPG.countItem(me,k), step.need[k])+'/'+step.need[k]).join(', ');
+    case 'drl':  return 'ĐRL '+Math.min(me.drl, step.need)+'/'+step.need;
+    case 'tiu':  return 'Đã hạ TIU '+Math.min(me.tiuKills||0, step.need)+'/'+step.need;
+    case 'mob':  return 'Mini-boss đã hạ '+Math.min(me.mobKills||0, step.need)+'/'+step.need;
+    case 'visit':return (me.visited && me.visited[step.room]) ? 'Đã đến' : 'Chưa đến '+ROOM_DEF[step.room].name;
+  }
+  return '';
+}
+function getQuest(id){ const me = RPG.player(); me.quests = me.quests || {}; return me.quests[id]; }
+function openQuestModal(f){
+  const q = QUESTS[f.id], me = RPG.player();
+  if(!q){ addLog(f.name+' chưa có nhiệm vụ nào cho bạn.', ''); return; }
+  me.quests = me.quests || {}; me.bonds = me.bonds || {};
+  let st = me.quests[f.id];
+  if(me.bonds[f.id]){
+    showModal('📜 '+q.title, `<p style="font-size:13px;">🤝 <b>${f.name}</b> đã tin tưởng bạn tuyệt đối. Nhiệm vụ đã hoàn thành.</p>`, [{label:'Đóng', onClick:()=>closeModal()}]);
+    return;
+  }
+  if(!st){
+    showModal('📜 '+q.title, `<p style="font-size:13px;"><b>${f.name}</b> nhờ bạn một việc riêng.</p><p style="font-size:12px;color:var(--text-dim);">${q.steps.length} bước · thưởng: +1 điểm Tài Năng, vật phẩm, và <b>Gắn bó</b> (họ sẽ không phản bội bạn).</p>`,
+      [{ label:'Nhận nhiệm vụ', primary:true, onClick:()=>{ me.quests[f.id] = { step:0 }; addLog('📜 Nhận nhiệm vụ: '+q.title+' ('+f.name+').', 'good'); openQuestModal(f); } },
+       { label:'Để sau', onClick:()=>closeModal() }]);
+    return;
+  }
+  const step = q.steps[st.step], done = questStepDone(step);
+  showModal('📜 '+q.title+' ('+(st.step+1)+'/'+q.steps.length+')', `<p style="font-size:13px;">${step.text}</p><p style="font-size:12px;color:${done?'var(--amber)':'var(--text-dim)'};">${questProgressText(step)}${done?' ✓':''}</p>`,
+    [{ label: done ? '✔ Báo cáo / nộp' : 'Chưa hoàn thành', primary:true, disabled:!done, onClick:()=>{
+        if(step.type==='comp') Object.keys(step.need).forEach(k=>{ me.components[k] -= step.need[k]; });
+        if(step.type==='item') Object.keys(step.need).forEach(k=>RPG.removeItem(me, k, step.need[k]));
+        st.step++;
+        if(st.step >= q.steps.length){
+          me.bonds[f.id] = true; me.bonusPoints = (me.bonusPoints||0) + 1;
+          Object.keys(q.gift.items||{}).forEach(k=>RPG.addItem(me, k, q.gift.items[k]));
+          addLog('🤝 Hoàn thành "'+q.title+'"! '+f.name+' đã Gắn bó với bạn. +1 điểm Tài Năng.', 'good');
+          closeModal(true);
+          playDLG([{spk:f.name, text:'Cảm ơn cậu, '+me.name+'. Tôi sẽ nhớ chuyện này. Dù ở Chapter nào, tôi cũng không quên.'}], ()=>{ markActionDirty(); refreshAll(); });
+        } else { addLog('📜 Hoàn thành bước '+st.step+' của "'+q.title+'".', 'good'); markActionDirty(); refreshAll(); openQuestModal(f); }
+      } },
+     { label:'Đóng', onClick:()=>closeModal() }]);
+}
+function openQuestLog(){
+  const me = RPG.player(); me.quests = me.quests || {}; me.bonds = me.bonds || {};
+  const rows = RPG.NPC_ROSTER.map(n=>{
+    const f = RPG.get(n.id), q = QUESTS[n.id];
+    if(!f || !q) return '';
+    if(!f.alive) return `<div class="shopItem" style="opacity:.5;"><span>${f.name}: đã bị loại</span></div>`;
+    if(me.bonds[n.id]) return `<div class="shopItem talentOn"><span>🤝 <b>${f.name}</b> — ${q.title}<br><span style="font-size:11px;color:var(--text-dim);">Hoàn thành · Gắn bó</span></span></div>`;
+    const st = me.quests[n.id];
+    if(!st) return `<div class="shopItem"><span>❔ <b>${f.name}</b> — ${q.title}<br><span style="font-size:11px;color:var(--text-dim);">${f.trust>=1?'Nói chuyện với họ để nhận nhiệm vụ.':'Cần Tin tưởng >= 1 (nói chuyện thêm).'}</span></span></div>`;
+    const step = q.steps[st.step];
+    return `<div class="shopItem"><span>📜 <b>${f.name}</b> — ${q.title} (${st.step+1}/${q.steps.length})<br><span style="font-size:11px;color:var(--text-dim);">${step.text}<br>${questProgressText(step)}</span></span></div>`;
+  }).join('');
+  showModal('📜 NHIỆM VỤ ĐỒNG ĐỘI', rows+`<p style="font-size:11px;color:var(--text-dim);margin-top:8px;">Nói chuyện với NPC để nhận / nộp nhiệm vụ. Mini-boss xuất hiện ở các phòng được báo trong Mục tiêu đêm.</p>`, [{label:'Đóng', onClick:()=>closeModal()}]);
+}
+
+/* ============== TÀI NĂNG ============== */
+function updateTalentBadge(){
+  const me = RPG.player(), b = $('talentBadge'), btn = $('talentBtn');
+  if(!me || !b || !btn) return;
+  const p = RPG.talentPoints(me);
+  b.textContent = p>0 ? '+'+p : '';
+  btn.classList.toggle('has-points', p>0);
+}
+function openTalentModal(){
+  const me = RPG.player();
+  if(!me) return;
+  const pts = RPG.talentPoints(me);
+  let html = `<p style="font-size:12px;color:var(--text-dim);">Điểm tài năng: <b style="color:var(--amber);">${pts}</b> (mỗi cấp +1, nhiệm vụ đồng đội +1; đang Lv${me.level}/${RPG.CFG.MAX_LEVEL}). Bậc sau cần bậc trước cùng nhánh. 12 tài năng nhưng nhiều nhất ${RPG.CFG.MAX_LEVEL+4} điểm — hãy chọn build!</p>`;
+  Object.keys(RPG.TALENT_BRANCHES).forEach(bk=>{
+    const br = RPG.TALENT_BRANCHES[bk];
+    html += `<div class="talentBranch">${br.icon} ${br.name} — <span style="color:var(--text-dim);">${br.desc}</span></div>`;
+    [1,2,3,4].forEach(t=>{
+      const id = bk+t, tl = RPG.TALENTS[id], on = RPG.hasTalent(me, id), can = RPG.canTakeTalent(me, id);
+      html += `<div class="shopItem ${on?'talentOn':''}"><span>${tl.icon} <b>${tl.name}</b> (bậc ${t})<br><span style="font-size:11px;color:var(--text-dim);">${tl.desc}</span></span>${on?'<span style="color:var(--amber);">✓ Đã học</span>':`<button class="btn primary" data-talent="${id}" ${can?'':'disabled'}>Học</button>`}</div>`;
+    });
+  });
+  showModal('⭐ TÀI NĂNG', html, [
+    { label:'📜 Nhiệm vụ', onClick:()=>openQuestLog() },
+    { label:'Tẩy điểm (học lại)', onClick:()=>{ RPG.resetTalents(me); addLog('⭐ Bạn đã tẩy toàn bộ tài năng, có thể chọn lại.', ''); refreshAll(); openTalentModal(); } },
+    { label:'Đóng', primary:true, onClick:()=>closeModal() }
+  ]);
+  document.querySelectorAll('#mgBody [data-talent]').forEach(b=>{
+    b.onclick = ()=>{
+      const id = b.getAttribute('data-talent');
+      if(RPG.takeTalent(me, id)){
+        addLog('⭐ Bạn học tài năng "'+RPG.TALENTS[id].name+'".', 'good');
+        markActionDirty(); refreshAll(); openTalentModal();
+      }
+    };
+  });
+}
+(function initTalentBtn(){ const b = document.getElementById('talentBtn'); if(b) b.onclick = openTalentModal; })();
+
 function isBagOpen(){ return $('mgModal') && !$('mgModal').classList.contains('hidden') && $('mgTitle').textContent.indexOf('TÚI ĐỒ')>=0; }
 function closeBagModal(){ closeModal(); }
 
@@ -1154,7 +1333,7 @@ function openBagModal(){
     return `<div class="shopItem"><span>${it.icon} ${it.name} <b>x${me.items[id]}</b><br><span style="font-size:11px;color:var(--text-dim);">${it.desc}${it.usable.indexOf('map')<0?' (dùng trong trận)':''}</span></span>${mapUse?`<button class="btn primary" data-use="${id}">Dùng</button>`:''}</div>`;
   }).join('') : '<p style="color:var(--text-dim);">Túi đồ trống.</p>';
   const comp = Object.keys(RPG.COMPONENTS).map(k=>RPG.COMPONENTS[k].icon+' '+RPG.COMPONENTS[k].name+' '+(me.components[k]||0)).join(' &nbsp;|&nbsp; ');
-  showModal('🎒 TÚI ĐỒ', `${rows}<p style="font-size:12px;color:var(--text-dim);margin-top:10px;">Linh kiện: ${comp}<br>💠 Mảnh La Peace: ${me.laPeace||0}/${RPG.CFG.LAPEACE_NEEDED}${pieceNamesHtml(me)}${me.taintedEver?'<br>🖤 ĐRL vấy bẩn: '+(me.taintedDrl||0):''}${(me.pieces||[]).map(k=>'<br><span style="font-size:11px;">'+RPG.LAPEACE_PIECES[k].icon+' '+RPG.LAPEACE_PIECES[k].name+': '+RPG.LAPEACE_PIECES[k].desc+'</span>').join('')}</p>`, [{label:'Đóng', onClick:()=>closeModal()}]);
+  showModal('🎒 TÚI ĐỒ', `${rows}<p style="font-size:12px;color:var(--text-dim);margin-top:10px;">Linh kiện: ${comp}<br>🧰 Trang bị: ${Object.keys(RPG.EQUIP_SLOTS).map(sl=>RPG.EQUIP_SLOTS[sl].icon+' '+((me.equip&&me.equip[sl])?RPG.EQUIPMENT[me.equip[sl]].name:'—')).join(' | ')}<br>💠 Mảnh La Peace: ${me.laPeace||0}/${RPG.CFG.LAPEACE_NEEDED}${pieceNamesHtml(me)}${me.taintedEver?'<br>🖤 ĐRL vấy bẩn: '+(me.taintedDrl||0):''}${(me.pieces||[]).map(k=>'<br><span style="font-size:11px;">'+RPG.LAPEACE_PIECES[k].icon+' '+RPG.LAPEACE_PIECES[k].name+': '+RPG.LAPEACE_PIECES[k].desc+'</span>').join('')}</p>`, [{label:'Đóng', onClick:()=>closeModal()}]);
   document.querySelectorAll('#mgBody [data-use]').forEach(b=>{
     b.onclick = ()=>{
       const id = b.getAttribute('data-use');
@@ -1172,13 +1351,13 @@ function onRoomClick(k){
 }
 /* Điểm vào duy nhất để đổi phòng: hiện màn hình loading rồi mới thực sự chuyển (xem LOADING KHI ĐỔI PHÒNG) */
 /* Thể lực không đủ cho 1 lần đổi khu vực. KHÔNG còn chặn đi — nhưng đi lúc này sẽ bị đánh lén khi tới nơi. */
-function isExhausted(){ return !!(S && !S.final && (S.stamina||0) < RPG.CFG.STAMINA_MOVE_COST); }
+function isExhausted(){ return !!(S && !S.final && (S.stamina||0) < moveCost()); }
 function movePlayer(dest, confirmed){
   if(!S || !S.running || S.paused) return false;
   if(TRAVEL.busy) return false;
   if(isExhausted() && !confirmed && !isRoomSafe(dest)){
     const pct = Math.round(RPG.CFG.EXHAUST_HP_PCT*100);
-    showModal('⚠ THỂ LỰC KHÔNG ĐỦ', `<p style="font-size:13px;">Thể lực còn <b>${Math.round(S.stamina||0)}</b>/${RPG.CFG.STAMINA_MAX} (cần ${RPG.CFG.STAMINA_MOVE_COST} để sang <b>${ROOM_DEF[dest].name}</b>).</p>
+    showModal('⚠ THỂ LỰC KHÔNG ĐỦ', `<p style="font-size:13px;">Thể lực còn <b>${Math.round(S.stamina||0)}</b>/${RPG.CFG.STAMINA_MAX} (cần ${moveCost()} để sang <b>${ROOM_DEF[dest].name}</b>).</p>
       <p style="font-size:12px;color:var(--blood-bright);">Nếu cố đi, một người còn sống sẽ <b>đánh lén</b> bạn khi tới nơi: vào trận chỉ còn tối đa <b>${pct}% HP</b> và <b>toàn bộ skill đang hồi chiêu</b>.</p>
       <p style="font-size:11px;color:var(--text-dim);">Vào Căn tin (khu an toàn) để đi mà không bị đánh lén, hoặc đứng nghỉ cho hồi thể lực.</p>`,
       [{ label:'Vẫn đi (chấp nhận rủi ro)', danger:true, onClick:()=>{ closeModal(); movePlayer(dest, true); } },
@@ -1191,8 +1370,8 @@ function movePlayer(dest, confirmed){
 function movePlayerNow(dest){
   if(!S.running || S.paused) return false;
   const from = S.playerRoom;
-  const tiredMove = !S.final && (S.stamina||0) < RPG.CFG.STAMINA_MOVE_COST;   // đi khi không đủ thể lực
-  if(!S.final) S.stamina = Math.max(0, (S.stamina||0) - RPG.CFG.STAMINA_MOVE_COST);
+  const tiredMove = !S.final && (S.stamina||0) < moveCost();   // đi khi không đủ thể lực
+  if(!S.final) S.stamina = Math.max(0, (S.stamina||0) - moveCost());
   S.gameMinutes += BASE_MOVE_COST_MIN;
   S.playerRoom = dest;
   tdEnterRoom(dest, from);
@@ -1200,6 +1379,9 @@ function movePlayerNow(dest){
   markActionDirty();
   advanceWorld(BASE_MOVE_COST_MIN, {isMove:true});
   if(S.running) checkEncounter();
+  S.prevRoom = from;
+  { const mp = RPG.player(); mp.visited = mp.visited || {}; mp.visited[S.playerRoom] = true; }
+  { const g = S.guardians && S.guardians[S.playerRoom]; if(g && !g.defeated && S.running) S.guardianPending = S.playerRoom; }
   if(tiredMove && S.running) S.exhaustPending = true;   // sẽ bị đánh lén khi tới nơi (checkExhaustion xử lý)
   refreshAll();
   return true;
@@ -1219,7 +1401,9 @@ function checkPartyLoyalty(){
   if(el >= RPG.CFG.PARTY_CHECK_MIN){
     S.partyRef = { t:S.gameMinutes, total:total, warned:false };
     if(gained >= RPG.CFG.PARTY_MIN_GAIN){ addLog('🤝 Đồng đội hài lòng vì bạn vẫn kiếm được ĐRL (+'+gained+').', 'good'); return; }
-    S.partyLeavePending = pick(allies).id;
+    const leavers = allies.filter(a=>!(me.bonds && me.bonds[a.id]));
+    if(!leavers.length){ addLog('🤝 Đồng đội Gắn bó vẫn ở lại bên bạn dù bạn kiếm ít điểm.', 'good'); return; }
+    S.partyLeavePending = pick(leavers).id;
   } else if(!S.partyRef.warned && el >= RPG.CFG.PARTY_CHECK_MIN*0.6 && gained < RPG.CFG.PARTY_MIN_GAIN){
     S.partyRef.warned = true;
     addLog('💬 '+pick(allies).name+' liếc bảng điểm của bạn, có vẻ sốt ruột. Cần kiếm thêm ít nhất '+(RPG.CFG.PARTY_MIN_GAIN-gained)+' ĐRL nữa!', 'warn');
@@ -1259,14 +1443,14 @@ function advanceWorld(minutesPassed){
     S.nextEventAt -= minutesPassed;
     if(S.nextEventAt<=0){
       spawnEvent();
-      S.nextEventAt = rand(...(EVENT_EVERY[S.night] || EVENT_EVERY[1]));
+      S.nextEventAt = eventRoll(S.night);
       markActionDirty();
     }
     S.nextMonsterMoveAt -= minutesPassed;
     let guard = 0;
     while(S.nextMonsterMoveAt<=0 && guard<6){
       moveMonster();
-      S.nextMonsterMoveAt += rand(...(TIU_MOVE_EVERY[S.night] || TIU_MOVE_EVERY[1]));
+      S.nextMonsterMoveAt += tiuMoveRoll(S.night);
       guard++;
     }
   }
@@ -1368,6 +1552,31 @@ function caughtByTIU(){ jumpscare(); }
 
 /* ---- ĐI KHI THIẾU THỂ LỰC: tới nơi -> thoại -> 1 người còn sống (không cùng đội) đánh lén: vào trận 50% HP, mọi skill đang hồi chiêu.
         Khu an toàn (Căn tin đang mở) hoặc không còn ai để đánh lén thì thoát. ---- */
+/* ---- Mini-boss canh phòng: tới nơi -> chọn đánh hoặc lùi ---- */
+function processGuardian(){
+  if(!S || !S.running || S.paused || S.final || !S.guardianPending) return;
+  if(TRAVEL.busy || isBlockingOverlayOpen() || S.exhaustPending) return;
+  const room = S.guardianPending; S.guardianPending = null;
+  const g = S.guardians[room];
+  if(!g || g.defeated || S.playerRoom !== room) return;
+  const k = RPG.MOB_KINDS[g.kind], me = RPG.player();
+  addLog('⚔ '+k.name+' đang canh giữ '+ROOM_DEF[room].name+'!', 'warn');
+  showModal(k.icon+' '+k.name.toUpperCase()+' CHẶN ĐƯỜNG', `<p style="font-size:13px;">${k.name} cùng 2 tay sai canh giữ <b>${ROOM_DEF[room].name}</b>. Đánh bại chúng để nhận <b>linh kiện</b>, <b>ĐRL</b> và EXP.</p>
+    <p style="font-size:12px;color:var(--text-dim);">Mini-boss mạnh hơn đối thủ thường. Thua: mất tối đa 3 ĐRL và bị đẩy lui. Trận kéo dài ${RPG.CFG.BATTLE_MINUTES} phút.</p>`,
+    [{ label:'⚔ Chiến đấu', danger:true, onClick:()=>{ closeModal(true); startGuardianBattle(room); } },
+     { label:'↩ Lùi lại', primary:true, onClick:()=>{ closeModal(); retreatFromRoom(); } }]);
+}
+function retreatFromRoom(){
+  if(S.prevRoom && S.prevRoom !== S.playerRoom){ S.playerRoom = S.prevRoom; addLog('Bạn lùi lại '+ROOM_DEF[S.playerRoom].name+'.', ''); }
+  markActionDirty(); refreshAll();
+}
+function startGuardianBattle(room){
+  const g = S.guardians[room], me = RPG.player();
+  const group = RPG.makeMobGroup(g.kind, Math.max(2, me.level + (S.ng||0)));
+  if(S.ng){ group.forEach(f=>{ const o=f.statsOverride; o.hp=Math.round(o.hp*(1+0.25*S.ng)); o.atk=Math.round(o.atk*(1+0.25*S.ng)); f.hp=f.maxHp=o.hp; }); }
+  S.paused = true;
+  startBattle({ enemyIds:group.map(f=>f.id), enemyFighters:group, final:false, mob:true, guardianRoom:room });
+}
 function checkExhaustion(){
   if(!S || !S.running || S.paused || S.final) return;
   if(!S.exhaustPending) return;
@@ -1469,6 +1678,7 @@ function openNPCMenu(meta){
     { label: S.duelDone[f.id] ? '⚔ Khiêu chiến (hôm nay đã đấu)' : '⚔ Khiêu chiến', danger:true, disabled:!!S.duelDone[f.id],
       onClick:()=> npcChallenge(f) },
     { label: recruitLabel, disabled:!rc.ok, onClick:()=> npcRecruit(f) },
+    { label: (me.bonds && me.bonds[f.id]) ? '📜 Nhiệm vụ (đã Gắn bó)' : '📜 Nhiệm vụ riêng', disabled:!(f.trust>=1 && QUESTS[f.id]), onClick:()=>{ closeModal(true); openQuestModal(f); } },
     { label:'Rời đi', onClick:()=>closeModal() }
   ]);
   $('mgModal').dataset.kb = '1';
@@ -1531,6 +1741,7 @@ function tick(now){
         checkEncounter();
         checkExhaustion();
         processPartyLeave();
+        processGuardian();
         refreshHud();
         refreshMap();
         const exNow = isExhausted();
@@ -1617,7 +1828,8 @@ function jumpscare(){
 /* The TIU không còn trừ ĐRL thuần: nó là đối thủ thật, mang mọi skill của mọi class */
 function startTiuBattle(){
   const me = RPG.player();
-  const tiu = RPG.makeTiu(me.level);
+  const tiu = RPG.makeTiu(me.level, S.tiuVariant || 0);
+  if(S.ng){ const o = tiu.statsOverride; o.hp = Math.round(o.hp*(1+0.3*S.ng)); o.atk = Math.round(o.atk*(1+0.3*S.ng)); tiu.hp = tiu.maxHp = o.hp; }
   S.paused = true;
   startBattle({ enemyIds:['TIU'], enemyFighters:[tiu], final:false, tiu:true });
 }
@@ -1632,6 +1844,7 @@ const SUMMON_GLYPH = { sword:'🗡️', guard:'🛡️', swordsman:'⚔️' };
 const TARGET_LABEL = { self:'Bản thân', single:'1 mục tiêu', aoe:'Toàn bộ địch', summon:'Triệu hồi', none:'' };
 
 function unitLook(u){
+  if(!u.isSummon && u.f && u.f.mob) return { glyph:u.f.mobIcon||'👤', bg:'#241a33', meta:{ icon:'' } };
   if(!u.isSummon && u.f && u.f.tiu) return { glyph:'☠', bg:'#3a0a0a', meta:{ icon:TIU_IMAGE } };
   if(u.isSummon) return { glyph:SUMMON_GLYPH[u.kind] || '✦', bg:'#4a3a8a' };
   if(u.f.isPlayer) return { glyph:RPG.CLASSES[u.f.classId].icon, bg:'#2a5a8a' };   // người chơi: giữ icon class
@@ -1684,9 +1897,10 @@ function startBattle(opts){
   $('battleBg').style.backgroundImage = img ? `url('${img}')` : '';
   renderBattle();
   const foe = enemies[0];
-  if(opts.final || opts.tiu) stopBattleOst(false); else startBattleOst(foe.id);   // mỗi trận 1 bản OST, trừ trận cuối
+  if(opts.final || opts.tiu || opts.mob) stopBattleOst(false); else startBattleOst(foe.id);   // mỗi trận 1 bản OST, trừ trận cuối
   let openLine;
   if(opts.final) openLine = '★ TRẬN QUYẾT ĐỊNH! '+foe.name+' chặn đường bạn!';
+  else if(opts.mob) openLine = '⚔ '+foe.name+' cùng đồng bọn xông vào! Đánh bại cả nhóm!';
   else if(opts.tiu) openLine = '☠ THE TIU hiện hình — hiện thân của mọi người từng tham gia giải đấu này! Nó mang đủ skill của cả 5 class.';
   else if(opts.exhausted) openLine = '🪤 '+foe.name+' đánh lén! Bạn kiệt sức: chỉ còn '+Math.round(RPG.CFG.EXHAUST_HP_PCT*100)+'% HP và mọi skill đang hồi chiêu!';
   else if(opts.ambush) openLine = '🪤 '+foe.name+' úp sọt bạn! Bạn bị choáng và mất lượt đầu!';
@@ -1767,6 +1981,7 @@ function ensureUnitView(u){
     <div class="dcBars">
       <div class="pkHpRow"><span class="pkHpLbl">HP</span><div class="pkTrack"><div class="pkHpFill"></div></div><span class="pkNum"></span></div>
       ${u.isSummon && !u.hasRage ? '' : '<div class="pkRageRow"><span class="pkMini">NỘ</span><div class="pkTrack thin"><div class="pkRageFill"></div></div><span class="pkPct">0%</span></div>'}
+      ${(u.isSummon || (u.f && u.f.tiu)) ? '' : '<div class="pkRageRow"><span class="pkMini">TL</span><div class="pkTrack thin"><div class="pkTrack" style="background:transparent"><div class="pkSpFill"></div></div></div><span class="pkSpNum"></span></div>'}
       ${showExp ? '<div class="pkRageRow"><span class="pkMini">EXP</span><div class="pkTrack thin"><div class="pkExpFill"></div></div></div>' : ''}
     </div>`;
   (enemy ? $('pkEnemySprites') : $('pkAllySprites')).appendChild(card);
@@ -1808,6 +2023,10 @@ function updateUnitView(u){
   box.querySelector('.pkNum').textContent = (u.side==='A' || u.isSummon) ? hp+'/'+u.maxHp : '';
   const rf = box.querySelector('.pkRageFill');
   if(rf) rf.style.width = Math.round(u.rage/RPG.CFG.RAGE_MAX*100)+'%';
+  const sf = box.querySelector('.pkSpFill');
+  if(sf) sf.style.width = Math.round(u.sp/RPG.CFG.SP_MAX*100)+'%';
+  const sn = box.querySelector('.pkSpNum');
+  if(sn) sn.textContent = Math.round(u.sp);
   const rp = box.querySelector('.pkPct');
   if(rp) rp.textContent = Math.round(u.rage/RPG.CFG.RAGE_MAX*100)+'%';
   if(u.side==='A') spr.classList.toggle('npReady', u.alive && u.rage>=RPG.CFG.RAGE_MAX);
@@ -1949,12 +2168,12 @@ function showBattleMenu(uid){
     return `${x.name}: Nộ ${x.rage}/${RPG.CFG.RAGE_MAX}`;
   });
   const elInfo = B.units.filter(x=>x.side==='E' && x.alive && !x.isSummon && x.f).map(elAffinityText);
-  pkPrompt(u.name+' sẽ làm gì?'+(signs.length?'\nDẤU HIỆU ĐỊCH · '+signs.join(' · '):'')+(elInfo.length?'\nHỆ ĐỊCH · '+elInfo.join(' · '):''));
+  pkPrompt(u.name+' sẽ làm gì? · Tinh Lực '+Math.round(u.sp)+'/'+RPG.CFG.SP_MAX+(signs.length?'\nDẤU HIỆU ĐỊCH · '+signs.join(' · '):'')+(elInfo.length?'\nHỆ ĐỊCH · '+elInfo.join(' · '):''));
   pkActive(uid);
   pkMenuSet('main', [
     { label:'CHIẾN ĐẤU', cls:'fgoAtk', icon:'⚔️', hint:'Tấn công thường hoặc dùng kỹ năng.', onClick:()=>showFightMenu(uid) },
     { label:'TÚI ĐỒ', cls:'fgoSmall', icon:'🎒', hint:'Dùng vật phẩm trong túi.', disabled:!op.items.length, onClick:()=>showBagMenu(uid) },
-    { label:'PHÒNG THỦ', cls:'fgoSmall', icon:'🛡️', hint:'Giảm 50% sát thương nhận trong lượt này.', onClick:()=>commit(uid,{type:'defend'}) },
+    { label:'PHÒNG THỦ', cls:'fgoSmall', icon:'🛡️', hint:'Hồi +'+RPG.CFG.SP_ON_DEFEND+' Tinh Lực. Giảm 50% sát thương và +'+10+' Nộ khi bị đánh. Nếu địch tung ULTIMATE lượt này: giảm 70% và +25 Nộ ("Đỡ đúng lúc"). Để ý dấu hiệu "Nộ đầy" của địch!', onClick:()=>commit(uid,{type:'defend'}) },
     { label:'ULTIMATE', cls:'ult fgoNP', icon:'✦', sub:(ult.el?RPG.ELEMENTS[ult.el].icon+' ':'')+ult.rage+'/'+ult.rageMax+' Nộ', hint:ult.name+': '+ult.desc+(ult.el?' (Hệ '+RPG.elementLabel(ult.el)+')':''), disabled:!ult.ready,
       onClick:()=>castWithQte(uid,'ultimate',ult) }
   ]);
@@ -1966,8 +2185,8 @@ function showFightMenu(uid){
                    onClick:()=>pickTarget(u,'single',t=>commit(uid,{type:'attack',target:t}),()=>showFightMenu(uid), op.basicEl) }];
   op.skills.forEach((s,k)=>{
     items.push({ label:s.name, cls:'fgoCmd '+(k%2 ? 'quick' : 'arts'), icon:(k%2 ? '💨' : '✨'),
-      sub: s.unlocked ? ((s.el?RPG.ELEMENTS[s.el].icon+' ':'')+(TARGET_LABEL[s.target]||'')+(s.cd>0?' · hồi '+s.cd:'')) : 'Mở ở Lv'+s.lvl,
-      hint:s.desc+(s.el?' (Hệ '+RPG.elementLabel(s.el)+')':''), disabled:!s.ready,
+      sub: s.unlocked ? ((s.el?RPG.ELEMENTS[s.el].icon+' ':'')+(TARGET_LABEL[s.target]||'')+(s.cost?' · '+s.cost+' TL':'')+(s.cd>0?' · hồi '+s.cd:'')) : 'Mở ở Lv'+s.lvl,
+      hint:s.desc+(s.el?' (Hệ '+RPG.elementLabel(s.el)+')':'')+(s.cost?' · Tốn '+s.cost+' Tinh Lực (đang có '+Math.round(u.sp)+')':''), disabled:!s.ready,
       onClick:()=>castWithQte(uid,'skill',s) });
   });
   items.push({ label:'◀ Quay lại', cls:'fgoBack', onClick:()=>showBattleMenu(uid) });
@@ -2101,6 +2320,10 @@ function battleFinish(){
   Object.keys((BATTLE && BATTLE.B && BATTLE.B.known) || {}).forEach(id=>{ S.knownElements[id] = true; });
   if(opts.tiu) S.paused = true;
   const won = sum.winner==='A';
+  { const mp = RPG.player();
+    if(won && opts.tiu) mp.tiuKills = (mp.tiuKills||0) + 1;
+    if(won && opts.mob){ mp.mobKills = (mp.mobKills||0) + 1; if(S.guardians[opts.guardianRoom]) S.guardians[opts.guardianRoom].defeated = true; }
+    if(!won && opts.mob) retreatFromRoom(); }
   BATTLE.closed = true;
   stopBattleOst(true);
   clearTimeout(BATTLE.sayTimer);
@@ -2109,11 +2332,21 @@ function battleFinish(){
   const me = RPG.player();
   let html = '';
   sum.duels.forEach(d=>{
+    if(d.mob){
+      if(won){
+        const dl = Object.keys(d.drops||{}).map(k=>RPG.COMPONENTS[k].icon+' '+RPG.COMPONENTS[k].name+' x'+d.drops[k]).join(', ');
+        html += `<p><b>Hạ gục ${d.mobName}!</b> +${d.drl} ĐRL · +${d.exp.gained} EXP${dl?'<br>Rơi ra: '+dl:''}</p>`;
+        d.exp.unlocked.forEach(u=>{ html += `<p style="color:var(--amber);">✦ LÊN CẤP Lv${u.lvl}: mở ${u.isUltimate?'ULTIMATE':'kỹ năng'} "${u.name}"!</p>`; });
+        if(d.exp.levelsGained.length) html += `<p style="color:var(--amber);">⭐ +${d.exp.levelsGained.length} điểm Tài Năng — bấm T để học.</p>`;
+      } else html += `<p><b>−${d.lost} ĐRL</b> — bạn bị ${d.mobName} đẩy lui.</p>`;
+      return;
+    }
     if(d.tiu){
       if(won){
         html += `<p><b style="color:#b46cff;">+${d.tainted} ĐRL VẤY BẨN</b> 🖤 — bạn đã hạ The TIU!<br><span style="font-size:11px;color:var(--text-dim);">Đổi lấy vật phẩm đặc biệt ở quầy Căn tin (tổng: ${me.taintedDrl||0}).</span></p>`;
         html += `<p>+${d.exp.gained} EXP</p>`;
         d.exp.unlocked.forEach(u=>{ html += `<p style="color:var(--amber);">✦ LÊN CẤP Lv${u.lvl}: mở ${u.isUltimate?'ULTIMATE':'kỹ năng'} "${u.name}"!</p>`; });
+        if(d.exp.levelsGained.length) html += `<p style="color:var(--amber);">⭐ +${d.exp.levelsGained.length} điểm Tài Năng — bấm T để học.</p>`;
       } else {
         html += `<p><b>−${d.lost} ĐRL</b> bị The TIU lấy đi.</p>`;
       }
@@ -2125,6 +2358,7 @@ function battleFinish(){
       html += `<p>+${d.exp.gained} EXP`+(d.loot?` · cướp được ${RPG.ITEMS[d.loot].icon} ${RPG.ITEMS[d.loot].name}`:'')+`</p>`;
       if(d.pieces && d.pieces.length) html += `<p style="color:var(--amber);">💠 Cướp được Mảnh La Peace: <b>${d.pieces.map(k=>RPG.LAPEACE_PIECES[k].icon+' '+RPG.LAPEACE_PIECES[k].name).join(', ')}</b>!<br><span style="font-size:11px;">${d.pieces.map(k=>RPG.LAPEACE_PIECES[k].desc).join('<br>')}</span></p>`;
       d.exp.unlocked.forEach(u=>{ html += `<p style="color:var(--amber);">✦ LÊN CẤP Lv${u.lvl}: mở ${u.isUltimate?'ULTIMATE':'kỹ năng'} "${u.name}"!</p>`; });
+      if(d.exp.levelsGained.length) html += `<p style="color:var(--amber);">⭐ +${d.exp.levelsGained.length} điểm Tài Năng — bấm T để học.</p>`;
       if(d.exp.levelsGained.length && !d.exp.unlocked.length) html += `<p style="color:var(--amber);">✦ LÊN CẤP Lv${me.level}: chỉ số tăng 10%!</p>`;
     }
   });
@@ -2202,11 +2436,14 @@ function endNight(){
 
 function beginChapter2(){
   // Đồng đội còn sống phản bội: chỉ còn 1 suất tốt nghiệp. Mỗi đồng đội có một cảnh riêng (DLG.BETRAY_BY).
-  const allies = RPG.partyAllies().map(a=>({ id:a.id, name:a.name }));
+  const meB = RPG.player();
+  const allies = RPG.partyAllies().map(a=>({ id:a.id, name:a.name, bond:!!(meB.bonds && meB.bonds[a.id]) }));
   RPG.partyAllies().forEach(a=>RPG.dismiss(a));
   const finish = ()=>beginNight(2, 1, {});
   const chain = allies.slice().reverse().reduce(
-    (next, a)=> ()=> playDLG((DLG.BETRAY_BY && DLG.BETRAY_BY[a.id]) || DLG.BETRAY, next, { npcId:a.id, vars:{ ALLY:a.name } }),
+    (next, a)=> ()=> a.bond
+      ? playDLG([{spk:a.name, text:'Chỉ có một suất tốt nghiệp... nhưng tôi không thể quay lưng với cậu. Tôi rút lui. Hãy thắng thay cả phần của tôi.'}], ()=>{ RPG.addItem(meB,'bimbim',2); addLog('🤝 '+a.name+' rút lui và để lại 2 Bim bim cho bạn.', 'good'); next(); }, { npcId:a.id })
+      : playDLG((DLG.BETRAY_BY && DLG.BETRAY_BY[a.id]) || DLG.BETRAY, next, { npcId:a.id, vars:{ ALLY:a.name } }),
     ()=> playDLG(DLG.INTRO_CH2, finish, {})
   );
   chain();
@@ -2218,12 +2455,61 @@ function startFinalBattle(){
   const lines = (DLG.FINAL_BY && DLG.FINAL_BY[foe.id]) || DLG.INTRO_CH2_FINAL;
   playDLG(lines, ()=>startBattle({ enemyIds:[foe.id], final:true }), { npcId:foe.id, vars:{ FOE:foe.name } });
 }
+/* ============== NHIỀU KẾT THÚC + NEW GAME+ ============== */
+const ENDINGS = {
+  normal:   { title:'TỐT NGHIỆP LOẠI GIỎI', tag:'Kết thúc thường',
+              lines:['Bảng ĐRL sáng lên duy nhất một cái tên. Tên bạn.','Suất duy nhất đã thuộc về bạn — nhưng khuôn viên UIT vẫn im lặng một cách đáng ngờ.'] },
+  alone:    { title:'NGƯỜI CUỐI CÙNG CÒN ĐỨNG', tag:'Kết thúc cô độc',
+              lines:['Bạn thắng. Không ai ở lại để chúc mừng, và bạn không còn nhớ nổi tên của ai.','Suất tốt nghiệp loại Giỏi lạnh như tấm bảng treo ở sảnh.'] },
+  together: { title:'CÙNG TỐT NGHIỆP', tag:'Kết thúc chân',
+              lines:['Ba mảnh La Peace chạm vào nhau. Ánh sáng tràn qua khuôn viên, xóa đi mọi luật của giải đấu.','Những người bạn Gắn bó bước ra khỏi bóng tối. Không còn suất duy nhất nào nữa — tất cả cùng nhận bằng.'] },
+  tiu:      { title:'KẺ HẠ THE TIU', tag:'Kết thúc bí mật',
+              lines:['Bạn đã hạ The TIU không chỉ một lần. Thứ ĐRL vấy bẩn trong tay bạn lặng lẽ thì thầm.','Giải đấu cần một người canh gác mới. Và bạn là ứng viên duy nhất còn sống sót.'] },
+  all:      { title:'LA PEACE THỰC SỰ', tag:'Kết thúc hoàn hảo',
+              lines:['La Peace hội tụ, ĐRL vấy bẩn tan vào ánh sáng, The TIU gục xuống lần cuối — và mỉm cười.','Mọi sinh viên trở lại. Không ai bị loại. Giải đấu chấm dứt, và bạn không còn là kẻ sống sót — bạn là người đã cứu tất cả.'] }
+};
+function computeEnding(){
+  const me = RPG.player();
+  const bonds = Object.keys(me.bonds||{}).filter(k=>me.bonds[k]).length;
+  const pieces = (me.pieces||[]).length >= RPG.CFG.LAPEACE_NEEDED;
+  const tiu = (me.tiuKills||0) >= 2 && !!me.taintedEver;
+  if(bonds>=2 && pieces && tiu) return 'all';
+  if(bonds>=2 && pieces) return 'together';
+  if(tiu) return 'tiu';
+  if(bonds===0) return 'alone';
+  return 'normal';
+}
+function recordEnding(key){
+  try{
+    const got = JSON.parse(localStorage.getItem('tiu_endings')||'[]');
+    if(got.indexOf(key)<0){ got.push(key); localStorage.setItem('tiu_endings', JSON.stringify(got)); }
+    return got.length;
+  }catch(e){ return 1; }
+}
+function startNewGamePlus(){
+  const old = RPG.player(), ng = (old.ngPlus||0) + 1;
+  const keep = { name:old.name, classId:old.classId, level:old.level, exp:old.exp, talents:old.talents||{}, equip:old.equip||{},
+                 bonusPoints:old.bonusPoints||0, taintedDrl:old.taintedDrl||0, taintedEver:!!old.taintedEver,
+                 items:Object.assign({}, old.items), components:Object.assign({}, old.components) };
+  RPG.init({ playerName:keep.name, playerClass:keep.classId });
+  const me = RPG.player();
+  Object.assign(me, { level:keep.level, exp:keep.exp, talents:keep.talents, equip:keep.equip, bonusPoints:keep.bonusPoints,
+                      taintedDrl:keep.taintedDrl, taintedEver:keep.taintedEver, items:keep.items, components:keep.components, ngPlus:ng });
+  const st = RPG.getStats(me); me.maxHp = st.hp; me.hp = st.hp;
+  resetStory();
+  beginNight(1, 1, {});
+  addLog('♻ NEW GAME+ '+ng+': giữ level, tài năng, trang bị. Địch, mini-boss và The TIU mạnh hơn '+(ng*25)+'–'+(ng*30)+'%, đêm nào cũng có biến cố.', 'warn');
+}
 function endFinal(won){
   BATTLE = null;
   if(won){
     const me = RPG.player();
+    const key = computeEnding(), e = ENDINGS[key];
     playDLG(DLG.WIN_FINAL, ()=>{
-      showWinScreen('TỐT NGHIỆP LOẠI GIỎI', me.name+' đã trụ lại cuối cùng với '+me.drl+' ĐRL (Lv'+me.level+'). Chúc mừng!', null, null);
+      playDLG(e.lines.map(t=>({spk:'', text:t})), ()=>{
+        const n = recordEnding(key);
+        showWinScreen(e.title, '['+e.tag+' · đã mở '+n+'/'+Object.keys(ENDINGS).length+' kết thúc] '+me.name+' kết thúc với '+me.drl+' ĐRL (Lv'+me.level+'). Gợi ý: Gắn bó với ≥2 đồng đội + đủ 3 La Peace + hạ TIU ≥2 lần để thấy kết thúc hoàn hảo.', 'NEW GAME+ (giữ nhân vật)', startNewGamePlus);
+      });
     });
   } else {
     showGameOver('BẠN ĐÃ THUA CHUNG CUỘC', 'Suất tốt nghiệp loại Giỏi thuộc về người khác.', 'THỬ LẠI TRẬN CUỐI');
@@ -2311,6 +2597,7 @@ function showClassResult(name, classId){
         RPG.init({ playerName:name, playerClass:classId });
         resetStory();
         beginNight(1, 1, {});
+        addLog('⭐ Bạn có 1 điểm Tài Năng! Bấm T (hoặc nút ⭐) để chọn nhánh build.', 'good');
       }}]);
 }
 
@@ -2487,6 +2774,19 @@ document.addEventListener('keydown', (e)=>{
     return;
   }
 
+  if(k === 'q'){
+    if(!S || !S.running || isPauseMenuOpen() || isBlockingOverlayOpen() || isBattleActive()) return;
+    e.preventDefault(); openQuestLog(); return;
+  }
+  if(k === 't'){
+    if(!S || !S.running || isPauseMenuOpen()) return;
+    const isTal = $('mgModal') && !$('mgModal').classList.contains('hidden') && $('mgTitle').textContent.indexOf('TÀI NĂNG')>=0;
+    if(isTal){ e.preventDefault(); closeModal(); return; }
+    if(isBlockingOverlayOpen() || isBattleActive() || !hudButtonUsable('talentBtn')) return;
+    e.preventDefault();
+    openTalentModal();
+    return;
+  }
   if(k === 'b'){
     if(!S || !S.running || isPauseMenuOpen()) return;
     if(isBagOpen()){ e.preventDefault(); closeBagModal(); return; } // bấm B lần nữa để đóng
@@ -2589,6 +2889,7 @@ document.getElementById('closeMapBtn').onclick = closeMapModal;
 (function initShortcutHints(){
   const hints = {
     bagBtn: 'Túi đồ [B]',
+    talentBtn: 'Tài năng [T]',
     miniMapExpand: 'Phóng to bản đồ [M]',
     closeMapBtn: 'Đóng bản đồ [M]',
     vnNextBtn: 'Tiếp tục [J] · Chọn đáp án [1–4] · Bỏ qua hội thoại [Ctrl]'
@@ -2685,7 +2986,7 @@ function startMinigame(room){
     modal.classList.add('hidden');
     delete S.activeEvents[room];
     if(success){
-      const gain = EVENT_REWARD_BASE + S.night*EVENT_REWARD_PER_NIGHT;
+      const gain = Math.round((EVENT_REWARD_BASE + S.night*EVENT_REWARD_PER_NIGHT) * (S.mod==='midterm' ? 1.5 : 1));
       RPG.player().drl += gain;
       addLog('Bạn đã xử lý xong sự cố tại '+ROOM_DEF[room].name+'. +'+gain+' ĐRL.','good');
     } else {
@@ -2907,21 +3208,25 @@ function startMinigame(room){
       });
     }
     markCurrent();
-    function submitArrow(key){
-      if(key === pattern[idx].key){
-        idx++;
-        if(idx>=pattern.length){ document.removeEventListener('keydown', onKey); markCurrent(); finish(true); }
-        else markCurrent();
-      } else {
-        document.removeEventListener('keydown', onKey);
-        boxes[idx].style.borderColor='var(--blood-bright)'; boxes[idx].style.background='#2a1013'; finish(false);
-      }
-    }
     function onKey(e){
       if(!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) return;
-      e.preventDefault(); submitArrow(e.key);
+      e.preventDefault();
+      if(e.key === pattern[idx].key){
+        idx++;
+        if(idx>=pattern.length){
+          document.removeEventListener('keydown', onKey);
+          markCurrent();
+          finish(true);
+        } else {
+          markCurrent();
+        }
+      } else {
+        document.removeEventListener('keydown', onKey);
+        boxes[idx].style.borderColor='var(--blood-bright)';
+        boxes[idx].style.background='#2a1013';
+        finish(false);
+      }
     }
-    addTouchArrowPad(body,submitArrow);
     document.addEventListener('keydown', onKey);
     startTimer(patternLen*2.6, ()=>{ document.removeEventListener('keydown', onKey); finish(false); });
   }
@@ -3003,16 +3308,6 @@ const QTE_KEYMAP = {
   w:'ArrowUp', s:'ArrowDown', a:'ArrowLeft', d:'ArrowRight',
   W:'ArrowUp', S:'ArrowDown', A:'ArrowLeft', D:'ArrowRight'
 };
-function addTouchArrowPad(parent,onDirection){
-  const pad=document.createElement('div'); pad.className='touchArrowPad';
-  [['ArrowUp','▲'],['ArrowLeft','◀'],['ArrowDown','▼'],['ArrowRight','▶']].forEach(([key,label])=>{
-    const b=document.createElement('button'); b.type='button'; b.className='touchArrow'; b.textContent=label;
-    b.setAttribute('aria-label','Bấm '+label);
-    b.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();onDirection(key);});
-    pad.appendChild(b);
-  });
-  parent.appendChild(pad);
-}
 // Số mũi tên QTE của kỹ năng theo độ phức tạp từng nhân vật
 let QTE = null;
 function qteEnsureHost(){
@@ -3067,15 +3362,13 @@ function runArrowQte(opts){
     </div>
     <div id="qteFeedback" style="font-size:18px;font-weight:800;min-height:24px;letter-spacing:2px;"></div>
     <div style="font-size:11px;color:#aaa;">Phím mũi tên (hoặc W A S D) — bấm khi con trỏ nằm trong vùng sáng để ${opts.mode==='attack'?'tăng hiệu quả':'PARRY (đỡ 100%) — ngoài vùng sáng chỉ đỡ 50%'}</div>
-    ${opts.allowSkip ? '<button type="button" id="qteSkipBtn" class="btn" style="margin-top:8px;">BỎ QTE · THI TRIỂN Ở 70%</button>' : ''}
-    <div id="qteTouchPad"></div>`;
+    ${opts.allowSkip ? '<button type="button" id="qteSkipBtn" class="btn" style="margin-top:8px;">BỎ QTE · THI TRIỂN Ở 70%</button>' : ''}`;
 
   const elProg = host.querySelector('#qteProgress');
   const elArrow = host.querySelector('#qteArrow');
   const elZone = host.querySelector('#qteZone');
   const elCursor = host.querySelector('#qteCursor');
   const elFb = host.querySelector('#qteFeedback');
-  const touchPad = host.querySelector('#qteTouchPad');
   const dodgeHitNum = document.getElementById('dodgeHitNum');
   if(dodgeHitNum) dodgeHitNum.textContent = '0';
 
@@ -3193,10 +3486,6 @@ function runArrowQte(opts){
     if(q.done || q.locked || !q.target) return;
     resolveStrike(k === q.target ? 'ok' : 'wrong');
   }
-  addTouchArrowPad(touchPad,key=>{
-    if(q.done || q.locked || !q.target) return;
-    resolveStrike(key===q.target?'ok':'wrong');
-  });
   const skipBtn = host.querySelector('#qteSkipBtn');
   if(skipBtn) skipBtn.onclick = ()=>endAll(0.4); // ngưỡng an toàn tương ứng 70% hiệu lực kỹ năng
   document.addEventListener('keydown', onKey, true);
@@ -3575,17 +3864,6 @@ document.addEventListener('keydown', (e)=>{
   }
 });
 document.addEventListener('keyup', (e)=>{ delete TD.keys[(e.key||'').toLowerCase()]; });
-document.querySelectorAll('#tdTouchControls [data-dir]').forEach(btn=>{
-  const dir=btn.dataset.dir;
-  const release=()=>{delete TD.keys[dir];btn.classList.remove('pressed');};
-  btn.addEventListener('pointerdown',e=>{
-    if(!tdCanControl()) return;
-    e.preventDefault();btn.setPointerCapture(e.pointerId);TD.keys[dir]=true;btn.classList.add('pressed');
-  });
-  ['pointerup','pointercancel','lostpointercapture'].forEach(type=>btn.addEventListener(type,release));
-});
-const tdTouchInteract=document.getElementById('tdTouchInteract');
-if(tdTouchInteract) tdTouchInteract.addEventListener('pointerdown',e=>{e.preventDefault();tdInteract();});
 window.addEventListener('blur', ()=>{ TD.keys = {}; });
 requestAnimationFrame(tdLoop);
 

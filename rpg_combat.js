@@ -36,6 +36,9 @@
     MIN_DMG_PCT: 0.2,      // sàn: ít nhất 20% (ATK*power)
     VARIANCE: [0.9, 1.1],
     DEFEND_MULT: 0.5,
+    DEFEND_ULT_MULT: 0.3,      // Phòng thủ ĐÚNG LÚC (địch tung Ultimate): chỉ nhận 30% sát thương
+    DEFEND_RAGE: 10,           // Phòng thủ bị đánh: +10 Nộ (1 lần / lượt) — "gồng" tích Nộ
+    DEFEND_ULT_RAGE: 25,       // đỡ đúng Ultimate: +25 Nộ thay vì +10
     FREEZE_MULT: 1.5,
     QTE_FAIL_BELOW: 0.4,
     SUMMON_HP: { sword: 0.4, guard: 0.7 },
@@ -85,7 +88,7 @@
     const st = RPG.getStats(f);
     const u = {
       uid: "u" + (B.nextUid++), f: f, id: f.id, name: f.name, side: side, controller: "ai",
-      isSummon: false, hp: clamp(f.hp > 0 ? f.hp : st.hp, 1, st.hp), maxHp: st.hp, rage: 0,   // HP được giữ lại từ trận trước
+      isSummon: false, hp: clamp(f.hp > 0 ? f.hp : st.hp, 1, st.hp), maxHp: st.hp, rage: 0, sp: RPG.CFG.SP_START + (RPG.hasTalent(f, "sp1") ? 15 : 0),   // HP được giữ lại từ trận trước
       base: { atk: st.atk, def: st.def, spd: st.spd },
       mods: [], st: {}, cds: {}, alive: true, spirit: null, defending: false, action: null,
       taunt: false, voidActive: false, revived: false   // revived: đã dùng Die Twice trong trận này
@@ -136,14 +139,23 @@
     if (amount <= 0) { emit(B, dst.name + " né được hoàn toàn đòn đánh!", "good"); return 0; }
     let d = amount;
     if (dst.st.freeze) d *= CC.FREEZE_MULT;
-    if (dst.defending && !o.dot) d *= CC.DEFEND_MULT;
+    if (dst.defending && !o.dot) {
+      d *= o.ult ? (tal(dst, "def2") ? 0.2 : CC.DEFEND_ULT_MULT) : (tal(dst, "def2") ? 0.35 : CC.DEFEND_MULT);
+      if (o.ult) o.tag = ((o.tag ? o.tag + " · " : "") + "🛡 ĐỠ ĐÚNG LÚC");
+      if (!dst.braced && dst.f && !dst.isSummon) {
+        dst.braced = true;
+        dst.rage = clamp(dst.rage + (o.ult ? CC.DEFEND_ULT_RAGE : CC.DEFEND_RAGE) + (tal(dst, "def2") ? 10 : 0), 0, RPG.CFG.RAGE_MAX);
+      }
+    }
     d = Math.max(1, Math.round(d));
     if (dst.st.immune) {
       emit(B, dst.name + " miễn nhiễm sát thương!", "good", { dst: dst.uid });
       if (dst.st.reflect && src && src.alive && !o.dot && !o.reflected) {
-        const r = Math.max(1, Math.round(d * dst.st.reflect.pct));
-        emit(B, dst.name + " phản lại " + r + " sát thương!", "atk", { src: dst.uid, dst: src.uid, amount: r });
-        hit(B, dst, src, r, { reflected: true, trueDmg: true });
+        if (o.basic) {   // Phản đòn chỉ phản được ĐÒN THƯỜNG
+          const r = Math.max(1, Math.round(d * dst.st.reflect.pct));
+          emit(B, "↩ PHẢN ĐÒN! " + dst.name + " phản lại " + r + " sát thương!", "atk", { src: dst.uid, dst: src.uid, amount: r });
+          hit(B, dst, src, r, { reflected: true, trueDmg: true });
+        } else emit(B, "Phản đòn vô hiệu trước skill/Ultimate — " + dst.name + " chỉ miễn nhiễm được đòn này.", "warn");
       }
       return 0;
     }
@@ -156,6 +168,10 @@
             (o.dot ? " (" + (o.label || "hiệu ứng") + ")" : " lên " + dst.name) +
             (dst.st.freeze ? " (Đóng băng +50%)" : "") + (o.tag ? " " + o.tag : "") + ".",
          "atk", { type: "damage", src: src && src.uid, dst: dst.uid, amount: d });
+    if (dst.hp <= 0 && tal(dst, "def3") && !dst.endured) {   // Bất Khuất: 1 lần / trận
+      dst.endured = true; dst.hp = 1;
+      emit(B, "🔥 BẤT KHUẤT! " + dst.name + " nghiến răng trụ lại với 1 HP!", "skill");
+    }
     if (dst.hp <= 0) kill(B, dst);
     return d;
   }
@@ -219,7 +235,7 @@
   function spawnSummon(B, owner, kind, spec) {
     const s = {
       uid: "u" + (B.nextUid++), f: null, id: kind, name: spec.name, side: owner.side, controller: "ai",
-      isSummon: true, owner: owner, kind: kind, hp: spec.hp, maxHp: spec.hp, rage: 0,
+      isSummon: true, owner: owner, kind: kind, hp: spec.hp, maxHp: spec.hp, rage: 0, sp: 0,
       base: { atk: 0, def: Math.round(owner.base.def * CC.SUMMON_DEF_PCT), spd: 0 },
       mods: [], st: {}, cds: {}, alive: true, spirit: null, defending: false, action: null,
       taunt: !!spec.taunt, atkPct: spec.atkPct, dmgMult: 1, hasRage: false
@@ -290,13 +306,13 @@
     const el = ctx.element || null;
     const aff = RPG.affinityOf(dst.f && !dst.isSummon ? dst.f : null);
     let isWeak = false;
-    if (el && aff.weak === el)        { isWeak = true; dmg *= RPG.CFG.WEAK_MULT; tags.push("💥 YẾU ĐIỂM " + RPG.ELEMENTS[el].icon); }
+    if (el && aff.weak === el)        { isWeak = true; dmg *= RPG.CFG.WEAK_MULT + (tal(src, "atk2") ? 0.15 : 0); tags.push("💥 YẾU ĐIỂM " + RPG.ELEMENTS[el].icon); }
     else if (el && aff.resist === el) { dmg *= RPG.CFG.RESIST_MULT; tags.push("🛡 KHÁNG " + RPG.ELEMENTS[el].icon); }
     if (el && (isWeak || aff.resist === el) && dst.f && src.side === "A") B.known[dst.f.id] = true;   // người chơi "khám phá" hệ của địch
-    const critChance = Math.min(RPG.CFG.CRIT_CAP, RPG.CFG.CRIT_BASE + eff(src, "spd") * RPG.CFG.CRIT_PER_SPD + (isWeak ? RPG.CFG.CRIT_WEAK_BONUS : 0));
-    if (mult > 0 && rng() < critChance) { dmg *= RPG.CFG.CRIT_MULT; tags.push("✨ CHÍ MẠNG"); }
+    const critChance = Math.min(RPG.CFG.CRIT_CAP, RPG.CFG.CRIT_BASE + eff(src, "spd") * RPG.CFG.CRIT_PER_SPD + (isWeak ? RPG.CFG.CRIT_WEAK_BONUS : 0) + (tal(src, "atk1") ? 0.10 : 0) + (src.isSummon ? 0 : RPG.equipBonus(src.f, "crit")));
+    if (mult > 0 && rng() < critChance) { dmg *= (tal(src, "atk3") ? 2.0 : RPG.CFG.CRIT_MULT); tags.push("✨ CHÍ MẠNG"); }
     if (isWeak && src.f && !src.isSummon) src.rage = clamp(src.rage + RPG.CFG.WEAK_RAGE, 0, RPG.CFG.RAGE_MAX);
-    hit(B, src, dst, dmg, Object.assign({}, o, { tag: tags.join(" · ") }));
+    hit(B, src, dst, dmg, Object.assign({}, o, { tag: tags.join(" · "), ult: !!ctx.ult }));
     yield* flush(B);
   }
 
@@ -306,7 +322,7 @@
     for (const e of effects) {
       switch (e.type) {
         case "damage":
-          for (const t of targets) if (t.alive) yield* dmgGen(B, u, t, e.power * scale, {}, ctx);
+          for (const t of targets) if (t.alive) yield* dmgGen(B, u, t, e.power * scale * ultAmp(u, ctx), {}, ctx);
           break;
         case "trueDamage":
           for (const t of targets) if (t.alive) hit(B, u, t, e.amount, { trueDmg: true });
@@ -323,6 +339,7 @@
         case "stealth": setSt(u, "stealth", { turns: e.turns }); emit(B, u.name + " tàng hình!", "skill"); break;
         case "cleanse": cleanse(u, e.only); emit(B, u.name + " được thanh tẩy hiệu ứng xấu.", "good"); break;
         case "healPct": heal(B, u, u.maxHp * e.pct * scale); break;
+        case "sp": gainSp(u, e.amount); emit(B, u.name + " +" + e.amount + " Tinh Lực.", "skill"); break;
         case "rage": u.rage = clamp(u.rage + e.amount, 0, RPG.CFG.RAGE_MAX); emit(B, u.name + " +" + e.amount + " Nộ.", "skill"); break;
         case "selfCostCurHpPct": {
           const c = Math.min(u.hp - 1, Math.round(u.hp * e.pct));
@@ -400,11 +417,24 @@
   const qScale = q => { q = (q == null ? 1 : q); return q < CC.QTE_FAIL_BELOW ? 0 : 0.7 + 0.3 * clamp((q - CC.QTE_FAIL_BELOW) / (1 - CC.QTE_FAIL_BELOW), 0, 1); };
   const hasSummon = (B, u) => B.units.some(function (s) { return s.isSummon && s.alive && s.owner === u; });
 
-  function skillReady(u, s) { return !(u.cds[s.id] > 0); }
+  /* Tinh Lực: skill thường tốn TL. Summon và The TIU không bị giới hạn. */
+  function tal(u, id) { return !!(u && !u.isSummon && u.f && RPG.hasTalent(u.f, id)); }
+  function ultAmp(u, ctx) {   // Ultimate: thức tỉnh Lv8 (+25%) và tài năng Sát Thần (+30%)
+    if (!ctx || !ctx.ult || u.isSummon || !u.f) return 1;
+    return (RPG.ultAwakened(u.f) ? RPG.CFG.ULT_AWAKEN_MULT : 1) * (tal(u, "atk4") ? 1.3 : 1);
+  }
+  function skillCost(u, s) {
+    if (u.isSummon || (u.f && u.f.tiu)) return 0;
+    const base = RPG.CFG.SP_COST[s.lvl] || 0;
+    return tal(u, "sp2") ? Math.ceil(base * 0.75) : base;
+  }
+  function canPay(u, s) { return u.sp >= skillCost(u, s); }
+  function gainSp(u, n) { if (!u.isSummon && !(u.f && u.f.tiu)) u.sp = clamp(u.sp + n, 0, RPG.CFG.SP_MAX); }
+  function skillReady(u, s) { return !(u.cds[s.id] > 0) && canPay(u, s); }
 
   function* execAction(B, u, a) {
     const ctx = { dodge: null, ult: false, skillName: "" };
-    if (a.type === "defend") { emit(B, u.name + " thủ thế, chuẩn bị chịu đòn.", "def"); yield* flush(B); return; }
+    if (a.type === "defend") { gainSp(u, RPG.CFG.SP_ON_DEFEND); emit(B, u.name + " thủ thế, chuẩn bị chịu đòn" + (u.isSummon ? "" : " (+" + RPG.CFG.SP_ON_DEFEND + " Tinh Lực)") + ".", "def"); yield* flush(B); return; }
 
     if (a.type === "attack") {
       const ts = pickTargets(B, u, "single", a.target);
@@ -412,7 +442,7 @@
       emit(B, u.name + " tấn công " + ts[0].name + "!", "atk", { type: "attack", src: u.uid, dst: ts[0].uid });
       ctx.element = u.isSummon ? "void" : RPG.basicElement(u.f);
       yield* dmgGen(B, u, ts[0], 1.0, { basic: true }, ctx);
-      if (!u.isSummon) u.rage = clamp(u.rage + RPG.CFG.RAGE_ON_ATTACK, 0, RPG.CFG.RAGE_MAX);
+      if (!u.isSummon) { u.rage = clamp(u.rage + RPG.CFG.RAGE_ON_ATTACK, 0, RPG.CFG.RAGE_MAX); gainSp(u, RPG.CFG.SP_ON_ATTACK + (tal(u, "sp4") ? 5 : 0)); }
       else if (u.hasRage) {
         u.rage += CC.SWORDSMAN_RAGE_ATTACK;
         if (u.rage >= RPG.CFG.RAGE_MAX) {
@@ -448,7 +478,7 @@
     // MANA TRANSFER: sau khi tung Ultimate được hồi lại một phần Nộ thay vì về 0
     const manaRefund = isUlt && !u.isSummon && u.f && RPG.hasPiece(u.f, "manaTransfer");
     if (isUlt) u.rage = manaRefund ? Math.round(RPG.CFG.RAGE_MAX * RPG.CFG.MANA_TRANSFER_PCT) : 0;
-    else { u.cds[def.id] = def.cd + 1; u.rage = clamp(u.rage + RPG.CFG.RAGE_ON_SKILL, 0, RPG.CFG.RAGE_MAX); }
+    else { u.cds[def.id] = Math.max(1, def.cd + 1 - (tal(u, "sp3") ? 1 : 0)); u.rage = clamp(u.rage + RPG.CFG.RAGE_ON_SKILL + (tal(u, "sp3") ? 15 : 0), 0, RPG.CFG.RAGE_MAX); u.sp -= skillCost(u, def); }
     const scale = qScale(a.quality);
     emit(B, (isUlt ? "✧ " : "✦ ") + u.name + " dùng \"" + def.name + "\"" + (scale === 0 ? " — THẤT BẠI!" : "") + (isUlt ? " ✧" : ""), isUlt ? "skill" : "skill", { type: "cast", src: u.uid, skill: def.id });
     if (manaRefund) emit(B, "🔷 MANA TRANSFER! " + u.name + " hồi lại " + u.rage + " Nộ.", "good");
@@ -507,14 +537,14 @@
   function options(B, u) {
     const skills = RPG.getSkills(u.f).map(function (s) {
       return { id: s.id, name: s.name, lvl: s.lvl, target: s.target, desc: s.desc, unlocked: s.unlocked, el: RPG.SKILL_ELEMENT[s.id] || null,
-               cd: u.cds[s.id] > 0 ? u.cds[s.id] - 1 : 0, ready: s.unlocked && skillReady(u, s) };
+               cd: u.cds[s.id] > 0 ? u.cds[s.id] - 1 : 0, cost: skillCost(u, s), ready: s.unlocked && skillReady(u, s) };
     });
     const ult = RPG.getUltimate(u.f);
     const items = Object.keys(u.f.items).filter(function (k) {
       return RPG.ITEMS[k] && RPG.ITEMS[k].usable.indexOf("combat") >= 0 && u.f.items[k] > 0;
     }).map(function (k) { return { id: k, name: RPG.ITEMS[k].name, icon: RPG.ITEMS[k].icon, count: u.f.items[k], target: RPG.ITEMS[k].target, desc: RPG.ITEMS[k].desc }; });
     return {
-      attack: true, defend: true, skills: skills, items: items,
+      attack: true, defend: true, skills: skills, items: items, sp: u.sp, spMax: RPG.CFG.SP_MAX,
       basicEl: u.isSummon ? "void" : RPG.basicElement(u.f),
       ultimate: { id: ult.id, name: ult.name, target: ult.target, desc: ult.desc, unlocked: ult.unlocked, el: RPG.SKILL_ELEMENT[ult.id] || null,
                   rage: u.rage, rageMax: RPG.CFG.RAGE_MAX, ready: ult.unlocked && u.rage >= RPG.CFG.RAGE_MAX },
@@ -538,7 +568,8 @@
     if (a.type === "skill") {
       const s = RPG.getSkills(u.f).find(function (x) { return x.id === a.id; });
       if (!s || !s.unlocked) return { ok: false, reason: "locked" };
-      if (!skillReady(u, s)) return { ok: false, reason: "cooldown" };
+      if (u.cds[s.id] > 0) return { ok: false, reason: "cooldown" };
+      if (!canPay(u, s)) return { ok: false, reason: "sp" };
     } else if (a.type === "ultimate") {
       const ult = RPG.getUltimate(u.f);
       if (!ult.unlocked) return { ok: false, reason: "locked" };
@@ -569,6 +600,8 @@
       });
       u.mods = u.mods.filter(function (m) { return !tickTimed(m); });
       Object.keys(u.cds).forEach(function (k) { if (u.cds[k] > 0) u.cds[k]--; });
+      gainSp(u, RPG.CFG.SP_REGEN + (tal(u, "sp1") ? 3 : 0) + (tal(u, "sp4") ? 4 : 0) + (u.isSummon ? 0 : RPG.equipBonus(u.f, "sp")));
+      if (tal(u, "def4") && u.alive) heal(B, u, u.maxHp * 0.08);
       if (u.spirit) u.spirit.age++;
     }
     yield* flush(B);
@@ -579,6 +612,25 @@
     if (B.over) return;
     emit(B, "— LƯỢT " + B.round + " —", "turn", { type: "round", round: B.round });
     yield* flush(B);
+    // ---- The TIU đổi giai đoạn theo %HP: <=66% (Giai đoạn 2), <=33% (Giai đoạn 3: cuồng nộ) ----
+    for (const t of B.units) {
+      if (!t.alive || !t.f || !t.f.tiu) continue;
+      const ratio = t.hp / t.maxHp, ph = ratio <= 0.33 ? 3 : (ratio <= 0.66 ? 2 : 1);
+      if (ph > (t.phase || 1)) {
+        t.phase = ph;
+        const baseAtk = RPG.getStats(t.f).atk;
+        if (ph === 2) {
+          emit(B, "☠ THE TIU — GIAI ĐOẠN 2! Nó gào lên, các linh hồn bên trong trỗi dậy!", "danger");
+          addMod(t, "atk", Math.round(baseAtk * 0.2), 99); t.rage = clamp(t.rage + 40, 0, RPG.CFG.RAGE_MAX);
+        } else {
+          emit(B, "☠ THE TIU — GIAI ĐOẠN 3: CUỒNG NỘ! Nó xé toạc mọi hiệu ứng xấu và dồn hết sức tàn!", "danger");
+          cleanse(t); addMod(t, "atk", Math.round(baseAtk * 0.25), 99); addMod(t, "spd", 15, 99); t.rage = RPG.CFG.RAGE_MAX;
+        }
+        yield* flush(B);
+      } else if ((t.phase || 1) >= 3 && t.rage < RPG.CFG.RAGE_MAX) {
+        t.rage = clamp(t.rage + 15, 0, RPG.CFG.RAGE_MAX);   // cuồng nộ: tích Nộ nhanh -> Ultimate dồn dập
+      }
+    }
     const order = B.units.filter(function (u) { return u.alive; })
       .map(function (u) { return { u: u, k: eff(u, "spd") + rng() * 0.01 }; })
       .sort(function (a, b) { return b.k - a.k; }).map(function (x) { return x.u; });
@@ -602,7 +654,7 @@
       yield* endTurn(B, u);
       checkOver(B); yield* flush(B);
     }
-    B.units.forEach(function (u) { u.defending = false; u.action = null; });
+    B.units.forEach(function (u) { u.defending = false; u.braced = false; u.action = null; });
     if (!B.over && B.round >= B.opts.maxRounds) {
       const pct = s => B.units.filter(function (x) { return x.side === s && !x.isSummon; }).reduce(function (a, x) { return a + x.hp / x.maxHp; }, 0);
       B.over = true; B.winner = pct("A") > pct("E") ? "A" : "E";
@@ -642,6 +694,23 @@
     const foes = B.units.filter(function (u) { return u.side === "E" && !u.isSummon; }).map(function (u) { return u.f; });
     const mates = B.units.filter(function (u) { return u.side === "A" && !u.isSummon && u.f !== pf; }).map(function (u) { return u.f; });
     const out = { winner: B.winner, duels: [], allyExp: [] };
+    if (foes.length && foes.every(function (e) { return e.mob; })) {   // trận với quái / mini-boss
+      if (B.winner === "A") {
+        let expSum = 0, drl = 0; const drops = {};
+        foes.forEach(function (e) {
+          expSum += e.minion ? 6 : 30 + 8 * pf.level;
+          if (!e.minion) { drl += e.rewardDrl || 0; Object.keys(e.drops || {}).forEach(function (k) { drops[k] = (drops[k] || 0) + e.drops[k]; }); }
+        });
+        const exp = RPG.addExp(pf, expSum);
+        pf.drl += drl; Object.keys(drops).forEach(function (k) { RPG.addComponent(pf, k, drops[k]); });
+        out.duels.push({ mob: true, winnerId: pf.id, loserId: foes[0].id, mobName: foes[0].name, drl: drl, lost: 0, exp: exp, drops: drops, pieces: [] });
+        mates.forEach(function (m) { out.allyExp.push({ id: m.id, exp: RPG.addExp(m, Math.round(expSum / 2)) }); });
+      } else {
+        const lost = Math.min(Math.max(0, pf.drl - 1), 3); pf.drl -= lost;
+        out.duels.push({ mob: true, winnerId: foes[0].id, loserId: pf.id, mobName: foes[0].name, drl: 0, lost: lost, exp: { gained: 0, unlocked: [], levelsGained: [] }, drops: {}, pieces: [] });
+      }
+      return out;
+    }
     if (B.winner === "A") {
       foes.forEach(function (e) {
         if (e.tiu) {   // thắng The TIU: không cướp ĐRL, nhận ĐRL VẤY BẨN + EXP
