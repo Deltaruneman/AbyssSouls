@@ -421,7 +421,7 @@
   function tal(u, id) { return !!(u && !u.isSummon && u.f && RPG.hasTalent(u.f, id)); }
   function ultAmp(u, ctx) {   // Ultimate: thức tỉnh Lv8 (+25%) và tài năng Sát Thần (+30%)
     if (!ctx || !ctx.ult || u.isSummon || !u.f) return 1;
-    return (RPG.ultAwakened(u.f) ? RPG.CFG.ULT_AWAKEN_MULT : 1) * (tal(u, "atk4") ? 1.3 : 1);
+    return (RPG.ultAwakened(u.f) ? RPG.CFG.ULT_AWAKEN_MULT : 1) * (tal(u, "atk3") ? 1.3 : 1);
   }
   function skillCost(u, s) {
     if (u.isSummon || (u.f && u.f.tiu)) return 0;
@@ -442,7 +442,7 @@
       emit(B, u.name + " tấn công " + ts[0].name + "!", "atk", { type: "attack", src: u.uid, dst: ts[0].uid });
       ctx.element = u.isSummon ? "void" : RPG.basicElement(u.f);
       yield* dmgGen(B, u, ts[0], 1.0, { basic: true }, ctx);
-      if (!u.isSummon) { u.rage = clamp(u.rage + RPG.CFG.RAGE_ON_ATTACK, 0, RPG.CFG.RAGE_MAX); gainSp(u, RPG.CFG.SP_ON_ATTACK + (tal(u, "sp4") ? 5 : 0)); }
+      if (!u.isSummon) { u.rage = clamp(u.rage + RPG.CFG.RAGE_ON_ATTACK, 0, RPG.CFG.RAGE_MAX); gainSp(u, RPG.CFG.SP_ON_ATTACK); }
       else if (u.hasRage) {
         u.rage += CC.SWORDSMAN_RAGE_ATTACK;
         if (u.rage >= RPG.CFG.RAGE_MAX) {
@@ -507,30 +507,75 @@
       default: return true;
     }
   }
+  /* ---- AI thông minh dần theo đêm: B.opts.aiLevel 0..5 (đêm càng muộn / New Game+ càng cao). Đồng đội tối đa cấp 2. ----
+       L1: chọn mục tiêu & skill theo hệ yếu/kháng · L2: biết PHÒNG THỦ khi địch sắp tung Ultimate / để hồi Tinh Lực
+       L3: dè sẻn Ultimate cho thời điểm hiệu quả, dùng đồ hồi máu sớm hơn · L4+: ưu tiên kết liễu, chọn skill theo sát thương kỳ vọng */
+  function aiLvl(B, u) { const L = B.opts.aiLevel || 0; return u.side === "E" ? L : (B.opts.allyAiLevel != null ? B.opts.allyAiLevel : Math.min(2, L)); }
+  function foeMult(el, t) {
+    if (!el || !t.f || t.isSummon) return 1;
+    const a = RPG.affinityOf(t.f);
+    return a.weak === el ? RPG.CFG.WEAK_MULT : (a.resist === el ? RPG.CFG.RESIST_MULT : 1);
+  }
+  function skillPower(s) {
+    let p = 1; (s.effects || []).forEach(function (e) { if (e.type === "damage" && e.power > p) p = e.power; });
+    return p;
+  }
+  function aiTarget(B, u, legal, el, L) {
+    if (!legal.length || L < 1) return undefined;
+    let best = null, bestScore = -1e9;
+    legal.forEach(function (t) {
+      let sc = (1 - t.hp / t.maxHp) * 1.0 + (foeMult(el, t) - 1) * 2.0 + (t.isSummon ? -0.35 : 0.1);
+      if (L >= 4 && t.hp <= u.maxHp * 0.25) sc += 1.0;   // kết liễu
+      if (sc > bestScore) { bestScore = sc; best = t; }
+    });
+    return best ? best.uid : undefined;
+  }
   function aiChoose(B, u) {
-    const q = 0.75 + rng() * 0.25;
+    const L = aiLvl(B, u);
+    const q = Math.min(1, 0.75 + rng() * 0.25 + 0.04 * L);
     if (u.isSummon) return { type: "attack" };
     const f = u.f, en = enemiesOf(B, u);
     if (!en.length) return { type: "defend" };
+    const legal = legalTargets(B, u, false);
     const ult = RPG.getUltimate(f);
-    const ultOk = ult.unlocked && u.rage >= RPG.CFG.RAGE_MAX &&
-      (f.tiu || ((f.classId !== "fighter" || u.hp > u.maxHp * 0.4) &&
+    const classOk = f.tiu || ((f.classId !== "fighter" || u.hp > u.maxHp * 0.4) &&
       (f.classId !== "summoner" || hasSummon(B, u)) &&
-      (f.classId !== "healer" || en.some(function (t) { return t.st.poison; }))));
-    if (ultOk) return { type: "ultimate", quality: q };
-    if (u.hp < u.maxHp * 0.35 && RPG.countItem(f, "bimbim") > 0) return { type: "item", id: "bimbim" };
+      (f.classId !== "healer" || en.some(function (t) { return t.st.poison; })));
+    let ultOk = ult.unlocked && u.rage >= RPG.CFG.RAGE_MAX && classOk;
+    if (ultOk && L >= 3 && B.round < 3 && u.hp > u.maxHp * 0.6 && !legal.some(function (t) { return t.hp < t.maxHp * 0.6; })) ultOk = rng() < 0.35;   // chưa đáng tung
+    if (ultOk) return { type: "ultimate", quality: q, target: aiTarget(B, u, legal, RPG.SKILL_ELEMENT[ult.id], L) };
+    const healAt = L >= 3 ? 0.5 : 0.35;
+    if (u.hp < u.maxHp * healAt && RPG.countItem(f, "bimbim") > 0) return { type: "item", id: "bimbim" };
     if (Object.keys(u.st).some(function (k) { return ["burn", "poison", "freeze"].indexOf(k) >= 0; }) && RPG.countItem(f, "antidote") > 0) return { type: "item", id: "antidote" };
+    // L2+: biết thủ thế trước Ultimate của đối phương, hoặc để hồi Tinh Lực khi cạn
+    if (L >= 2) {
+      const threat = en.some(function (t) { return !t.isSummon && t.rage >= RPG.CFG.RAGE_MAX; });
+      if (threat && u.hp < u.maxHp * 0.85 && rng() < 0.55) return { type: "defend" };
+      const starved = RPG.getSkills(f).some(function (s) { return s.unlocked && !(u.cds[s.id] > 0) && !canPay(u, s); });
+      if (starved && u.sp < 20 && u.hp > u.maxHp * 0.4 && rng() < 0.5) return { type: "defend" };
+    }
     const ready = RPG.getSkills(f).filter(function (s) { return s.unlocked && skillReady(u, s) && skillUseful(B, u, s); });
-    // Ưu tiên: skill gây sát thương (75%) > triệu hồi/hồi máu cần thiết (80%) > buff bản thân (30%) > đánh thường
     const offense = ready.filter(function (s) { return s.target === "single" || s.target === "aoe"; });
     const support = ready.filter(function (s) { return s.target === "summon" || s.id === "blessing"; });
     const selfBuff = ready.filter(function (s) { return offense.indexOf(s) < 0 && support.indexOf(s) < 0; });
     const pickOf = function (arr) { return arr[Math.floor(rng() * arr.length)]; };
+    const offP = Math.min(0.95, 0.75 + 0.05 * L);
     if (support.length && rng() < 0.8) return { type: "skill", id: pickOf(support).id, quality: q };
-    if (offense.length && rng() < 0.75) return { type: "skill", id: pickOf(offense).id, quality: q };
-    if (selfBuff.length && rng() < 0.3) return { type: "skill", id: pickOf(selfBuff).id, quality: q };
+    if (offense.length && rng() < offP) {
+      let s = pickOf(offense);
+      if (L >= 1 && legal.length) {   // chọn skill có sát thương kỳ vọng cao nhất (theo hệ yếu/kháng)
+        let bestV = -1;
+        offense.forEach(function (o) {
+          const el = RPG.SKILL_ELEMENT[o.id], tgt = aiTarget(B, u, legal, el, L), tt = legal.find(function (x) { return x.uid === tgt; }) || legal[0];
+          const v = skillPower(o) * foeMult(el, tt) * (o.target === "aoe" ? Math.max(1, en.length * 0.8) : 1) * (0.9 + rng() * 0.2);
+          if (v > bestV) { bestV = v; s = o; }
+        });
+      }
+      return { type: "skill", id: s.id, quality: q, target: aiTarget(B, u, legal, RPG.SKILL_ELEMENT[s.id], L) };
+    }
+    if (selfBuff.length && rng() < (L >= 2 ? 0.2 : 0.3)) return { type: "skill", id: pickOf(selfBuff).id, quality: q };
     if (u.hp < u.maxHp * 0.3 && rng() < 0.25) return { type: "defend" };
-    return { type: "attack" };
+    return { type: "attack", target: aiTarget(B, u, legal, RPG.basicElement(f), L) };
   }
 
   /* ----------------------------- MENU CHO UI ----------------------------- */
@@ -600,8 +645,7 @@
       });
       u.mods = u.mods.filter(function (m) { return !tickTimed(m); });
       Object.keys(u.cds).forEach(function (k) { if (u.cds[k] > 0) u.cds[k]--; });
-      gainSp(u, RPG.CFG.SP_REGEN + (tal(u, "sp1") ? 3 : 0) + (tal(u, "sp4") ? 4 : 0) + (u.isSummon ? 0 : RPG.equipBonus(u.f, "sp")));
-      if (tal(u, "def4") && u.alive) heal(B, u, u.maxHp * 0.08);
+      gainSp(u, RPG.CFG.SP_REGEN + (tal(u, "sp1") ? 3 : 0) + (u.isSummon ? 0 : RPG.equipBonus(u.f, "sp")));
       if (u.spirit) u.spirit.age++;
     }
     yield* flush(B);

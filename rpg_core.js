@@ -114,7 +114,7 @@
     lastStopper: "slash", perfectKill: "slash", thunder: "thunder", bitterMedicine: "poison", voidSummon: "void"
   };
   /* ------------------------- TÀI NĂNG (Talent) -------------------------
-     Điểm tài năng = Level hiện tại + điểm thưởng từ nhiệm vụ đồng đội (Lv8 = 8 điểm + tối đa 4). Mỗi tài năng tốn 1 điểm.
+     Điểm tài năng: 1 điểm ở Lv1, +1 mỗi 2 cấp (Lv3/5/7) và +1 cho mỗi nhiệm vụ đồng đội (tối đa 8 điểm cho 9 tài năng). Mỗi tài năng tốn 1 điểm.
      3 nhánh x 3 bậc; bậc sau cần bậc trước cùng nhánh. Chỉ có 5 điểm cho 9 tài năng -> phải chọn build. */
   const TALENT_BRANCHES = {
     atk: { name: "CÔNG KÍCH", icon: "⚔️", desc: "Chí mạng và khai thác yếu điểm" },
@@ -122,23 +122,22 @@
     sp:  { name: "TINH LỰC",  icon: "🔷", desc: "Dùng skill dày hơn, nhịp độ nhanh" }
   };
   const TALENTS = {
-    atk1: { branch: "atk", tier: 1, name: "Mắt Cáo",    icon: "🦅", desc: "+10% tỉ lệ chí mạng." },
-    atk2: { branch: "atk", tier: 2, name: "Đột Phá",    icon: "💥", desc: "Đánh trúng YẾU ĐIỂM: sát thương ×1.45 (thay vì ×1.3)." },
-    atk3: { branch: "atk", tier: 3, name: "Sát Ý",      icon: "🩸", desc: "Chí mạng gây ×2.0 sát thương (thay vì ×1.5)." },
-    def1: { branch: "def", tier: 1, name: "Da Trâu",    icon: "🐂", desc: "+15% HP tối đa." },
-    def2: { branch: "def", tier: 2, name: "Gồng Mình",  icon: "🧱", desc: "Phòng thủ giảm 65% sát thương (thay vì 50%), đỡ Ultimate giảm 80%; +10 Nộ thêm khi bị đánh lúc phòng thủ." },
-    def3: { branch: "def", tier: 3, name: "Bất Khuất",  icon: "🔥", desc: "Mỗi trận 1 lần: đòn chí tử chỉ để lại 1 HP." },
-    sp1:  { branch: "sp",  tier: 1, name: "Điềm Tĩnh",  icon: "🧘", desc: "Bắt đầu trận +15 Tinh Lực, hồi thêm +3 Tinh Lực mỗi lượt." },
-    sp2:  { branch: "sp",  tier: 2, name: "Tiết Kiệm",  icon: "💧", desc: "Skill tốn ít hơn 25% Tinh Lực." },
-    sp3:  { branch: "sp",  tier: 3, name: "Dồn Nộ",     icon: "⚡", desc: "Dùng skill: +15 Nộ thêm và hồi chiêu ngắn hơn 1 lượt." },
-    atk4: { branch: "atk", tier: 4, name: "Sát Thần",   icon: "☄️", desc: "Ultimate gây thêm 30% sát thương." },
-    def4: { branch: "def", tier: 4, name: "Bất Tử",     icon: "💗", desc: "Hồi 8% HP tối đa vào cuối mỗi lượt." },
-    sp4:  { branch: "sp",  tier: 4, name: "Mạch Nguồn", icon: "🌊", desc: "Hồi thêm +4 Tinh Lực mỗi lượt và đánh thường +5 Tinh Lực thêm." }
+    atk1: { branch: "atk", tier: 1, name: "Mắt Cáo",   icon: "🦅", short: "+10% chí mạng",                 desc: "+10% tỉ lệ chí mạng." },
+    atk2: { branch: "atk", tier: 2, name: "Đột Phá",   icon: "💥", short: "Yếu điểm ×1.45",                desc: "Đánh trúng YẾU ĐIỂM: sát thương ×1.45 (thay vì ×1.3)." },
+    atk3: { branch: "atk", tier: 3, name: "Sát Ý",     icon: "🩸", short: "Chí mạng ×2, Ult +30%",         desc: "Chí mạng gây ×2.0 sát thương và Ultimate mạnh thêm 30%." },
+    def1: { branch: "def", tier: 1, name: "Da Trâu",   icon: "🐂", short: "+15% HP",                       desc: "+15% HP tối đa." },
+    def2: { branch: "def", tier: 2, name: "Gồng Mình", icon: "🧱", short: "Thủ giảm 65%",                  desc: "Phòng thủ giảm 65% sát thương (đỡ Ultimate giảm 80%), +10 Nộ thêm khi bị đánh." },
+    def3: { branch: "def", tier: 3, name: "Bất Khuất", icon: "🔥", short: "1 lần trụ 1 HP / trận",         desc: "Mỗi trận 1 lần: đòn chí tử chỉ để lại 1 HP." },
+    sp1:  { branch: "sp",  tier: 1, name: "Điềm Tĩnh", icon: "🧘", short: "+TL đầu trận & mỗi lượt",       desc: "+15 Tinh Lực đầu trận, hồi thêm +3 Tinh Lực mỗi lượt." },
+    sp2:  { branch: "sp",  tier: 2, name: "Tiết Kiệm", icon: "💧", short: "Skill rẻ hơn 25%",              desc: "Skill tốn ít hơn 25% Tinh Lực." },
+    sp3:  { branch: "sp",  tier: 3, name: "Dồn Nộ",    icon: "⚡", short: "Skill +15 Nộ, hồi chiêu −1",    desc: "Dùng skill: +15 Nộ thêm và hồi chiêu ngắn hơn 1 lượt." }
   };
+
   function ultAwakened(f) { return !!(f && !f.tiu && f.level >= CFG.ULT_AWAKEN_LEVEL); }
   function hasTalent(f, id) { return !!(f && !f.tiu && f.talents && f.talents[id]); }
   function talentSpent(f) { return Object.keys(f.talents || {}).length; }
-  function talentPoints(f) { return f && f.isPlayer ? Math.max(0, f.level + (f.bonusPoints || 0) - talentSpent(f)) : 0; }
+  function talentEarned(f) { return 1 + Math.floor((f.level - 1) / 2) + (f.bonusPoints || 0); }   // Lv1:1, Lv3:2, Lv5:3, Lv7:4 (+ nhiệm vụ)
+  function talentPoints(f) { return f && f.isPlayer ? Math.max(0, talentEarned(f) - talentSpent(f)) : 0; }
   function canTakeTalent(f, id) {
     const t = TALENTS[id]; if (!t || !f.isPlayer || hasTalent(f, id)) return false;
     if (talentPoints(f) < 1) return false;
@@ -149,6 +148,29 @@
     if (!canTakeTalent(f, id)) return false;
     f.talents = f.talents || {}; f.talents[id] = true;
     syncMaxHp(f); return true;
+  }
+  const NPC_BUILDS = {
+    fighter:  ["def1", "def2", "atk1", "def3", "atk2", "atk3"],
+    assassin: ["atk1", "atk2", "atk3", "sp1", "sp2", "def1"],
+    mage:     ["sp1", "atk1", "sp2", "atk2", "atk3", "def1"],
+    healer:   ["def1", "sp1", "sp2", "def2", "sp3", "def3"],
+    summoner: ["sp1", "def1", "sp2", "atk1", "def2", "atk2"]
+  };
+  /* NPC / quái tự học tài năng theo class. extra = điểm cộng thêm (đêm càng muộn NPC càng "tinh"). */
+  function autoTalents(f, extra) {
+    if (!f || f.isPlayer || f.tiu || f.minion) return;
+    const n = 1 + Math.floor((f.level - 1) / 2) + (extra || 0), list = NPC_BUILDS[f.classId] || NPC_BUILDS.fighter;
+    f.talents = {};
+    list.slice(0, Math.max(0, n)).forEach(function (id) { f.talents[id] = true; });
+    const st = getStats(f), r = f.maxHp > 0 ? f.hp / f.maxHp : 1;
+    f.maxHp = st.hp; f.hp = Math.max(1, Math.round(f.maxHp * r));
+  }
+  /* Đặt level tuyệt đối (cho phép GIẢM) — dùng khi random cấp đối thủ mỗi lần chạm trán */
+  function forceLevel(f, lv) {
+    lv = Math.max(1, Math.min(CFG.MAX_LEVEL, lv));
+    const ratio = f.maxHp > 0 ? f.hp / f.maxHp : 1;
+    f.level = lv; f.exp = CFG.EXP_TABLE[lv];
+    f.maxHp = getStats(f).hp; f.hp = Math.max(1, Math.round(f.maxHp * ratio));
   }
   function resetTalents(f) { f.talents = {}; syncMaxHp(f); }
   function syncMaxHp(f) {
@@ -597,7 +619,7 @@
   function makeMob(kind, lv, minion) {
     const k = MOB_KINDS[kind] || MOB_KINDS.guard; lv = Math.max(1, lv || 1);
     const hp = minion ? Math.round(34 + 9 * lv) : Math.round(k.hp + k.hpLv * lv);
-    return {
+    const m0 = {
       id: "MOB" + (++_mobSeq), name: minion ? "Sinh viên bóng ma" : k.name, title: minion ? "Tay sai" : "Mini-boss", mob: true, minion: !!minion, mobKind: kind, mobIcon: minion ? "👤" : k.icon,
       isPlayer: false, classId: minion ? "assassin" : k.classId, level: minion ? 1 : Math.min(CFG.MAX_LEVEL, Math.max(3, lv)), exp: 0, hp: hp, maxHp: hp, rage: 0,
       pieces: [], laPeace: 0, spellBreaker: false, drl: 0, trust: 0, inParty: false, alive: true, items: {}, components: {}, statuses: [],
@@ -605,7 +627,9 @@
                             : { hp: hp, atk: Math.round(k.atk + k.atkLv * lv), def: Math.round(k.def + k.defLv * lv), spd: k.spd },
       rewardDrl: minion ? 0 : k.drl + Math.floor(lv / 3), drops: minion ? {} : k.drops
     };
+    return mobFinish(m0);
   }
+  function mobFinish(m) { if (!m.minion) autoTalents(m, 0); return m; }
   function makeMobGroup(kind, lv) { return [makeMob(kind, lv, false), makeMob(kind, lv, true), makeMob(kind, lv, true)]; }
   function addTainted(f, n) { f.taintedDrl = (f.taintedDrl || 0) + n; f.taintedEver = true; return f.taintedDrl; }
   function tiuPenalty(f, amount) {
@@ -811,6 +835,7 @@
     if (state) Object.keys(state.fighters).forEach(function (id) {   // tương thích save cũ (chỉ có bộ đếm laPeace)
       const f = state.fighters[id];
       if (!f.talents) f.talents = {};
+      Object.keys(f.talents).forEach(function (k) { if (!TALENTS[k]) delete f.talents[k]; });
       if (!f.equip) f.equip = {};
       if (!f.pieces) { f.pieces = []; for (let i = 0; i < (f.laPeace || 0) && i < LAPEACE_ORDER.length; i++) f.pieces.push(LAPEACE_ORDER[i]); }
       syncPieces(f);
@@ -829,7 +854,7 @@
     addRage: addRage, rageOnAttack: rageOnAttack, rageOnSkill: rageOnSkill, canUseUltimate: canUseUltimate,
     heal: heal, healPct: healPct, regen: regen, healAll: healAll,
     expToNext: expToNext, expForWin: expForWin, addExp: addExp,
-    resolveDuel: resolveDuel, setLevel: setLevel, scaleOpponents: scaleOpponents, tiuPenalty: tiuPenalty, makeTiu: makeTiu, TIU_VARIANTS: TIU_VARIANTS, makeMob: makeMob, makeMobGroup: makeMobGroup, MOB_KINDS: MOB_KINDS, EQUIPMENT: EQUIPMENT, EQUIP_SLOTS: EQUIP_SLOTS, equipBonus: equipBonus, canCraftEquip: canCraftEquip, craftEquip: craftEquip, TALENTS: TALENTS, TALENT_BRANCHES: TALENT_BRANCHES, ultAwakened: ultAwakened, hasTalent: hasTalent, talentPoints: talentPoints, canTakeTalent: canTakeTalent, takeTalent: takeTalent, resetTalents: resetTalents, ELEMENTS: ELEMENTS, SKILL_ELEMENT: SKILL_ELEMENT, affinityOf: affinityOf, basicElement: basicElement, elementLabel: elementLabel, addTainted: addTainted, aliveFighters: aliveFighters,
+    resolveDuel: resolveDuel, setLevel: setLevel, scaleOpponents: scaleOpponents, tiuPenalty: tiuPenalty, makeTiu: makeTiu, TIU_VARIANTS: TIU_VARIANTS, makeMob: makeMob, makeMobGroup: makeMobGroup, MOB_KINDS: MOB_KINDS, EQUIPMENT: EQUIPMENT, EQUIP_SLOTS: EQUIP_SLOTS, equipBonus: equipBonus, canCraftEquip: canCraftEquip, craftEquip: craftEquip, TALENTS: TALENTS, TALENT_BRANCHES: TALENT_BRANCHES, autoTalents: autoTalents, forceLevel: forceLevel, talentEarned: talentEarned, ultAwakened: ultAwakened, hasTalent: hasTalent, talentPoints: talentPoints, canTakeTalent: canTakeTalent, takeTalent: takeTalent, resetTalents: resetTalents, ELEMENTS: ELEMENTS, SKILL_ELEMENT: SKILL_ELEMENT, affinityOf: affinityOf, basicElement: basicElement, elementLabel: elementLabel, addTainted: addTainted, aliveFighters: aliveFighters,
     rankAscending: rankAscending, eliminateLowest: eliminateLowest,
     addLaPeace: addLaPeace, hasPiece: hasPiece, pieceOwner: pieceOwner, unownedPieces: unownedPieces,
     transferPieces: transferPieces, giveToRandomOpponent: giveToRandomOpponent, syncPieces: syncPieces,

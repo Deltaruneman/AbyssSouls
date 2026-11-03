@@ -1267,18 +1267,18 @@ function openTalentModal(){
   const me = RPG.player();
   if(!me) return;
   const pts = RPG.talentPoints(me);
-  let html = `<p style="font-size:12px;color:var(--text-dim);">Điểm tài năng: <b style="color:var(--amber);">${pts}</b> (mỗi cấp +1, nhiệm vụ đồng đội +1; đang Lv${me.level}/${RPG.CFG.MAX_LEVEL}). Bậc sau cần bậc trước cùng nhánh. 12 tài năng nhưng nhiều nhất ${RPG.CFG.MAX_LEVEL+4} điểm — hãy chọn build!</p>`;
-  Object.keys(RPG.TALENT_BRANCHES).forEach(bk=>{
+  const node = (id)=>{
+    const tl = RPG.TALENTS[id], on = RPG.hasTalent(me, id), can = RPG.canTakeTalent(me, id);
+    const st = on ? 'on' : (can ? 'can' : 'lock');
+    return `<button class="talentNode ${st}" data-talent="${id}" ${can?'':'disabled'} title="${tl.desc}"><span class="tnIcon">${tl.icon}</span><span class="tnName">${tl.name}${on?' ✓':''}</span><span class="tnShort">${tl.short}</span></button>`;
+  };
+  const cols = Object.keys(RPG.TALENT_BRANCHES).map(bk=>{
     const br = RPG.TALENT_BRANCHES[bk];
-    html += `<div class="talentBranch">${br.icon} ${br.name} — <span style="color:var(--text-dim);">${br.desc}</span></div>`;
-    [1,2,3,4].forEach(t=>{
-      const id = bk+t, tl = RPG.TALENTS[id], on = RPG.hasTalent(me, id), can = RPG.canTakeTalent(me, id);
-      html += `<div class="shopItem ${on?'talentOn':''}"><span>${tl.icon} <b>${tl.name}</b> (bậc ${t})<br><span style="font-size:11px;color:var(--text-dim);">${tl.desc}</span></span>${on?'<span style="color:var(--amber);">✓ Đã học</span>':`<button class="btn primary" data-talent="${id}" ${can?'':'disabled'}>Học</button>`}</div>`;
-    });
-  });
-  showModal('⭐ TÀI NĂNG', html, [
+    return `<div class="talentCol"><div class="talentHead">${br.icon} ${br.name}</div>${[1,2,3].map(t=>node(bk+t)).join('')}</div>`;
+  }).join('');
+  showModal('⭐ TÀI NĂNG', `<p class="talentPts">Điểm còn lại: <b>${pts}</b> <span>· +1 mỗi 2 cấp và mỗi nhiệm vụ đồng đội · học từ trên xuống</span></p><div class="talentGrid">${cols}</div>`, [
     { label:'📜 Nhiệm vụ', onClick:()=>openQuestLog() },
-    { label:'Tẩy điểm (học lại)', onClick:()=>{ RPG.resetTalents(me); addLog('⭐ Bạn đã tẩy toàn bộ tài năng, có thể chọn lại.', ''); refreshAll(); openTalentModal(); } },
+    { label:'Tẩy điểm', onClick:()=>{ RPG.resetTalents(me); addLog('⭐ Bạn đã tẩy toàn bộ tài năng, có thể chọn lại.', ''); refreshAll(); openTalentModal(); } },
     { label:'Đóng', primary:true, onClick:()=>closeModal() }
   ]);
   document.querySelectorAll('#mgBody [data-talent]').forEach(b=>{
@@ -1572,7 +1572,9 @@ function retreatFromRoom(){
 }
 function startGuardianBattle(room){
   const g = S.guardians[room], me = RPG.player();
-  const group = RPG.makeMobGroup(g.kind, Math.max(2, me.level + (S.ng||0)));
+  const roll = rollOpponentLevel(me.level);
+  const group = RPG.makeMobGroup(g.kind, Math.max(2, roll.lv + (S.ng||0)));
+  addLog(RPG.MOB_KINDS[g.kind].name+' Lv'+Math.max(2, roll.lv)+' ('+roll.rel+' bạn).', roll.rel==='cao hơn' ? 'warn' : '');
   if(S.ng){ group.forEach(f=>{ const o=f.statsOverride; o.hp=Math.round(o.hp*(1+0.25*S.ng)); o.atk=Math.round(o.atk*(1+0.25*S.ng)); f.hp=f.maxHp=o.hp; }); }
   S.paused = true;
   startBattle({ enemyIds:group.map(f=>f.id), enemyFighters:group, final:false, mob:true, guardianRoom:room });
@@ -1853,14 +1855,39 @@ function unitLook(u){
 }
 function hpClass(p){ return p>50 ? '' : (p>20 ? 'mid' : 'low'); }
 
+/* ---- Cấp độ đối thủ mỗi lần chạm trán: 50% cao hơn (+1/+2), 25% ngang, 25% thấp hơn (-1/-2) ---- */
+function rollOpponentLevel(myLv){
+  const r = Math.random();
+  let d;
+  if(r < 0.50) d = Math.random() < 0.6 ? 1 : 2;        // cao hơn
+  else if(r < 0.75) d = 0;                             // ngang
+  else d = Math.random() < 0.7 ? -1 : -2;              // thấp hơn
+  const lv = Math.max(1, Math.min(RPG.CFG.MAX_LEVEL, myLv + d));
+  return { lv, rel: lv>myLv ? 'cao hơn' : (lv<myLv ? 'thấp hơn' : 'ngang') };
+}
+/* ---- AI thông minh dần theo đêm (0..5) ---- */
+function aiLevelNow(){
+  const base = S.chapter===1 ? (S.night-1) : (2 + S.night);   // Ch1: 0,1,2 · Ch2: 3,4
+  return Math.min(5, base + (S.ng||0));
+}
 function startBattle(opts){
   const me = RPG.player();
   RPG.scaleOpponents(oppLevelFloor());   // đối thủ luôn có Lv >= Lv người chơi và >= mốc theo đêm
   const allies = [me].concat(opts.final ? [] : RPG.partyAllies());
   const enemies = opts.enemyFighters || opts.enemyIds.map(id=>RPG.get(id));
+  const aiL = aiLevelNow();
+  enemies.forEach(f=>{   // NPC thật: random cấp theo tỉ lệ (trận cuối: giữ cấp cao); tài năng tự học theo cấp + đêm
+    if(f.tiu || f.mob) return;
+    if(!opts.final){
+      const roll = rollOpponentLevel(me.level);
+      RPG.forceLevel(f, roll.lv);
+      addLog(f.name+' Lv'+f.level+' ('+roll.rel+' bạn).', roll.rel==='cao hơn' ? 'warn' : '');
+    }
+    RPG.autoTalents(f, Math.floor(aiL/2));
+  });
   const knownEl = {};
   enemies.forEach(f=>{ if((f.trust||0)>=1 || (S.knownElements && S.knownElements[f.id])) knownEl[f.id] = true; });   // đã quen / đã khám phá từ trận trước
-  const B = RPGCombat.create({ allies, enemies, dodge:!!opts.final, controlAllies:false, known:knownEl });
+  const B = RPGCombat.create({ allies, enemies, dodge:!!opts.final, controlAllies:false, known:knownEl, aiLevel:aiL });
   // Bẫy gài đã trúng: -HP và mất lượt đầu
   enemies.forEach(f=>{
     const d = S.npcDebuff && S.npcDebuff[f.id];

@@ -868,3 +868,16 @@ body.mod-blackout #app::after{content:'';position:fixed;inset:0;pointer-events:n
 body.mod-fog #app::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:40;background:linear-gradient(rgba(190,200,210,.14),rgba(190,200,210,.06));backdrop-filter:blur(1.2px);}
 body.mod-bloodmoon #app::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:40;background:radial-gradient(ellipse at 50% 40%,rgba(120,0,0,.0) 30%,rgba(140,10,10,.35) 100%);mix-blend-mode:multiply;}
 body.mod-midterm #nightBadge{color:var(--amber);}
+
+/* ===== Bảng Tài Năng gọn ===== */
+.talentPts{font-size:13px;margin:0 0 8px;} .talentPts span{font-size:11px;color:var(--text-dim);}
+.talentGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.talentCol{display:flex;flex-direction:column;gap:6px;}
+.talentHead{font-size:11px;letter-spacing:1px;color:var(--amber);text-align:center;padding-bottom:2px;border-bottom:1px solid var(--line);}
+.talentNode{display:flex;flex-direction:column;align-items:center;gap:1px;padding:8px 4px;background:rgba(255,255,255,.03);border:1px solid var(--line);color:var(--text);cursor:pointer;font-family:inherit;text-align:center;}
+.talentNode .tnIcon{font-size:18px;} .talentNode .tnName{font-size:12px;font-weight:700;} .talentNode .tnShort{font-size:10px;color:var(--text-dim);line-height:1.25;}
+.talentNode.can{border-color:var(--amber);}
+.talentNode.on{background:rgba(226,182,92,.14);border-color:var(--amber);}
+.talentNode.lock{opacity:.4;cursor:default;}
+.talentNode.kb{outline:2px solid var(--amber);outline-offset:2px;}
+@media (max-width:560px){.talentGrid{grid-template-columns:1fr;} .talentNode{flex-direction:row;gap:8px;justify-content:flex-start;text-align:left;} .talentNode .tnShort{margin-left:auto;}}
