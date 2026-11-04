@@ -5,6 +5,6 @@
    anon key là khóa CÔNG KHAI, được phép đặt trong game. TUYỆT ĐỐI KHÔNG đặt service_role key ở đây.
    ========================================================================= */
 window.TIU_CLOUD = {
-  url: "https://YOUR_PROJECT_REF.supabase.co",
-  anonKey: "YOUR_ANON_PUBLIC_KEY"
+  url: "https://txtukriulnisqsbnlswm.supabase.co",
+  anonKey: "sb_publishable_meYc93hRi4E6Emp6mcfJrA_mmRyEphy"
 };
