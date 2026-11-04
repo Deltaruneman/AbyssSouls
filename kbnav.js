@@ -48,14 +48,14 @@
       rows.push($("backFromSettings"));
       return { name: "settings", items: rows, back: $("backFromSettings") };
     }
-    if (shown("pauseMenu")) return { name: "list", items: pick(["pauseResumeBtn", "pauseSettingsBtn", "pauseMainMenuBtn"]), back: $("pauseResumeBtn") };
+    if (shown("pauseMenu")) return { name: "list", items: pick(["pauseResumeBtn", "pauseSettingsBtn", "pauseArenaBtn", "pauseMainMenuBtn"]), back: $("pauseResumeBtn") };
     if (shown("jumpscareOverlay")) {
       var j = pick(["jsContinueBtn", "jsGiveUpBtn"]);
       return j.length ? { name: "list", items: j } : null;
     }
     if (shown("gameOverScreen")) return { name: "list", items: pick(["retryBtn", "menuFromGameOver"]) };
     if (shown("winScreen")) return { name: "list", items: pick(["nextNightBtn", "menuFromWin"]) };
-    if (shown("titleScreen")) return { name: "list", items: pick(["startBtn", "continueBtn", "settingsBtn"]) };
+    if (shown("titleScreen")) return { name: "list", items: pick(["startBtn", "continueBtn", "settingsBtn", "arenaBtn"]) };
     if (shown("mapModal")) {
       var rn = Array.prototype.slice.call(document.querySelectorAll("#mapSvgWrap .room-node.reachable"));
       return { name: "map", items: rn, back: $("closeMapBtn") };

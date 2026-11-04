@@ -388,7 +388,7 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
 /* bảng thông báo + các nút lựa chọn trồi lên sau khi TIU đã lao ra khỏi màn hình */
 .jsPanelSub{display:block;font-family:var(--font-mono);font-size:14px;color:var(--text-dim);letter-spacing:1px;margin-top:8px;}
 /* minigame modal */
-#mgModal{position:fixed;inset:0;background:rgba(3,3,4,0.96);z-index:70;display:flex;align-items:center;justify-content:center;}
+#mgModal{position:fixed;inset:0;background:rgba(3,3,4,0.96);z-index:78;display:flex;align-items:center;justify-content:center;}
 #mgBox{background:var(--panel);border:1px solid var(--line);width:min(680px,92vw);padding:22px;border-radius:4px;position:relative;overflow:hidden;}
 #mgTitle{font-family:var(--font-disp);font-weight:900;font-size:25px;color:var(--amber);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;}
 #mgTimer{font-size:14px;color:var(--blood-bright);margin-bottom:12px;}
@@ -952,3 +952,12 @@ body.mod-midterm #nightBadge{color:var(--amber);}
 #winScreen.end-tiu h1{color:#c69cff;text-shadow:0 0 22px rgba(150,70,255,.7);} #winScreen.end-tiu{background:radial-gradient(ellipse at 50% 40%,rgba(60,0,90,.55),rgba(5,0,10,.96));}
 #winScreen.end-all h1{background:linear-gradient(90deg,#ffe9a8,#9be7ff,#ffb6f0,#ffe9a8);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;}
 #winScreen.end-all{background:radial-gradient(ellipse at 50% 35%,rgba(255,240,200,.22),rgba(5,5,10,.95));}
+
+/* ===== Bad ending: bỏ cuộc trước The TIU ===== */
+#gameOverScreen.end-giveup{background:radial-gradient(ellipse at 50% 45%,rgba(40,40,48,.96),rgba(2,2,4,.99));filter:saturate(.35);}
+#gameOverScreen.end-giveup h1{color:#8c93a3;letter-spacing:5px;text-shadow:0 0 18px rgba(120,130,160,.45);animation:giveupFade 3.2s ease-in-out infinite alternate;}
+@keyframes giveupFade{from{opacity:.55}to{opacity:1}}
+
+/* Đấu trường: ô nhập key/tên */
+#mgBody input[type=text]{margin-top:4px;font-family:inherit;}
+#mgBody code{background:#0a0a0c;padding:1px 5px;border:1px solid var(--line);}

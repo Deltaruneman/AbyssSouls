@@ -1823,10 +1823,38 @@ function jumpscare(){
   };
   jsGiveUpBtn.onclick = ()=>{
     closeJumpscare();
-    persistSave();
-    S.running = false;
-    showTitle();
+    giveUpToTiu();
   };
+}
+
+/* ---- BAD ENDING: bỏ cuộc khi bị The TIU bắt ---- */
+function recordBadEnding(key){
+  try{
+    const got = JSON.parse(localStorage.getItem('tiu_bad_endings')||'[]');
+    if(got.indexOf(key)<0){ got.push(key); localStorage.setItem('tiu_bad_endings', JSON.stringify(got)); }
+    return got.length;
+  }catch(e){ return 1; }
+}
+function giveUpToTiu(){
+  const me = RPG.player(), allies = RPG.partyAllies();
+  const T = t=>({spk:'THE TIU', text:t}), N = t=>({spk:'', text:t});
+  const lines = [
+    N('Bạn buông vũ khí. The TIU không tấn công — nó chỉ đứng đó, rồi nhẹ nhàng đặt bàn tay lạnh lên trán bạn.'),
+    T('Bỏ cuộc cũng là một lựa chọn. Tôi tôn trọng điều đó.'),
+    {spk:me.name, text:'Mình mệt rồi... Mình không muốn đấu nữa.'},
+    T('Ý chí mà bạn vừa buông xuống, tôi sẽ giữ lại. Nó không biến mất — nó sẽ trở thành một phần của tôi.')
+  ];
+  if(allies.length) lines.push({spk:allies[0].name, text:'Này! Đứng dậy đi! ...'}, N('Giọng '+allies[0].name+' chìm dần trong sương, như thể giữa hai người có một tấm kính dày.'));
+  lines.push(
+    N('Những kỹ năng nhạt dần. Nộ, Thể lực, từng thứ một rời khỏi cơ thể bạn như hơi thở cuối cùng của một giấc mơ.'),
+    N('Khi mở mắt, bạn đứng ngoài cổng UIT, tay trống rỗng, và không còn nhớ vì sao mình ở đây.')
+  );
+  playDLG(lines, ()=>{
+    const n = recordBadEnding('giveup');
+    const go = $('gameOverScreen');
+    go.classList.add('end-giveup');
+    showGameOver('BAD ENDING — Ý CHÍ BỊ BUÔNG', 'Bạn đã bỏ cuộc trước The TIU và ý chí của bạn trở thành một phần của nó. ['+n+' bad ending đã mở] Bạn có thể thử lại đêm này từ đầu đêm, hoặc về menu.', 'THỬ LẠI ĐÊM NÀY');
+  }, {});
 }
 
 /* The TIU không còn trừ ĐRL thuần: nó là đối thủ thật, mang mọi skill của mọi class */
@@ -1874,12 +1902,12 @@ function aiLevelNow(){
 }
 function startBattle(opts){
   const me = RPG.player();
-  RPG.scaleOpponents(oppLevelFloor());   // đối thủ luôn có Lv >= Lv người chơi và >= mốc theo đêm
+  if(!opts.arena) RPG.scaleOpponents(oppLevelFloor());   // đối thủ luôn có Lv >= Lv người chơi và >= mốc theo đêm
   const allies = [me].concat(opts.allyFighters || (opts.final ? [] : RPG.partyAllies()));
   const enemies = opts.enemyFighters || opts.enemyIds.map(id=>RPG.get(id));
-  const aiL = aiLevelNow();
+  const aiL = opts.arena ? 3 : aiLevelNow();
   enemies.forEach(f=>{   // NPC thật: random cấp theo tỉ lệ (trận cuối: giữ cấp cao); tài năng tự học theo cấp + đêm
-    if(f.tiu || f.mob) return;
+    if(f.tiu || f.mob || f.ghost) return;
     if(!opts.final){
       const roll = rollOpponentLevel(me.level);
       RPG.forceLevel(f, roll.lv);
@@ -1926,9 +1954,10 @@ function startBattle(opts){
   $('battleBg').style.backgroundImage = img ? `url('${img}')` : '';
   renderBattle();
   const foe = enemies[0];
-  if(opts.final || opts.tiu || opts.mob) stopBattleOst(false); else startBattleOst(foe.id);   // mỗi trận 1 bản OST, trừ trận cuối
+  if(opts.final || opts.tiu || opts.mob || opts.arena) stopBattleOst(false); else startBattleOst(foe.id);   // mỗi trận 1 bản OST, trừ trận cuối
   let openLine;
   if(opts.final) openLine = '★ TRẬN QUYẾT ĐỊNH! '+foe.name+' chặn đường bạn!';
+  else if(opts.arena) openLine = '⚔ ĐẤU TRƯỜNG: bản sao của '+foe.name+' xuất hiện! (trận thử — không tính điểm)';
   else if(opts.mob) openLine = '⚔ '+foe.name+' cùng đồng bọn xông vào! Đánh bại cả nhóm!';
   else if(opts.tiu) openLine = '☠ THE TIU hiện hình — hiện thân của mọi người từng tham gia giải đấu này! Nó mang đủ skill của cả 5 class.';
   else if(opts.exhausted) openLine = '🪤 '+foe.name+' đánh lén! Bạn kiệt sức: chỉ còn '+Math.round(RPG.CFG.EXHAUST_HP_PCT*100)+'% HP và mọi skill đang hồi chiêu!';
@@ -2341,8 +2370,22 @@ function spendTime(minutes, label){
   markActionDirty();
 }
 
+/* Đấu thử đấu trường: KHÔNG settle (không EXP / ĐRL / thời gian) — chỉ đóng giao diện trận rồi gọi onDone */
+function arenaBattleFinish(){
+  const B = BATTLE.B, opts = BATTLE.opts, won = B.winner==='A';
+  BATTLE.closed = true;
+  stopBattleOst(true);
+  clearTimeout(BATTLE.sayTimer);
+  $('battleOverlay').classList.add('hidden');
+  const round = B.round;
+  BATTLE = null;
+  if(opts.cleanup) opts.cleanup();
+  markActionDirty(); refreshAll();
+  if(opts.onDone) opts.onDone(won, round);
+}
 function battleFinish(){
   const B = BATTLE.B, opts = BATTLE.opts;
+  if(opts.arena){ arenaBattleFinish(); return; }
   const sum = RPGCombat.settle(B);
   opts.enemyIds.forEach(id=>{ S.duelDone[id] = true; });
   S.knownElements = S.knownElements || {};
@@ -2419,6 +2462,7 @@ function battleFinish(){
 /* ============== KẾT THÚC ĐÊM / CHƯƠNG / GAME ============== */
 function showGameOver(title, sub, retryLabel){
   S.running = false;
+  if(title.indexOf('BAD ENDING')<0) $('gameOverScreen').classList.remove('end-giveup');
   document.querySelector('#gameOverScreen h1').textContent = title;
   $('goSub').textContent = sub;
   $('retryBtn').textContent = retryLabel || 'THỬ LẠI ĐÊM NÀY';
@@ -2629,6 +2673,7 @@ function endFinal(won, path){
     const showEnd = ()=>{
       playDLG(endingScenes(key, me), ()=>{
         const n = recordEnding(key), total = Object.keys(ENDINGS).length;
+        if(window.TiuCloud) window.TiuCloud.autoSave();
         const hint = n<total ? ' Còn '+(total-n)+' kết thúc chưa mở — thử Gắn bó với đồng đội, gom đủ La Peace, hoặc hạ The TIU nhiều lần.' : ' Bạn đã mở tất cả kết thúc!';
         const ws = $('winScreen');
         Object.keys(ENDINGS).forEach(k=>ws.classList.remove(ENDINGS[k].cls));
