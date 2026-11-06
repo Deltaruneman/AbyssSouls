@@ -2881,6 +2881,12 @@ function isBlockingOverlayOpen(){
     .some(id=>{ const el=$(id); return el && !el.classList.contains('hidden'); });
 }
 let tutorialScriptLoading = false;
+function tutorialModuleUrl(){
+  const scripts = Array.prototype.slice.call(document.getElementsByTagName('script'));
+  const mainScript = scripts.find(s=>/(^|\/)script\.js(?:[?#]|$)/i.test(s.getAttribute('src')||''));
+  return new URL('tutorial.js', mainScript && mainScript.src ? mainScript.src : document.baseURI).href;
+}
+function escapeTutorialHtml(value){ return String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function showTutorialFallback(reason){
   showModal('❓ HƯỚNG DẪN', '<p>Đi lại: <b>WASD</b> hoặc phím mũi tên. Tương tác: <b>E</b>. Bản đồ: <b>M</b>. Túi đồ: <b>B</b>. Nhật ký nhiệm vụ: <b>Q</b>. Tạm dừng: <b>Esc</b>.</p><p>'+(reason||'File tutorial.js chưa tải hoặc chưa khởi tạo được.')+'</p>', [
     {label:'Thử tải lại',primary:true,onClick:()=>{ closeModal(true); openTutorialMenuSafe(true); }},
@@ -2896,6 +2902,10 @@ function openTutorialMenuSafe(retry){
       if(modal && !modal.classList.contains('hidden') && $('mgTitle').textContent==='❓ HƯỚNG DẪN' && $('mgBody').querySelector('[data-tut]')) return;
     }catch(e){ /* dùng hướng dẫn dự phòng bên dưới */ }
   }
+  // Nếu module có mặt nhưng danh sách bài không mở được, thử chạy thẳng bài nhập môn.
+  if(tut && typeof tut.start==='function'){
+    try{ if(tut.start('basic',true)) return; }catch(e){ /* hiển thị bảng dự phòng */ }
+  }
   if(tutorialScriptLoading){
     showModal('ĐANG TẢI HƯỚNG DẪN', '<p>Đang tải lại phần hướng dẫn. Vui lòng chờ một chút.</p>', [{label:'Đóng',primary:true,onClick:()=>closeModal()}]);
     return;
@@ -2904,7 +2914,8 @@ function openTutorialMenuSafe(retry){
     tutorialScriptLoading = true;
     showModal('ĐANG TẢI HƯỚNG DẪN', '<p>Phần hướng dẫn chưa được nạp. Đang thử tải lại từ thư mục game…</p>', [{label:'Đóng',primary:true,onClick:()=>closeModal()}]);
     const tag = document.createElement('script');
-    tag.src = new URL('tutorial.js', document.baseURI).href + '?retry=' + Date.now();
+    const moduleUrl = tutorialModuleUrl();
+    tag.src = moduleUrl + (moduleUrl.indexOf('?')>=0 ? '&' : '?') + 'retry=' + Date.now();
     tag.onload = ()=>{
       tutorialScriptLoading = false;
       const loaded = window.TiuTutorial;
@@ -2917,7 +2928,7 @@ function openTutorialMenuSafe(retry){
     };
     tag.onerror = ()=>{
       tutorialScriptLoading = false;
-      showTutorialFallback('Không tải được tutorial.js. Hãy kiểm tra file nằm cạnh index.html rồi thử lại.');
+      showTutorialFallback('Không tải được tutorial.js từ <code>'+escapeTutorialHtml(moduleUrl)+'</code>. Hãy kiểm tra game đang mở đúng thư mục và file tutorial.js nằm cạnh script.js.');
     };
     document.head.appendChild(tag);
     return;
