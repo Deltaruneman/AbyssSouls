@@ -1,0 +1,506 @@
+{
+ "combat/hit_side": {
+  "frames": 12,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "side",
+  "faces": null
+ },
+ "combat/hit_top": {
+  "frames": 12,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "top",
+  "faces": null
+ },
+ "combat/crit": {
+  "frames": 12,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "any",
+  "faces": null
+ },
+ "combat/slash": {
+  "frames": 12,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "any",
+  "faces": "right"
+ },
+ "combat/slash_x": {
+  "frames": 18,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "any",
+  "faces": "right"
+ },
+ "combat/explosion_side": {
+  "frames": 18,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "side",
+  "faces": null
+ },
+ "combat/explosion_top": {
+  "frames": 18,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "top",
+  "faces": null
+ },
+ "combat/muzzle": {
+  "frames": 8,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "any",
+  "faces": "right"
+ },
+ "combat/blood_side_red": {
+  "frames": 12,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "side",
+  "faces": "right"
+ },
+ "combat/blood_side_green": {
+  "frames": 12,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "side",
+  "faces": "right"
+ },
+ "combat/blood_side_purple": {
+  "frames": 12,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "side",
+  "faces": "right"
+ },
+ "combat/blood_top_red": {
+  "frames": 12,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "top",
+  "faces": null
+ },
+ "combat/blood_top_green": {
+  "frames": 12,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "top",
+  "faces": null
+ },
+ "combat/blood_top_purple": {
+  "frames": 12,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "top",
+  "faces": null
+ },
+ "combat/ground_slam_side": {
+  "frames": 18,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "side",
+  "faces": null
+ },
+ "combat/ground_slam_top": {
+  "frames": 18,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "top",
+  "faces": null
+ },
+ "magic/fireball": {
+  "frames": 12,
+  "fps": 24,
+  "cell": 128,
+  "loop": true,
+  "view": "any",
+  "faces": "right"
+ },
+ "magic/fire_hit_side": {
+  "frames": 12,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "side",
+  "faces": null
+ },
+ "magic/fire_hit_top": {
+  "frames": 12,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "top",
+  "faces": null
+ },
+ "magic/ice_hit_side": {
+  "frames": 18,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "side",
+  "faces": null
+ },
+ "magic/ice_hit_top": {
+  "frames": 18,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "top",
+  "faces": null
+ },
+ "magic/lightning_side": {
+  "frames": 18,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "side",
+  "faces": null
+ },
+ "magic/lightning_top": {
+  "frames": 18,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "top",
+  "faces": null
+ },
+ "magic/magic_burst": {
+  "frames": 12,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "any",
+  "faces": null
+ },
+ "magic/heal_side": {
+  "frames": 18,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "side",
+  "faces": null
+ },
+ "magic/heal_top": {
+  "frames": 18,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "top",
+  "faces": null
+ },
+ "magic/shield": {
+  "frames": 18,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "any",
+  "faces": null
+ },
+ "status/buff": {
+  "frames": 18,
+  "fps": 24,
+  "cell": 128,
+  "loop": true,
+  "view": "any",
+  "faces": null
+ },
+ "status/debuff": {
+  "frames": 18,
+  "fps": 24,
+  "cell": 128,
+  "loop": true,
+  "view": "any",
+  "faces": null
+ },
+ "status/poison": {
+  "frames": 18,
+  "fps": 24,
+  "cell": 128,
+  "loop": true,
+  "view": "any",
+  "faces": null
+ },
+ "status/stun": {
+  "frames": 18,
+  "fps": 24,
+  "cell": 128,
+  "loop": true,
+  "view": "any",
+  "faces": null
+ },
+ "status/burn": {
+  "frames": 12,
+  "fps": 24,
+  "cell": 128,
+  "loop": true,
+  "view": "any",
+  "faces": null
+ },
+ "status/sleep": {
+  "frames": 24,
+  "fps": 24,
+  "cell": 128,
+  "loop": true,
+  "view": "any",
+  "faces": null
+ },
+ "movement/dust_side": {
+  "frames": 12,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "side",
+  "faces": null
+ },
+ "movement/dust_top": {
+  "frames": 12,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "top",
+  "faces": null
+ },
+ "movement/footstep_side": {
+  "frames": 8,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "side",
+  "faces": null
+ },
+ "movement/footstep_top": {
+  "frames": 8,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "top",
+  "faces": null
+ },
+ "movement/dash": {
+  "frames": 12,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "any",
+  "faces": "right"
+ },
+ "movement/double_jump_side": {
+  "frames": 12,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "side",
+  "faces": null
+ },
+ "movement/double_jump_top": {
+  "frames": 12,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "top",
+  "faces": null
+ },
+ "movement/poof_side": {
+  "frames": 12,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "side",
+  "faces": null
+ },
+ "movement/poof_top": {
+  "frames": 12,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "top",
+  "faces": null
+ },
+ "pickup_ui/pickup": {
+  "frames": 12,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "any",
+  "faces": null
+ },
+ "pickup_ui/coins_side": {
+  "frames": 18,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "side",
+  "faces": null
+ },
+ "pickup_ui/coins_top": {
+  "frames": 18,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "top",
+  "faces": null
+ },
+ "pickup_ui/item_glow": {
+  "frames": 24,
+  "fps": 24,
+  "cell": 128,
+  "loop": true,
+  "view": "any",
+  "faces": null
+ },
+ "pickup_ui/level_up": {
+  "frames": 18,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "any",
+  "faces": null
+ },
+ "pickup_ui/confetti_side": {
+  "frames": 18,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "side",
+  "faces": null
+ },
+ "pickup_ui/confetti_top": {
+  "frames": 18,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "top",
+  "faces": null
+ },
+ "pickup_ui/heart": {
+  "frames": 12,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "any",
+  "faces": null
+ },
+ "pickup_ui/ui_click": {
+  "frames": 8,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "any",
+  "faces": null
+ },
+ "pickup_ui/star": {
+  "frames": 12,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "any",
+  "faces": null
+ },
+ "nature/fire_side": {
+  "frames": 12,
+  "fps": 24,
+  "cell": 128,
+  "loop": true,
+  "view": "side",
+  "faces": null
+ },
+ "nature/fire_top": {
+  "frames": 12,
+  "fps": 24,
+  "cell": 128,
+  "loop": true,
+  "view": "top",
+  "faces": null
+ },
+ "nature/smoke_side": {
+  "frames": 18,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "side",
+  "faces": null
+ },
+ "nature/smoke_top": {
+  "frames": 18,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "top",
+  "faces": null
+ },
+ "nature/water_side": {
+  "frames": 12,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "side",
+  "faces": null
+ },
+ "nature/water_top": {
+  "frames": 12,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "top",
+  "faces": null
+ },
+ "nature/leaves_side": {
+  "frames": 18,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "side",
+  "faces": null
+ },
+ "nature/leaves_top": {
+  "frames": 18,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "top",
+  "faces": null
+ },
+ "nature/rocks_side": {
+  "frames": 18,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "side",
+  "faces": null
+ },
+ "nature/rocks_top": {
+  "frames": 18,
+  "fps": 24,
+  "cell": 128,
+  "loop": false,
+  "view": "top",
+  "faces": null
+ },
+ "nature/portal": {
+  "frames": 18,
+  "fps": 24,
+  "cell": 128,
+  "loop": true,
+  "view": "any",
+  "faces": null
+ }
+}

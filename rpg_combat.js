@@ -176,7 +176,8 @@
     emit(B, (src && !o.dot ? src.name + " gây " : dst.name + " nhận ") + d + " sát thương" +
             (o.dot ? " (" + (o.label || "hiệu ứng") + ")" : " lên " + dst.name) +
             (dst.st.freeze ? " (Đóng băng +50%)" : "") + (o.tag ? " " + o.tag : "") + ".",
-         "atk", { type: "damage", src: src && src.uid, dst: dst.uid, amount: d });
+         "atk", { type: "damage", src: src && src.uid, dst: dst.uid, amount: d,
+           element: o.element || null, ultimate: !!o.ult, critical: !!o.critical, weak: !!o.weak, resisted: !!o.resisted });
     if (dst.hp <= 0 && tal(dst, "def3") && !dst.endured) {   // Bất Khuất: 1 lần / trận
       dst.endured = true; dst.hp = 1;
       emit(B, "🔥 BẤT KHUẤT! " + dst.name + " nghiến răng trụ lại với 1 HP!", "skill");
@@ -262,7 +263,7 @@
     if (kind === "windSpirit") {
       if (u.spirit) { return "explode"; }
       u.spirit = { age: 0 };
-      emit(B, u.name + " triệu hồi Tinh linh gió! (+25% sức mạnh đánh thường, +50% SPD)", "skill");
+      emit(B, u.name + " triệu hồi Tinh linh gió! (+25% sức mạnh đánh thường, +50% SPD)", "skill", { type: "summon", src: u.uid });
       return "ok";
     }
     if (kind === "sword") {
@@ -271,7 +272,7 @@
       if (findSummon(B, u, "swordsman")) { emit(B, "Ma Kiếm Sĩ đã ở trên sân — không cần thêm Ma Kiếm.", ""); return; }
       const s = spawnSummon(B, u, "sword", { name: "Ma Kiếm", hp: Math.round(mh * (pvpMode ? CC.PVP_HP_SWORD : CC.SUMMON_HP.sword)), atkPct: (pvpMode ? CC.PVP_SWORD_ATK_PCT : CC.SWORD_ATK_PCT) });
       if (u.voidActive) applyVoid(B, s);
-      emit(B, u.name + " triệu hồi " + s.name + "!", "skill", { type: "summon", uid: s.uid });
+      emit(B, u.name + " triệu hồi " + s.name + "!", "skill", { type: "summon", src: u.uid, uid: s.uid });
     } else if (kind === "guard") {
       if (findSummon(B, u, "swordsman")) { emit(B, "Ma Kiếm Sĩ đã ở trên sân.", ""); return; }
       const og = findSummon(B, u, "guard");
@@ -283,11 +284,11 @@
         sw.alive = false; sw.hp = 0;
         const s = spawnSummon(B, u, "swordsman", { name: "Ma Kiếm Sĩ", hp: hp, atkPct: (pvpMode ? CC.PVP_SWORDSMAN_ATK_PCT : CC.SWORDSMAN_ATK_PCT), taunt: true });
         if (u.voidActive) applyVoid(B, s);
-        emit(B, "Ma Kiếm và Hộ Vệ hợp thể thành " + s.name + "!", "skill", { type: "summon", uid: s.uid });
+        emit(B, "Ma Kiếm và Hộ Vệ hợp thể thành " + s.name + "!", "skill", { type: "summon", src: u.uid, uid: s.uid });
       } else {
         const s = spawnSummon(B, u, "guard", { name: "Hộ Vệ", hp: ghp, atkPct: 0, taunt: true });
         if (u.voidActive) applyVoid(B, s);
-        emit(B, u.name + " triệu hồi " + s.name + " (Taunt)!", "skill", { type: "summon", uid: s.uid });
+        emit(B, u.name + " triệu hồi " + s.name + " (Taunt)!", "skill", { type: "summon", src: u.uid, uid: s.uid });
       }
     }
   }
@@ -321,7 +322,10 @@
     const critChance = Math.min(RPG.CFG.CRIT_CAP, RPG.CFG.CRIT_BASE + eff(src, "spd") * RPG.CFG.CRIT_PER_SPD + (isWeak ? RPG.CFG.CRIT_WEAK_BONUS : 0) + (tal(src, "atk1") ? 0.10 : 0) + (src.isSummon ? 0 : RPG.equipBonus(src.f, "crit")));
     if (mult > 0 && rng() < critChance) { dmg *= (tal(src, "atk3") ? 2.0 : RPG.CFG.CRIT_MULT); tags.push("✨ CHÍ MẠNG"); }
     if (isWeak && src.f && !src.isSummon) src.rage = clamp(src.rage + RPG.CFG.WEAK_RAGE, 0, RPG.CFG.RAGE_MAX);
-    hit(B, src, dst, dmg, Object.assign({}, o, { tag: tags.join(" · "), ult: !!ctx.ult }));
+    hit(B, src, dst, dmg, Object.assign({}, o, {
+      tag: tags.join(" · "), ult: !!ctx.ult, element: el,
+      critical: tags.indexOf("✨ CHÍ MẠNG") >= 0, weak: isWeak, resisted: !!(el && !isWeak && aff.resist === el)
+    }));
     yield* flush(B);
   }
 
@@ -338,15 +342,15 @@
           break;
         case "buff":
           addMod(u, e.stat, e.amount, e.turns);
-          emit(B, u.name + " +" + e.amount + " " + e.stat.toUpperCase() + " trong " + e.turns + " turn.", "skill");
+          emit(B, u.name + " +" + e.amount + " " + e.stat.toUpperCase() + " trong " + e.turns + " turn.", "skill", { type: "buff", dst: u.uid, stat: e.stat });
           break;
         case "debuff":
-          for (const t of targets) if (t.alive && !parried(ctx, t)) { addMod(t, e.stat, -e.amount, e.turns); emit(B, t.name + " bị giảm " + e.amount + " " + e.stat.toUpperCase() + "!", "skill"); }
+          for (const t of targets) if (t.alive && !parried(ctx, t)) { addMod(t, e.stat, -e.amount, e.turns); emit(B, t.name + " bị giảm " + e.amount + " " + e.stat.toUpperCase() + "!", "skill", { type: "debuff", dst: t.uid, stat: e.stat }); }
           break;
-        case "immune": setSt(u, "immune", { turns: e.turns }); emit(B, u.name + " miễn nhiễm sát thương!", "skill"); break;
-        case "reflect": setSt(u, "reflect", { turns: e.turns, pct: e.pct }); break;
-        case "stealth": setSt(u, "stealth", { turns: e.turns }); emit(B, u.name + " tàng hình!", "skill"); break;
-        case "cleanse": cleanse(u, e.only); emit(B, u.name + " được thanh tẩy hiệu ứng xấu.", "good"); break;
+        case "immune": setSt(u, "immune", { turns: e.turns }); emit(B, u.name + " miễn nhiễm sát thương!", "skill", { type: "status", dst: u.uid, status: "immune" }); break;
+        case "reflect": setSt(u, "reflect", { turns: e.turns, pct: e.pct }); emit(B, u.name + " sẵn sàng phản đòn!", "skill", { type: "status", dst: u.uid, status: "reflect" }); break;
+        case "stealth": setSt(u, "stealth", { turns: e.turns }); emit(B, u.name + " tàng hình!", "skill", { type: "status", dst: u.uid, status: "stealth" }); break;
+        case "cleanse": cleanse(u, e.only); emit(B, u.name + " được thanh tẩy hiệu ứng xấu.", "good", { type: "cleanse", dst: u.uid }); break;
         case "healPct": heal(B, u, u.maxHp * e.pct * scale); break;
         case "sp": gainSp(u, e.amount); emit(B, u.name + " +" + e.amount + " Thể Lực.", "skill"); break;
         case "rage": u.rage = clamp(u.rage + e.amount, 0, RPG.CFG.RAGE_MAX); emit(B, u.name + " +" + e.amount + " Nộ.", "skill"); break;
@@ -370,7 +374,7 @@
             const p = t.st.poison || { stacks: 0 };
             setSt(t, "poison", { stacks: Math.min(e.max, p.stacks + e.amount), turns: CC.POISON_TURNS,
                                   dmg: Math.max(1, Math.round(effAtk(u) * e.dotPower * CC.DMG_SCALE * (pvpMode ? CC.PVP_DOT_MULT : 1))) });
-            emit(B, t.name + " nhiễm độc (" + t.st.poison.stacks + " stack)!", "skill");
+            emit(B, t.name + " nhiễm độc (" + t.st.poison.stacks + " stack)!", "skill", { type: "status", dst: t.uid, status: "poison" });
           }
           break;
         case "poisonDamage":
@@ -443,13 +447,13 @@
 
   function* execAction(B, u, a) {
     const ctx = { dodge: null, ult: false, skillName: "" };
-    if (a.type === "defend") { gainSp(u, RPG.CFG.SP_ON_DEFEND); emit(B, u.name + " thủ thế, chuẩn bị chịu đòn" + (u.isSummon ? "" : " (+" + RPG.CFG.SP_ON_DEFEND + " Thể Lực)") + ".", "def"); yield* flush(B); return; }
+    if (a.type === "defend") { gainSp(u, RPG.CFG.SP_ON_DEFEND); emit(B, u.name + " thủ thế, chuẩn bị chịu đòn" + (u.isSummon ? "" : " (+" + RPG.CFG.SP_ON_DEFEND + " Thể Lực)") + ".", "def", { type: "defend", src: u.uid }); yield* flush(B); return; }
 
     if (a.type === "attack") {
       const ts = pickTargets(B, u, "single", a.target);
       if (!ts.length) return;
-      emit(B, u.name + " tấn công " + ts[0].name + "!", "atk", { type: "attack", src: u.uid, dst: ts[0].uid });
       ctx.element = u.isSummon ? "void" : RPG.basicElement(u.f);
+      emit(B, u.name + " tấn công " + ts[0].name + "!", "atk", { type: "attack", src: u.uid, dst: ts[0].uid, element: ctx.element });
       yield* dmgGen(B, u, ts[0], 1.0, { basic: true }, ctx);
       if (!u.isSummon) { u.rage = clamp(u.rage + RPG.CFG.RAGE_ON_ATTACK, 0, RPG.CFG.RAGE_MAX); gainSp(u, RPG.CFG.SP_ON_ATTACK); }
       else if (u.hasRage) {
@@ -489,7 +493,7 @@
     if (isUlt) u.rage = manaRefund ? Math.round(RPG.CFG.RAGE_MAX * RPG.CFG.MANA_TRANSFER_PCT) : 0;
     else { u.cds[def.id] = Math.max(1, def.cd + 1 - (tal(u, "sp3") ? 1 : 0)); u.rage = clamp(u.rage + RPG.CFG.RAGE_ON_SKILL + (tal(u, "sp3") ? 15 : 0), 0, RPG.CFG.RAGE_MAX); u.sp -= skillCost(u, def); }
     const scale = qScale(a.quality);
-    emit(B, (isUlt ? "✧ " : "✦ ") + u.name + " dùng \"" + def.name + "\"" + (scale === 0 ? " — THẤT BẠI!" : "") + (isUlt ? " ✧" : ""), isUlt ? "skill" : "skill", { type: "cast", src: u.uid, skill: def.id });
+    emit(B, (isUlt ? "✧ " : "✦ ") + u.name + " dùng \"" + def.name + "\"" + (scale === 0 ? " — THẤT BẠI!" : "") + (isUlt ? " ✧" : ""), isUlt ? "skill" : "skill", { type: "cast", src: u.uid, skill: def.id, element: ctx.element, ultimate: isUlt });
     if (manaRefund) emit(B, "🔷 MANA TRANSFER! " + u.name + " hồi lại " + u.rage + " Nộ.", "good");
     if (scale === 0) { yield* flush(B); return; }
     const targets = pickTargets(B, u, def.target, a.target);

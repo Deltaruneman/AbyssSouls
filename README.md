@@ -34,9 +34,9 @@ Không cần Supabase để chơi cốt truyện.
 | Tua thoại đến lựa chọn | `Ctrl` |
 | Chọn đáp án thoại nhanh | `1`–`4` hoặc bấm đáp án |
 | Điều hướng các menu | Mũi tên hoặc `W A S D`, xác nhận bằng `Enter`/`Space` |
-| QTE trong trận | Bấm hướng mũi tên hiện trên màn hình; có thể dùng `W A S D` |
+| QTE trong trận | Bấm hướng mũi tên hiện trên màn hình, dùng `W A S D` hoặc chạm các nút mũi tên |
 
-Các nút hành động trên giao diện cũng có thể bấm trực tiếp. Di chuyển nhân vật bên trong tòa nhà hiện cần bàn phím; game chưa có cần điều khiển cảm ứng trên điện thoại.
+Các nút hành động trên giao diện cũng có thể bấm trực tiếp. Trên điện thoại, menu chiến đấu được xếp lại ở cạnh dưới để dễ chạm; chạm vào biểu tượng trạng thái trên thẻ nhân vật để xem tên và số lượt còn lại. Di chuyển nhân vật bên trong tòa nhà vẫn cần bàn phím.
 
 ## Vòng chơi
 
@@ -77,7 +77,7 @@ The TIU có thể gây sự cố ở một số phòng. Hãy đến nơi đượ
 - Mỗi lượt, chọn tấn công, phòng thủ, kỹ năng, Ultimate hoặc vật phẩm. Tấn công và phòng thủ giúp hồi Thể Lực chiến đấu; kỹ năng tiêu Thể Lực và có hồi chiêu.
 - Mỗi trận tiêu tốn 60 phút trong đồng hồ game; HP và hồi chiêu còn lại ảnh hưởng các trận sau.
 - Nộ tích lũy trong trận. Khi đầy, Ultimate có thể được dùng; QTE mũi tên giúp tăng hiệu quả. Một số trận có QTE để né hoặc đỡ đòn.
-- Hệ thuộc tính có điểm yếu và kháng. Trạng thái như Cháy, Độc, Đóng băng, Tê liệt và choáng có thể ảnh hưởng sát thương hoặc lượt hành động.
+- Hệ thuộc tính có điểm yếu và kháng. Trạng thái như Cháy, Độc, Đóng băng, Tê liệt và Choáng có thể ảnh hưởng sát thương hoặc lượt hành động; biểu tượng trên thẻ cho biết số lượt còn lại, chạm/bấm biểu tượng để đọc tên trạng thái.
 - HP được giữ lại giữa các trận; nhân vật thua còn ít nhất 1 HP. Đầu đêm mới, đội hình hồi phục. Thắng trận có thể cho EXP, ĐRL, linh kiện hoặc vật phẩm.
 - Có năm Class: Đấu Sĩ, Sát Thủ, Pháp Sư, Dược Sư và Triệu Hồi. Class quyết định chỉ số, hệ cơ bản, kỹ năng và Ultimate. Cấp tối đa là 8.
 - Mở tài năng bằng `T`. Ba nhánh Công Kích, Bền Bỉ và Thể Lực cho phép xây dựng lối chơi khác nhau; có thể tẩy điểm miễn phí.
@@ -110,5 +110,6 @@ Chế độ này cần dịch vụ Supabase hoạt động; phần chơi đơn k
 - `arena.js`, `arena_core.js`, `handler.mjs`, `index.ts`, `engine.mjs`: phần đấu trường và đồng bộ trực tuyến.
 - `build_engine.js`: helper đóng gói engine cho Edge Function; hiện vẫn giả định cấu trúc thư mục cũ.
 - `assets/`: ảnh, nhạc và tài nguyên giao diện.
+- VFX chiến đấu dùng theme **Flat Night** tại `assets/vfx/Cooked_FX_FREE_Flat_Night/Cooked_FX_FREE/Flat_Night/PNG_1x/`; metadata frame nằm trong `Flat_Night/anims.json`, giấy phép gốc được giữ cùng gói tải về.
 
 Frontend không cần bước build. Thư mục dự án hiện chưa có lệnh test chung; helper `build_engine.js` cũng cần được chỉnh lại đường dẫn trước khi dùng với cấu trúc checkout hiện tại. Khi chỉnh gameplay, mở game qua máy chủ tĩnh và kiểm tra trực tiếp các luồng bị ảnh hưởng.
