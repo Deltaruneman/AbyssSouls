@@ -82,7 +82,7 @@
     const talents = {};
     build.talents.forEach(function (k) { talents[k] = true; });
     const f = {
-      id: id || "GHOST", name: build.name, title: "Bản sao đấu trường", isPlayer: false, ghost: true,
+      id: id || "GHOST", name: build.name, title: "Bản sao đấu trường", isPlayer: false, ghost: true, pvp: true,
       classId: build.classId, level: 1, exp: 0, hp: 1, maxHp: 1, rage: 0, pieces: [], laPeace: 0, spellBreaker: false,
       drl: 0, trust: 0, inParty: false, alive: true, items: {}, components: {}, statuses: [],
       talents: talents, equip: Object.assign({}, build.equip)
@@ -111,7 +111,7 @@
     const swap = (seed & 1) === 1;                       // đồng xu: ai đứng phe "A" (phe A hành động trước khi bằng SPD)
     const first = swap ? buildB : buildA, second = swap ? buildA : buildB;
     const fa = makeGhost(first, "ARENA_1"), fb = makeGhost(second, "ARENA_2");
-    const B = RPGCombat.create({ allies: [fa], enemies: [fb], autoPlayer: true, aiLevel: AI_LEVEL, allyAiLevel: AI_LEVEL, rng: rng, loseOnPlayerDeath: true });
+    const B = RPGCombat.create({ allies: [fa], enemies: [fb], autoPlayer: true, aiLevel: AI_LEVEL, allyAiLevel: AI_LEVEL, rng: rng, loseOnPlayerDeath: true, pvp: true });
     let guard = 0;
     while (!B.over && guard++ < 80) {
       const info = RPGCombat.beginRound(B);

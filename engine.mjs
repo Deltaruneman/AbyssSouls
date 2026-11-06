@@ -83,6 +83,16 @@
     SP_ON_ATTACK: 5,                     // đánh thường: +5 TL
     SP_ON_DEFEND: 25,                    // phòng thủ: +25 TL (hồi sức)
 
+    // ---- Cân bằng PvP (chỉ áp dụng cho fighter có cờ pvp=true; chế độ chơi đơn KHÔNG bị ảnh hưởng) ----
+    // Hệ số nhân chỉ số gốc theo class, tìm bằng mô phỏng round-robin 5 class ở Lv3/4/6/8 (xem tools/balance).
+    PVP_CLASS: {
+      fighter: { hp: 0.94, atk: 1.15, def: 0.76, spd: 1.23 },
+      assassin: { hp: 1.00, atk: 0.87, def: 0.54, spd: 0.76 },
+      mage: { hp: 0.87, atk: 0.94, def: 0.88, spd: 1.50 },
+      healer: { hp: 1.07, atk: 1.24, def: 1.24, spd: 1.15 },
+      summoner: { hp: 1.00, atk: 1.16, def: 1.02, spd: 1.15 }
+    },
+
     // ---- Hệ thuộc tính & chí mạng ----
     WEAK_MULT: 1.3,                      // đánh trúng YẾU ĐIỂM: x1.3 sát thương, +WEAK_RAGE Nộ cho người đánh
     RESIST_MULT: 0.7,                    // đánh vào hệ KHÁNG: x0.7
@@ -474,9 +484,10 @@
     const b = CLASSES[f.classId].base;
     let mult = 1;
     CFG.GROWTH_LEVELS.forEach(function (lv) { if (f.level >= lv) mult += CFG.GROWTH_PCT; });
+    const pm = (f.pvp && CFG.PVP_CLASS && CFG.PVP_CLASS[f.classId]) || { hp: 1, atk: 1, def: 1, spd: 1 };
     return {
-      hp: Math.round(b.hp * mult * (hasTalent(f, "def1") ? 1.15 : 1)) + equipBonus(f, "hp"), atk: Math.round(b.atk * mult) + equipBonus(f, "atk"),
-      def: Math.round(b.def * mult) + equipBonus(f, "def"), spd: Math.round(b.spd * mult) + equipBonus(f, "spd")
+      hp: Math.round(b.hp * mult * (hasTalent(f, "def1") ? 1.15 : 1) * pm.hp) + equipBonus(f, "hp"), atk: Math.round(b.atk * mult * pm.atk) + equipBonus(f, "atk"),
+      def: Math.round(b.def * mult * pm.def) + equipBonus(f, "def"), spd: Math.round(b.spd * mult * pm.spd) + equipBonus(f, "spd")
     };
   }
 
@@ -911,13 +922,20 @@
     FREEZE_MULT: 1.5,
     QTE_FAIL_BELOW: 0.4,
     SUMMON_HP: { sword: 0.4, guard: 0.7 },
+    SWORD_ATK_PCT: 0.5, SWORDSMAN_ATK_PCT: 1.0,   // sức đánh của Ma Kiếm / Ma Kiếm Sĩ (theo ATK chủ)
     SUMMON_DEF_PCT: 0.5,
     POISON_TURNS: 3, POISON_MAX_ULT: 6,
     SWORDSMAN_RAGE_ATTACK: 15, SWORDSMAN_ULT_POWER: 2.0,
-    MAX_ROUNDS: 40
+    MAX_ROUNDS: 40,
+    // ---- Chế độ PvP (đấu trường): phòng thủ theo TỈ LỆ thay vì trừ thẳng, để không có class nào miễn nhiễm hoàn toàn ----
+    PVP_DEF_K: 100,        // sát thương = ATK*power * K/(K+DEF)
+    PVP_DMG_SCALE: 1.0,
+    PVP_DOT_MULT: 1.0,     // nhân sát thương độc/cháy theo thời gian trong PvP (DoT bỏ qua DEF nên dễ thành 'khắc chế cứng')
+    PVP_SWORD_ATK_PCT: 0.754, PVP_SWORDSMAN_ATK_PCT: 1.322, PVP_HP_SWORD: 0.500, PVP_HP_GUARD: 0.658   // chỉ số summon khi PvP
   };
 
   let rng = Math.random;
+  let pvpMode = false;   // đặt bởi create({pvp:true})
   const rand = (a, b) => a + rng() * (b - a);
   const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
@@ -940,6 +958,7 @@
       nextUid: 1, settled: false, playerUnit: null
     };
     B.dodge = !!B.opts.dodge;
+    pvpMode = !!B.opts.pvp;
     B.known = Object.assign({}, B.opts.known || {});   // id địch mà người chơi đã biết hệ (thuộc tính)
     opts.allies.forEach(function (f, i) {
       const u = makeUnit(B, f, "A");
@@ -996,8 +1015,9 @@
     const atk = effAtk(src, o.basic);
     const raw = atk * power;
     const def = o.ignoreDef ? 0 : eff(dst, "def");
-    let d = Math.max(raw * CC.MIN_DMG_PCT, raw - def * CC.DEF_FACTOR);
-    d *= rand(CC.VARIANCE[0], CC.VARIANCE[1]) * CC.DMG_SCALE;
+    let d;
+    if (pvpMode) { d = raw * CC.PVP_DEF_K / (CC.PVP_DEF_K + Math.max(0, def)); d *= rand(CC.VARIANCE[0], CC.VARIANCE[1]) * CC.PVP_DMG_SCALE; }
+    else { d = Math.max(raw * CC.MIN_DMG_PCT, raw - def * CC.DEF_FACTOR); d *= rand(CC.VARIANCE[0], CC.VARIANCE[1]) * CC.DMG_SCALE; }
     return d;
   }
 
@@ -1129,7 +1149,7 @@
       const old = findSummon(B, u, "sword");
       if (old) { old.hp = old.maxHp; emit(B, "Ma Kiếm được làm mới sức mạnh.", "skill"); return; }
       if (findSummon(B, u, "swordsman")) { emit(B, "Ma Kiếm Sĩ đã ở trên sân — không cần thêm Ma Kiếm.", ""); return; }
-      const s = spawnSummon(B, u, "sword", { name: "Ma Kiếm", hp: Math.round(mh * CC.SUMMON_HP.sword), atkPct: 0.5 });
+      const s = spawnSummon(B, u, "sword", { name: "Ma Kiếm", hp: Math.round(mh * (pvpMode ? CC.PVP_HP_SWORD : CC.SUMMON_HP.sword)), atkPct: (pvpMode ? CC.PVP_SWORD_ATK_PCT : CC.SWORD_ATK_PCT) });
       if (u.voidActive) applyVoid(B, s);
       emit(B, u.name + " triệu hồi " + s.name + "!", "skill", { type: "summon", uid: s.uid });
     } else if (kind === "guard") {
@@ -1137,11 +1157,11 @@
       const og = findSummon(B, u, "guard");
       if (og) { og.hp = og.maxHp; emit(B, "Hộ Vệ được làm mới sức mạnh.", "skill"); return; }
       const sw = findSummon(B, u, "sword");
-      const ghp = Math.round(mh * CC.SUMMON_HP.guard);
+      const ghp = Math.round(mh * (pvpMode ? CC.PVP_HP_GUARD : CC.SUMMON_HP.guard));
       if (sw) {                                           // HỢP THỂ
         const hp = sw.hp + ghp;
         sw.alive = false; sw.hp = 0;
-        const s = spawnSummon(B, u, "swordsman", { name: "Ma Kiếm Sĩ", hp: hp, atkPct: 1.0, taunt: true });
+        const s = spawnSummon(B, u, "swordsman", { name: "Ma Kiếm Sĩ", hp: hp, atkPct: (pvpMode ? CC.PVP_SWORDSMAN_ATK_PCT : CC.SWORDSMAN_ATK_PCT), taunt: true });
         if (u.voidActive) applyVoid(B, s);
         emit(B, "Ma Kiếm và Hộ Vệ hợp thể thành " + s.name + "!", "skill", { type: "summon", uid: s.uid });
       } else {
@@ -1219,7 +1239,7 @@
         case "status":
           for (const t of targets) {
             if (!t.alive || parried(ctx, t) || rng() >= (e.chance == null ? 1 : e.chance)) continue;
-            if (e.status === "burn") setSt(t, "burn", { turns: e.turns, dmg: Math.max(1, Math.round(effAtk(u) * e.dotPower * scale * CC.DMG_SCALE)) });
+            if (e.status === "burn") setSt(t, "burn", { turns: e.turns, dmg: Math.max(1, Math.round(effAtk(u) * e.dotPower * scale * CC.DMG_SCALE * (pvpMode ? CC.PVP_DOT_MULT : 1))) });
             else if (e.status === "freeze") setSt(t, "freeze", { turns: e.turns });
             else setSt(t, e.status, { turns: e.turns });           // paralyze / stun: tiêu hao khi bị bỏ lượt
             emit(B, t.name + " dính hiệu ứng " + ({ burn: "Cháy", freeze: "Đóng băng", paralyze: "Tê liệt", stun: "Choáng" }[e.status] || e.status) + "!", "skill", { type: "status", dst: t.uid, status: e.status });
@@ -1229,14 +1249,14 @@
           for (const t of targets) if (t.alive) {
             const p = t.st.poison || { stacks: 0 };
             setSt(t, "poison", { stacks: Math.min(e.max, p.stacks + e.amount), turns: CC.POISON_TURNS,
-                                  dmg: Math.max(1, Math.round(effAtk(u) * e.dotPower * CC.DMG_SCALE)) });
+                                  dmg: Math.max(1, Math.round(effAtk(u) * e.dotPower * CC.DMG_SCALE * (pvpMode ? CC.PVP_DOT_MULT : 1))) });
             emit(B, t.name + " nhiễm độc (" + t.st.poison.stacks + " stack)!", "skill");
           }
           break;
         case "poisonDamage":
           for (const t of targets) if (t.alive) {
             const stacks = (t.st.poison ? t.st.poison.stacks : 0) + (e.baseStacks && !t.st.poison ? e.baseStacks : 0);
-            if (stacks > 0) yield* dmgGen(B, u, t, e.powerPerStack * stacks * scale, { ignoreDef: true }, ctx);
+            if (stacks > 0) yield* dmgGen(B, u, t, e.powerPerStack * stacks * scale * (pvpMode ? CC.PVP_DOT_MULT : 1), { ignoreDef: true }, ctx);
             else emit(B, t.name + " không có độc để kích nổ.", "");
           }
           break;
@@ -1741,7 +1761,7 @@
     const talents = {};
     build.talents.forEach(function (k) { talents[k] = true; });
     const f = {
-      id: id || "GHOST", name: build.name, title: "Bản sao đấu trường", isPlayer: false, ghost: true,
+      id: id || "GHOST", name: build.name, title: "Bản sao đấu trường", isPlayer: false, ghost: true, pvp: true,
       classId: build.classId, level: 1, exp: 0, hp: 1, maxHp: 1, rage: 0, pieces: [], laPeace: 0, spellBreaker: false,
       drl: 0, trust: 0, inParty: false, alive: true, items: {}, components: {}, statuses: [],
       talents: talents, equip: Object.assign({}, build.equip)
@@ -1770,7 +1790,7 @@
     const swap = (seed & 1) === 1;                       // đồng xu: ai đứng phe "A" (phe A hành động trước khi bằng SPD)
     const first = swap ? buildB : buildA, second = swap ? buildA : buildB;
     const fa = makeGhost(first, "ARENA_1"), fb = makeGhost(second, "ARENA_2");
-    const B = RPGCombat.create({ allies: [fa], enemies: [fb], autoPlayer: true, aiLevel: AI_LEVEL, allyAiLevel: AI_LEVEL, rng: rng, loseOnPlayerDeath: true });
+    const B = RPGCombat.create({ allies: [fa], enemies: [fb], autoPlayer: true, aiLevel: AI_LEVEL, allyAiLevel: AI_LEVEL, rng: rng, loseOnPlayerDeath: true, pvp: true });
     let guard = 0;
     while (!B.over && guard++ < 80) {
       const info = RPGCombat.beginRound(B);

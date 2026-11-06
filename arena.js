@@ -222,11 +222,12 @@
     const v = TiuArena.validateBuild(b);
     if (!v.ok) { info("⚠ ĐỐI THỦ KHÔNG HỢP LỆ", `<p style="font-size:14px;">${esc(v.reason)}</p>`, pageOpponents); return; }
     const me = RPG.player(), stash = { hp: me.hp, items: me.items };
+    me.pvp = true;   // áp dụng hệ số cân bằng PvP cho nhân vật của bạn trong trận thử
     const st = RPG.getStats(me); me.items = {}; me.hp = st.hp; me.maxHp = st.hp;   // đấu trường: HP đầy, không dùng vật phẩm
     const ghost = TiuArena.makeGhost(v.build, "GHOST_" + String(opp.id).slice(0, 8));
     closeModal(true);
     startBattle({ enemyIds: [ghost.id], enemyFighters: [ghost], allyFighters: [], final: false, arena: true,
-      cleanup: () => { me.items = stash.items; me.hp = Math.max(1, Math.min(stash.hp, me.maxHp)); },
+      cleanup: () => { me.pvp = false; me.items = stash.items; me.maxHp = RPG.getStats(me).hp; me.hp = Math.max(1, Math.min(stash.hp, me.maxHp)); },
       onDone: (won, rounds) => {
         modal(won ? "🏆 BẠN THẮNG BẢN SAO" : "💀 BẠN THUA BẢN SAO", `<p style="font-size:14px;">Đối thủ: <b>${esc(v.build.name)}</b> (${esc(CLASS_NAME[v.build.classId] || v.build.classId)} Lv${v.build.level}) · ${rounds} lượt.</p>
           <p style="font-size:13px;color:var(--text-dim);">Trận thử — không ảnh hưởng điểm, HP và vật phẩm của bạn.</p>`,

@@ -109,7 +109,7 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
 #soundToggleBtn.muted #soundIcon{opacity:0.6;}
 /* ---------- Mục 2: nút Rón Rén (Sneak Mode) — cùng khuôn dạng nút HUD, riêng trạng thái "active" ---------- */
 #bagArea{display:flex;align-items:center;gap:4px;flex-shrink:0;}
-#bagBtn,#talentBtn{display:flex;align-items:center;justify-content:center;gap:5px;height:38px;flex-shrink:0;padding:0 12px;
+#bagBtn,#talentBtn,#helpBtn{display:flex;align-items:center;justify-content:center;gap:5px;height:38px;flex-shrink:0;padding:0 12px;
   background:#0d0e10;border:1px solid var(--line);color:var(--text);font-family:var(--font-mono);font-size:19px;cursor:pointer;border-radius:0;
   box-shadow:2px 3px 0 rgba(0,0,0,0.55);transition:border-color .1s,color .1s,box-shadow .1s;position:relative;}
 #bagBtn::before,#talentBtn::before{content:'[';position:absolute;left:3px;color:var(--text-dim);opacity:0;transition:opacity .1s;}
@@ -900,8 +900,8 @@ body.mod-midterm #nightBadge{color:var(--amber);}
 .hud-block{min-width:104px;}
 
 /* --- Nhật ký & sơ đồ: rộng hơn một chút cho vừa chữ --- */
-#logPane{width:340px;max-height:300px;line-height:1.55;}
-#miniMapWrap{width:340px;bottom:332px;}
+#logPane{width:300px;max-height:250px;line-height:1.5;}
+#miniMapWrap{width:230px;bottom:282px;}
 
 /* --- Hộp thoại / cửa hàng / chế tạo / tài năng: cuộn được, không bị cắt --- */
 #mgBox{max-height:92vh;display:flex;flex-direction:column;width:min(760px,94vw);}
@@ -936,8 +936,8 @@ body.mod-midterm #nightBadge{color:var(--amber);}
 
 /* --- Màn hình hẹp: thu gọn mà vẫn đọc được --- */
 @media (max-width:900px){
-  #logPane{width:min(340px,92vw);max-height:46vh;}
-  #miniMapWrap{width:min(340px,92vw);}
+  #logPane{width:min(300px,86vw);max-height:44vh;bottom:64px;}
+  #miniMapWrap{width:min(230px,70vw);bottom:64px;}
   .hud-block{min-width:84px;}
 }
 @media (max-width:560px){
@@ -961,3 +961,27 @@ body.mod-midterm #nightBadge{color:var(--amber);}
 /* Đấu trường: ô nhập key/tên */
 #mgBody input[type=text]{margin-top:4px;font-family:inherit;}
 #mgBody code{background:#0a0a0c;padding:1px 5px;border:1px solid var(--line);}
+
+/* ===== Thu nhỏ bản đồ / sơ đồ ===== */
+#mapModalWrap{width:min(440px,90vw,calc((100vh - 160px) * 0.99));}
+#sidePane{max-width:800px;}
+#roomBanner{min-height:230px;}
+#miniMapHead{font-size:13px;}
+
+/* ===== Hướng dẫn trực quan (tutorial.js) ===== */
+#tutLayer{display:none;position:fixed;inset:0;z-index:150;}
+#tutLayer.on{display:block;}
+#tutShield{position:absolute;inset:0;background:transparent;}
+#tutLayer.nospot #tutShield{background:rgba(0,0,0,.78);}
+#tutSpot{position:fixed;border:2px solid var(--amber);border-radius:6px;box-shadow:0 0 0 9999px rgba(0,0,0,.76),0 0 20px rgba(226,182,92,.65);transition:left .25s ease,top .25s ease,width .25s ease,height .25s ease;pointer-events:none;}
+#tutCard{position:fixed;background:#14110d;border:1px solid var(--amber);border-radius:6px;padding:14px 16px;box-shadow:0 8px 30px rgba(0,0,0,.7);font-size:15px;line-height:1.55;z-index:2;max-width:94vw;}
+#tutTitle{font-family:var(--font-disp);font-size:20px;letter-spacing:1px;color:var(--amber);margin-bottom:6px;}
+#tutText b{color:#f3e2b3;}
+#tutFoot{display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:10px;}
+#tutCount{font-size:13px;color:var(--text-dim);}
+#tutBtns{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
+
+#tutToast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:#14110d;border:1px solid var(--amber);color:var(--text);padding:10px 16px;font-size:15px;border-radius:6px;opacity:0;pointer-events:none;transition:all .3s;z-index:160;max-width:92vw;text-align:center;}
+#tutToast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+#helpBtn.pulse{animation:helpPulse 1.4s ease-in-out infinite;border-color:var(--amber);}
+@keyframes helpPulse{0%,100%{box-shadow:0 0 0 0 rgba(226,182,92,0);}50%{box-shadow:0 0 10px 3px rgba(226,182,92,.7);}}

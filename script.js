@@ -1917,7 +1917,7 @@ function startBattle(opts){
   });
   const knownEl = {};
   enemies.forEach(f=>{ if((f.trust||0)>=1 || (S.knownElements && S.knownElements[f.id])) knownEl[f.id] = true; });   // đã quen / đã khám phá từ trận trước
-  const B = RPGCombat.create({ allies, enemies, dodge:!!opts.final, controlAllies:false, known:knownEl, aiLevel:aiL });
+  const B = RPGCombat.create({ allies, enemies, dodge:!!opts.final, controlAllies:false, known:knownEl, aiLevel:aiL, pvp:!!opts.arena });
   // Bẫy gài đã trúng: -HP và mất lượt đầu
   enemies.forEach(f=>{
     const d = S.npcDebuff && S.npcDebuff[f.id];

@@ -82,6 +82,16 @@
     SP_ON_ATTACK: 5,                     // đánh thường: +5 TL
     SP_ON_DEFEND: 25,                    // phòng thủ: +25 TL (hồi sức)
 
+    // ---- Cân bằng PvP (chỉ áp dụng cho fighter có cờ pvp=true; chế độ chơi đơn KHÔNG bị ảnh hưởng) ----
+    // Hệ số nhân chỉ số gốc theo class, tìm bằng mô phỏng round-robin 5 class ở Lv3/4/6/8 (xem tools/balance).
+    PVP_CLASS: {
+      fighter: { hp: 0.94, atk: 1.15, def: 0.76, spd: 1.23 },
+      assassin: { hp: 1.00, atk: 0.87, def: 0.54, spd: 0.76 },
+      mage: { hp: 0.87, atk: 0.94, def: 0.88, spd: 1.50 },
+      healer: { hp: 1.07, atk: 1.24, def: 1.24, spd: 1.15 },
+      summoner: { hp: 1.00, atk: 1.16, def: 1.02, spd: 1.15 }
+    },
+
     // ---- Hệ thuộc tính & chí mạng ----
     WEAK_MULT: 1.3,                      // đánh trúng YẾU ĐIỂM: x1.3 sát thương, +WEAK_RAGE Nộ cho người đánh
     RESIST_MULT: 0.7,                    // đánh vào hệ KHÁNG: x0.7
@@ -473,9 +483,10 @@
     const b = CLASSES[f.classId].base;
     let mult = 1;
     CFG.GROWTH_LEVELS.forEach(function (lv) { if (f.level >= lv) mult += CFG.GROWTH_PCT; });
+    const pm = (f.pvp && CFG.PVP_CLASS && CFG.PVP_CLASS[f.classId]) || { hp: 1, atk: 1, def: 1, spd: 1 };
     return {
-      hp: Math.round(b.hp * mult * (hasTalent(f, "def1") ? 1.15 : 1)) + equipBonus(f, "hp"), atk: Math.round(b.atk * mult) + equipBonus(f, "atk"),
-      def: Math.round(b.def * mult) + equipBonus(f, "def"), spd: Math.round(b.spd * mult) + equipBonus(f, "spd")
+      hp: Math.round(b.hp * mult * (hasTalent(f, "def1") ? 1.15 : 1) * pm.hp) + equipBonus(f, "hp"), atk: Math.round(b.atk * mult * pm.atk) + equipBonus(f, "atk"),
+      def: Math.round(b.def * mult * pm.def) + equipBonus(f, "def"), spd: Math.round(b.spd * mult * pm.spd) + equipBonus(f, "spd")
     };
   }
 
