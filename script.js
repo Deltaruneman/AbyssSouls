@@ -2880,16 +2880,49 @@ function isBlockingOverlayOpen(){
   return ['mgModal','mapModal','vnOverlay','jumpscareOverlay','gameOverScreen','winScreen','settingsScreen','battleOverlay','titleScreen']
     .some(id=>{ const el=$(id); return el && !el.classList.contains('hidden'); });
 }
-function openTutorialMenuSafe(){
+let tutorialScriptLoading = false;
+function showTutorialFallback(reason){
+  showModal('❓ HƯỚNG DẪN', '<p>Đi lại: <b>WASD</b> hoặc phím mũi tên. Tương tác: <b>E</b>. Bản đồ: <b>M</b>. Túi đồ: <b>B</b>. Nhật ký nhiệm vụ: <b>Q</b>. Tạm dừng: <b>Esc</b>.</p><p>'+(reason||'File tutorial.js chưa tải hoặc chưa khởi tạo được.')+'</p>', [
+    {label:'Thử tải lại',primary:true,onClick:()=>{ closeModal(true); openTutorialMenuSafe(true); }},
+    {label:'Đóng',onClick:()=>closeModal()}
+  ]);
+}
+function openTutorialMenuSafe(retry){
   const tut = window.TiuTutorial;
   if(tut && typeof tut.openMenu==='function'){
     try{
       tut.openMenu();
       const modal = $('mgModal');
-      if(modal && !modal.classList.contains('hidden')) return;
+      if(modal && !modal.classList.contains('hidden') && $('mgTitle').textContent==='❓ HƯỚNG DẪN' && $('mgBody').querySelector('[data-tut]')) return;
     }catch(e){ /* dùng hướng dẫn dự phòng bên dưới */ }
   }
-  showModal('❓ HƯỚNG DẪN', '<p>Đi lại: <b>WASD</b> hoặc phím mũi tên. Tương tác: <b>E</b>. Bản đồ: <b>M</b>. Túi đồ: <b>B</b>. Nhật ký nhiệm vụ: <b>Q</b>. Tạm dừng: <b>Esc</b>.</p><p>Hướng dẫn trực quan chưa tải được. Bạn vẫn có thể tiếp tục chơi bằng các phím trên.</p>', [{label:'Đóng',primary:true,onClick:()=>closeModal()}]);
+  if(tutorialScriptLoading){
+    showModal('ĐANG TẢI HƯỚNG DẪN', '<p>Đang tải lại phần hướng dẫn. Vui lòng chờ một chút.</p>', [{label:'Đóng',primary:true,onClick:()=>closeModal()}]);
+    return;
+  }
+  if(!window.TiuTutorial){
+    tutorialScriptLoading = true;
+    showModal('ĐANG TẢI HƯỚNG DẪN', '<p>Phần hướng dẫn chưa được nạp. Đang thử tải lại từ thư mục game…</p>', [{label:'Đóng',primary:true,onClick:()=>closeModal()}]);
+    const tag = document.createElement('script');
+    tag.src = new URL('tutorial.js', document.baseURI).href + '?retry=' + Date.now();
+    tag.onload = ()=>{
+      tutorialScriptLoading = false;
+      const loaded = window.TiuTutorial;
+      if(loaded && typeof loaded.openMenu==='function'){
+        try{
+          loaded.openMenu();
+          if($('mgTitle').textContent!=='❓ HƯỚNG DẪN' || !$('mgBody').querySelector('[data-tut]')) showTutorialFallback('File đã tải nhưng menu hướng dẫn không khởi tạo được.');
+        }catch(e){ showTutorialFallback('File đã tải nhưng menu hướng dẫn không khởi tạo được.'); }
+      } else showTutorialFallback('Không tìm thấy module hướng dẫn sau khi tải lại. Hãy kiểm tra tutorial.js có nằm cạnh index.html không.');
+    };
+    tag.onerror = ()=>{
+      tutorialScriptLoading = false;
+      showTutorialFallback('Không tải được tutorial.js. Hãy kiểm tra file nằm cạnh index.html rồi thử lại.');
+    };
+    document.head.appendChild(tag);
+    return;
+  }
+  showTutorialFallback(retry ? 'Vẫn chưa nạp được tutorial.js. Hãy kiểm tra file nằm cạnh index.html.' : 'Menu hướng dẫn chưa mở được.');
 }
 // Gắn đường mở độc lập để menu vẫn phản hồi nếu module tutorial chưa kịp mount.
 document.addEventListener('click',e=>{
