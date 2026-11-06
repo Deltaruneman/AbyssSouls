@@ -48,7 +48,23 @@
   const STEP_GUARD_MS = 700;    // sau khi một bước hiện ra, bỏ qua phím trong 0,7 giây để không bị "nhảy bước" do bấm nhanh
   let layer = null, spot = null, card = null;
 
+  const CSS = "#tutLayer{display:none;position:fixed;left:0;top:0;right:0;bottom:0;z-index:150;}#tutLayer.on{display:block;}#tutShield{position:absolute;left:0;top:0;right:0;bottom:0;background:transparent;}#tutLayer.nospot #tutShield{background:rgba(0,0,0,.78);}"
+    + "#tutSpot{position:fixed;border:2px solid #e2b65c;border-radius:6px;box-shadow:0 0 0 9999px rgba(0,0,0,.76),0 0 20px rgba(226,182,92,.65);transition:left .25s ease,top .25s ease,width .25s ease,height .25s ease;pointer-events:none;}"
+    + "#tutCard{position:fixed;background:#14110d;color:#e8e0d0;border:1px solid #e2b65c;border-radius:6px;padding:14px 16px;box-shadow:0 8px 30px rgba(0,0,0,.7);font-size:15px;line-height:1.55;z-index:2;max-width:94vw;box-sizing:border-box;font-family:inherit;}"
+    + "#tutTitle{font-size:20px;letter-spacing:1px;color:#e2b65c;margin-bottom:6px;font-weight:700;}#tutText b{color:#f3e2b3;}#tutFoot{display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:10px;}#tutCount{font-size:13px;color:#a89e8e;}#tutBtns{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;}"
+    + "#tutBtns button{background:#241f18;color:#e8e0d0;border:1px solid #6b5a3a;padding:7px 12px;font-size:14px;cursor:pointer;font-family:inherit;}#tutBtns button.primary{border-color:#e2b65c;background:#3a2f1a;}"
+    + "#tutToast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:#14110d;border:1px solid #e2b65c;color:#e8e0d0;padding:10px 16px;font-size:15px;border-radius:6px;opacity:0;pointer-events:none;transition:all .3s;z-index:160;max-width:92vw;text-align:center;}#tutToast.on{opacity:1;transform:translateX(-50%) translateY(0);}";
+  function injectCss() {
+    if (document.getElementById("tutStyle")) return;
+    const st = document.createElement("style"); st.id = "tutStyle"; st.textContent = CSS;
+    (document.head || document.documentElement).appendChild(st);
+  }
+  /* Lớp hướng dẫn có thực sự đang phủ màn hình không? (nếu không -> hủy, tuyệt đối không chặn phím) */
+  function layerWorks() {
+    try { const cs = getComputedStyle(layer); return cs.position === "fixed" && cs.display !== "none"; } catch (e) { return false; }
+  }
   function build() {
+    injectCss();
     if (layer) return;
     layer = document.createElement("div"); layer.id = "tutLayer";
     layer.innerHTML = '<div id="tutShield"></div><div id="tutSpot"></div><div id="tutCard" role="dialog" aria-live="polite"><div id="tutTitle"></div><div id="tutText"></div><div id="tutFoot"><span id="tutCount"></span><span id="tutBtns"><button class="btn" id="tutSkip">Bỏ qua</button><button class="btn" id="tutBack">← Lùi</button><button class="btn primary" id="tutNext">Tiếp ▶</button></span></div></div>';
@@ -58,6 +74,7 @@
     $("tutSkip").textContent = "Bỏ qua (không hiện lại)";
   }
   function toast(msg) {
+    injectCss();
     let el = $("tutToast");
     if (!el) { el = document.createElement("div"); el.id = "tutToast"; document.body.appendChild(el); }
     el.textContent = msg; el.classList.add("on");
@@ -104,6 +121,13 @@
     active = { key: key, steps: t.steps, i: 0, shownAt: Date.now(), prevPaused: (typeof S !== "undefined" && S) ? !!S.paused : false };
     if (typeof S !== "undefined" && S && S.running && typeof isBattleActive === "function" && !isBattleActive()) S.paused = true;
     layer.classList.add("on");
+    if (!layerWorks()) {   // hiển thị lỗi -> hủy ngay, trả lại trạng thái game, không đánh dấu đã xem
+      layer.classList.remove("on");
+      if (typeof S !== "undefined" && S && S.running) { S.paused = active.prevPaused; S.lastTick = performance.now(); }
+      active = null; snoozed[key] = true;
+      try { console.warn("[tutorial] Lớp hướng dẫn không hiển thị được — đã hủy."); } catch (e) { /* bỏ qua */ }
+      return false;
+    }
     render();
     return true;
   }
@@ -121,11 +145,12 @@
 
   /* ------------------------------ MENU HƯỚNG DẪN (H) ------------------------------ */
   function openMenu() {
-    if (active || typeof showModal !== "function") return;
+    if (active) finish("snooze");           // đang có hướng dẫn mở: đóng nó trước, rồi mở menu
+    if (typeof showModal !== "function") return;
     const rows = Object.keys(TOURS).map((k) => `<div class="shopItem"><span>${TOURS[k].icon} <b>${TOURS[k].name}</b><br><span style="font-size:12px;color:var(--text-dim);">${TOURS[k].steps.length} bước${done()[k] ? " · đã xem" : ""}</span></span><button class="btn primary" data-tut="${k}">Xem</button></div>`).join("");
-    showModal("❓ HƯỚNG DẪN", rows + `<p style="font-size:12px;color:var(--text-dim);margin-top:8px;">Bài Chiến đấu cần đang trong một trận để rọi đúng vào từng phần giao diện.</p>`, [
+    try { showModal("❓ HƯỚNG DẪN", rows + `<p style="font-size:12px;color:var(--text-dim);margin-top:8px;">Bài Chiến đấu cần đang trong một trận để rọi đúng vào từng phần giao diện.</p>`, [
       { label: "Đặt lại tất cả (xem lại từ đầu)", onClick: () => { try { localStorage.removeItem(LS); } catch (e) { /* bỏ qua */ } openMenu(); } },
-      { label: "Đóng", primary: true, onClick: () => closeModal() }]);
+      { label: "Đóng", primary: true, onClick: () => closeModal() }]); } catch (e) { toast("Không mở được menu hướng dẫn: " + (e && e.message)); try { console.error(e); } catch (x) { /* bỏ qua */ } return; }
     document.querySelectorAll("#mgBody [data-tut]").forEach((b) => {
       b.onclick = () => { const k = b.getAttribute("data-tut"); delete snoozed[k]; closeModal(); setTimeout(() => start(k, true), 60); };
     });
@@ -138,7 +163,7 @@
       !(typeof VN_ACTIVE !== "undefined" && VN_ACTIVE) && !(typeof TRAVEL !== "undefined" && TRAVEL.busy);
   }
   function poll() {
-    if (active) return;
+    if (active) { if (layer && !layerWorks()) finish("snooze"); return; }
     const d = done();
     const calm = Date.now() - lastInputAt > 1500;
     if (!idle()) idleSince = 0; else if (!idleSince) idleSince = Date.now();
@@ -163,7 +188,8 @@
       if (active) {
         e.preventDefault(); e.stopImmediatePropagation();
         if (e.repeat || Date.now() - active.shownAt < STEP_GUARD_MS) return;   // đang bấm dồn để bỏ qua thoại -> không nhảy bước
-        if (k === "enter" || k === "arrowright" || k === " ") next();
+        if (k === "h") { finish("snooze"); openMenu(); }
+        else if (k === "enter" || k === "arrowright" || k === " ") next();
         else if (k === "arrowleft") back();
         else if (k === "escape") finish("snooze");
         return;
