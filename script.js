@@ -2880,6 +2880,28 @@ function isBlockingOverlayOpen(){
   return ['mgModal','mapModal','vnOverlay','jumpscareOverlay','gameOverScreen','winScreen','settingsScreen','battleOverlay','titleScreen']
     .some(id=>{ const el=$(id); return el && !el.classList.contains('hidden'); });
 }
+function openTutorialMenuSafe(){
+  const tut = window.TiuTutorial;
+  if(tut && typeof tut.openMenu==='function'){
+    try{
+      tut.openMenu();
+      const modal = $('mgModal');
+      if(modal && !modal.classList.contains('hidden')) return;
+    }catch(e){ /* dùng hướng dẫn dự phòng bên dưới */ }
+  }
+  showModal('❓ HƯỚNG DẪN', '<p>Đi lại: <b>WASD</b> hoặc phím mũi tên. Tương tác: <b>E</b>. Bản đồ: <b>M</b>. Túi đồ: <b>B</b>. Nhật ký nhiệm vụ: <b>Q</b>. Tạm dừng: <b>Esc</b>.</p><p>Hướng dẫn trực quan chưa tải được. Bạn vẫn có thể tiếp tục chơi bằng các phím trên.</p>', [{label:'Đóng',primary:true,onClick:()=>closeModal()}]);
+}
+// Gắn đường mở độc lập để menu vẫn phản hồi nếu module tutorial chưa kịp mount.
+document.addEventListener('click',e=>{
+  const help=e.target && e.target.closest ? e.target.closest('#helpBtn') : null;
+  if(!help) return;
+  e.preventDefault(); e.stopPropagation(); openTutorialMenuSafe();
+},true);
+window.addEventListener('keydown',e=>{
+  if((e.key||'').toLowerCase()!=='h' || e.ctrlKey || e.metaKey || e.altKey || isTypingTarget(e.target)) return;
+  if(typeof S==='undefined' || !S || !S.running || isBattleActive()) return;
+  e.preventDefault(); e.stopImmediatePropagation(); openTutorialMenuSafe();
+},true);
 function openPauseMenu(){
   if(!S || !S.running) return;
   if(isBlockingOverlayOpen()) return;
