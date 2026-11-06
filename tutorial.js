@@ -1,7 +1,7 @@
 /* =========================================================================
    tutorial.js — HƯỚNG DẪN TRỰC QUAN CHO NGƯỜI CHƠI MỚI
    Nạp SAU script.js. Hiện "đèn rọi" (spotlight) vào đúng phần giao diện đang được giải thích.
-   - Tự bật lần đầu: hướng dẫn CƠ BẢN (đêm 1), CHIẾN ĐẤU (trận đầu), TÀI NĂNG (lần có điểm mới ở Lv3).
+   - Hướng dẫn theo chủ đề, có thể mở lại bất cứ lúc nào; một số bài tự bật khi gặp cơ chế lần đầu.
    - Phím: Enter / → / Space = tiếp · ← = lùi · Esc = bỏ qua · H = mở menu hướng dẫn bất cứ lúc nào.
    - Trạng thái "đã xem" lưu ở localStorage (tiu_tut_done).
    ========================================================================= */
@@ -14,29 +14,84 @@
 
   /* ------------------------------ NỘI DUNG CÁC BÀI ------------------------------ */
   const TOURS = {
-    basic: { name: "Cơ bản", icon: "🧭", steps: [
-      { title: "Chào mừng đến The TIU", text: "5 sinh viên thiếu ĐRL, chỉ 1 suất tốt nghiệp loại Giỏi. Sức mạnh của bạn là <b>ý chí</b> được The TIU mô phỏng thành hình hài. Hướng dẫn này dài khoảng 1 phút — bấm <b>Enter</b> để đi tiếp, <b>Esc</b> để bỏ qua." },
-      { sel: "#hud", title: "Thanh trạng thái", text: "Giờ trong ca trực, <b>HP</b>, thanh kinh nghiệm, <b>Thể lực</b> đi lại và nơi The TIU được thấy lần cuối. Hết giờ ca là hết đêm." },
-      { sel: "#energyOuter", title: "Thể lực đi lại", text: "Mỗi lần sang khu vực khác tốn <b>20 thể lực</b>. Cạn thể lực mà vẫn đi thì sẽ bị <b>đánh lén</b> (vào trận chỉ còn 50% HP, mọi skill đang hồi chiêu). Nghỉ ở Căn tin để hồi." },
-      { sel: "#roomBanner", title: "Bản đồ khu vực", text: "Di chuyển bằng <b>WASD</b> hoặc phím mũi tên. Đứng cạnh một vật rồi bấm <b>E</b>: cửa sang khu khác, bảng sự cố (⚠ để kiếm ĐRL), điểm nhặt đồ, NPC, quầy Căn tin." },
-      { sel: "#miniMapWrap", title: "Sơ đồ", text: "Cho bạn biết đang ở đâu. Bấm <b>M</b> để phóng to và chọn khu vực liền kề để đi." },
-      { sel: "#nightBrief", title: "Mục tiêu đêm", text: "Ghi biến cố của đêm (mất điện, sương mù...), các phòng có <b>mini-boss</b> canh giữ và The TIU lần cuối thấy ở đâu. Đọc trước khi di chuyển." },
-      { sel: "#actionPane", title: "Hành động", text: "Nút hành động trong phòng hiện ở đây. Đối thủ gặp được ở phòng thì chọn <b>nói chuyện / thách đấu</b>. Nói chuyện nhiều để tăng <b>Tin tưởng</b>: đủ 2 điểm sẽ lập đội và nhận nhiệm vụ riêng." },
-      { sel: "#bagBtn", title: "Túi đồ [B]", text: "Vật phẩm hồi máu, giải độc... Mở bằng <b>B</b>." },
-      { sel: "#talentBtn", title: "Tài năng [T]", text: "Bạn đang có <b>1 điểm Tài Năng</b> — học ngay! 3 nhánh: Công kích, Bền bỉ, Thể lực. Cứ 2 cấp có thêm 1 điểm, mỗi nhiệm vụ đồng đội +1." },
-      { sel: "#logPane", title: "Nhật ký ca trực", text: "Mọi sự kiện được ghi ở đây: ai vừa đến, sự cố mới, kết quả trận." },
-      { title: "Hãy tránh The TIU", text: "Nếu nó bắt được bạn, bạn phải <b>đối đầu</b> (rất khó) hoặc <b>bỏ cuộc</b> — và đó là một bad ending. Căn tin trong giờ an toàn là nơi trú ẩn. Bấm <b>H</b> bất cứ lúc nào để xem lại hướng dẫn." }
+    basic: { name: "Bắt đầu & điều khiển", icon: "🧭", steps: [
+      { title: "Chào mừng đến The TIU", text: "Năm sinh viên cạnh tranh suất tốt nghiệp loại Giỏi. Bạn cần sống sót, kiếm <b>ĐRL</b> và chọn cách đối đầu với The TIU. Bấm <b>Enter / → / Space</b> để tiếp, <b>←</b> để lùi, <b>Esc</b> để đóng bài." },
+      { sel: "#hud", title: "Thanh trạng thái", text: "Theo dõi giờ ca, HP, mức hoạt động của The TIU, thể lực đi lại và vị trí nó được nhìn thấy lần cuối. Khi hết giờ, đêm kết thúc và thứ hạng ĐRL được tính." },
+      { sel: "#roomBanner", title: "Đi lại trong tòa nhà", text: "Dùng <b>WASD</b> hoặc phím mũi tên để đi trong sơ đồ tòa nhà. Đến gần vật thể sẽ thấy nhãn tương tác; bấm <b>E</b> để dùng NPC, cửa, điểm nhặt đồ, sự cố, quầy hoặc bàn chế tạo. Nếu bản đồ tòa nhà không khả dụng, dùng nút hành động bên dưới." },
+      { sel: "#actionPane", title: "Hành động luôn có nút bấm", text: "Các hành động hợp lệ trong phòng hiện ở đây. Bạn có thể bấm nút trực tiếp; di chuyển giữa phòng cũng có nút đích đến, nên không cần dùng phím tắt để chơi." },
+      { title: "Thoại và lựa chọn", text: "Bấm vào khung thoại hoặc dùng <b>J / Enter / Space</b> để hiện chữ và sang câu tiếp. <b>Ctrl</b> tua đến lựa chọn tiếp theo; phím <b>1–4</b> chọn nhanh, hoặc bấm đáp án trên màn hình. Lựa chọn có thể thay đổi quan hệ và kết thúc." },
+      { sel: "#miniMapWrap", title: "Bản đồ khuôn viên", text: "Bản đồ nhỏ cho biết vị trí và các phòng nối trực tiếp. Bấm <b>M</b> hoặc <b>⤢</b> để mở bản đồ lớn; chọn phòng viền sáng để đi sang đó." },
+      { sel: "#nightBrief", title: "Mục tiêu và cảnh báo", text: "Đọc mục tiêu đêm, thứ hạng ĐRL, sự cố gần nhất, mini-boss, biến cố thời tiết và vị trí The TIU. Sương mù che vị trí lần cuối; mất điện làm nó đi nhanh; trăng máu tốn thêm thể lực." },
+      { sel: "#logPane", title: "Nhật ký ca trực", text: "Nhật ký ghi sự cố, NPC di chuyển, phần thưởng, trận đấu và cảnh báo. Nếu bảng bị thu gọn, bấm biểu tượng 📜 để mở lại." },
+      { sel: "#talentBtn", title: "Điểm Tài Năng đầu tiên", text: "Bạn bắt đầu với một điểm. Bấm <b>T</b> hoặc ⭐ để chọn một tài năng; có thể đổi build miễn phí bằng nút Tẩy điểm. Bài riêng giải thích cách xây dựng nhân vật." },
+      { sel: "#helpBtn", title: "Mở lại bất kỳ lúc nào", text: "Khi đang khám phá, nút ❓ hoặc phím <b>H</b> mở danh sách mọi bài. Bài đã xem vẫn có thể xem lại; dùng <b>Đặt lại tất cả</b> nếu muốn bật lại hướng dẫn tự động. Trong trận, hãy tập trung vào bảng lệnh chiến đấu." }
     ] },
-    battle: { name: "Chiến đấu", icon: "⚔", steps: [
-      { sel: "#pkAllyInfo", title: "Thẻ nhân vật", text: "<b>HP</b> là máu. <b>NỘ</b> tích khi đánh và bị đánh — đầy thanh là dùng được <b>Ultimate</b>. <b>TL</b> (Thể lực chiến đấu) là tài nguyên cho skill thường." },
-      { sel: "#pkEnemyInfo", title: "Đối thủ", text: "Xem HP và Nộ của địch. <b>Nộ đầy</b> nghĩa là nó sắp tung Ultimate. Dòng <b>HỆ ĐỊCH</b> ở lời nhắc cho biết điểm yếu — hiện ❓ nếu bạn chưa khám phá." },
-      { sel: "#pkMenu", title: "Chọn lệnh", text: "Dùng <b>↑↓</b> + <b>Enter</b> (hoặc phím số). <b>Tấn công</b>: +Nộ, +TL. <b>Kỹ năng</b>: tốn TL, có hồi chiêu. <b>Phòng thủ</b>: giảm sát thương và <b>+25 TL</b>. <b>Vật phẩm</b>. <b>ULTIMATE</b> khi đủ Nộ." },
-      { sel: "#pkTextBox", title: "Hệ thuộc tính & chí mạng", text: "💥 <b>Yếu điểm</b>: ×1.3 sát thương. 🛡 <b>Kháng</b>: ×0.7. ✨ <b>Chí mạng</b> theo SPD. Đánh thử để lộ hệ của địch rồi chọn skill khắc hệ." },
-      { sel: "#pkTurn", title: "Mẹo sinh tồn", text: "Địch <b>Nộ đầy</b> → hãy <b>Phòng thủ</b>: đỡ đúng Ultimate chỉ nhận 30% sát thương và được +25 Nộ. Hết TL thì phòng thủ để hồi sức, đừng cố xả skill." }
+    survival: { name: "Khám phá, thời gian & sinh tồn", icon: "🕯️", steps: [
+      { sel: "#clockVal", title: "Thời gian chạy trong ca", text: "Một giây thực tương ứng một phút trong game. Đi giữa hai phòng tốn <b>10 phút</b>; hoạt động và nghỉ cũng làm thời gian trôi, nên hãy cân đối đường đi." },
+      { sel: "#energyOuter", title: "Thể lực đi lại", text: "Đi sang phòng khác tiêu thể lực. Khi thấp hơn chi phí di chuyển, đi tiếp sẽ khiến bạn bị phục kích: vào trận với <b>50% HP</b> và kỹ năng hồi chiêu. Nghỉ ở Căn tin đang trong giờ an toàn để hồi thể lực." },
+      { sel: "#staminaOuter", title: "HP và hồi phục", text: "HP giữa các trận được giữ lại; nhân vật thua trận còn ít nhất 1 HP. Đầu đêm mới cả đội hồi đầy. Dùng vật phẩm hoặc nghỉ Căn tin để hồi trong đêm." },
+      { sel: "#miniMapWrap", title: "Lập lộ trình", text: "Di chuyển qua các phòng liền kề. Hãy ghé phòng có nhặt đồ, NPC, sự cố hoặc mini-boss nếu còn thời gian; đường đi xa sẽ tiêu thể lực và làm The TIU tiếp tục tuần tra." },
+      { sel: "#nightBrief", title: "Căn tin và giờ an toàn", text: "Căn tin mở quầy suốt đêm. Trong Chapter 1, nơi này an toàn từ <b>01:00–02:00</b> và <b>04:00–05:00</b>; nghỉ tốn một giờ, hồi HP cho bạn/đồng đội và hồi thể lực. Sang Chapter 2, hãy kiểm tra nút Nghỉ vì nơi an toàn không còn áp dụng." },
+      { title: "The TIU săn theo phòng", text: "The TIU tuần tra theo thời gian; khi ở cùng phòng, bạn có thể bị bắt và buộc phải chiến đấu. Sau khi thoát một lần, nó có khoảng thời gian bị đẩy lùi. Theo dõi thanh hoạt động và vị trí lần cuối để tránh chạm mặt." },
+      { title: "Tạm dừng và lưu", text: "Bấm <b>Esc</b> để tạm dừng, mở cài đặt hoặc về menu. Tiến trình tự lưu; bắt đầu đêm mới tạo checkpoint để bạn có thể thử lại đêm đó. Ở menu chính, chọn <b>Tiếp tục</b> để tải bản lưu." },
+      { title: "Đêm và thứ hạng", text: "Chapter 1 có ba đêm loại trừ: kiếm ĐRL, sống sót và tránh đứng cuối bảng. Mua đồ sẽ tiêu ĐRL nhưng phần đã tiêu không bị tính là mất điểm khi đồng đội xét lòng trung thành." }
     ] },
-    talent: { name: "Tài năng & trang bị", icon: "⭐", steps: [
-      { sel: "#talentBtn", title: "Bạn có điểm Tài Năng mới", text: "Bấm <b>T</b> để mở. Học từ trên xuống trong mỗi nhánh. Bạn có thể <b>Tẩy điểm</b> miễn phí để thử build khác." },
-      { sel: "#bagBtn", title: "Trang bị", text: "Thu thập linh kiện (từ điểm nhặt đồ và <b>mini-boss</b>) rồi chế tạo <b>vũ khí / giáp / bùa</b> ở Bàn chế tạo trong Căn tin. Đồ chế xong tự được mang vào." }
+    events: { name: "Sự cố & mini-game", icon: "⚠️", steps: [
+      { sel: "#nightBrief", title: "Sự cố do The TIU gây ra", text: "Sự cố xuất hiện ở một tòa và có hạn xử lý. Mục tiêu đêm cho biết nơi gần nhất và thời gian còn lại. Bỏ lỡ có thể khiến sự cố lan hoặc kéo The TIU đến gần." },
+      { sel: "#resolveBtn", title: "Bắt đầu xử lý", text: "Đến đúng phòng có biểu tượng ⚠ rồi bấm <b>XỬ LÝ SỰ CỐ</b> (hoặc đến gần vật thể và bấm E). Hoàn thành mini-game nhận ĐRL; thất bại mất cơ hội nhận thưởng và có thể làm The TIU áp sát." },
+      { title: "Các dạng thử thách", text: "Tìm biểu tượng khác lạ hoặc quả bóng thật; đảo đèn cho khớp mẫu; nối hai đầu dây cùng màu; trả lời câu hỏi; gõ lại chuỗi mũi tên; hoặc sắp số theo thứ tự. Màn hình của từng thử thách luôn ghi luật và thời gian còn lại. Làm sai có thể kết thúc ngay." },
+      { title: "Ưu tiên theo khoảng cách", text: "Phần thưởng sự cố tăng theo đêm. Ưu tiên sự cố gần, còn nhiều thời gian và đường đi an toàn; đừng cố chạy vòng xa khi thể lực thấp hoặc The TIU đang sát bên." },
+      { title: "Mini-boss canh phòng", text: "Một số đêm có phòng bị mini-boss và tay sai chặn. Mục tiêu đêm cho biết vị trí. Bạn có thể chọn chiến đấu hoặc lùi; thắng nhận ĐRL, EXP và linh kiện." },
+      { title: "Bẫy và phục kích", text: "Bẫy gài đặt tại phòng hiện tại, tồn tại giới hạn thời gian và làm đối thủ bước vào mất HP, mất lượt đầu ở trận kế tiếp. Đổi lại, hoạt động gây tiếng động có thể khiến The TIU nhảy đến gần." }
+    ] },
+    social: { name: "NPC, đồng đội & nhiệm vụ", icon: "🤝", steps: [
+      { sel: "#actionPane", title: "Gặp NPC", text: "NPC xuất hiện ở các phòng khác nhau và có thể đi lang thang. Đến gần họ bấm <b>E</b>, hoặc dùng nút Gặp trong bảng hành động." },
+      { title: "Nói chuyện và Tin tưởng", text: "Nói chuyện giúp tăng Tin tưởng. Khi đủ ngưỡng, NPC có thể gia nhập đội và mở nhiệm vụ riêng. Nút thách đấu cho phép đấu trực tiếp; trận tiêu thời gian game và HP còn lại được giữ cho trận sau." },
+      { sel: "#hiddenStatsBtn", title: "Theo dõi quan hệ", text: "Bấm <b>⋮</b> để xem Tin tưởng, thông tin đã dò và vị trí NPC đã được khám phá. Máy quay soi cũng có thể thu thập Class, cấp và vị trí đối thủ." },
+      { title: "Đồng đội và lòng trung thành", text: "Đồng đội hỗ trợ chiến đấu nhưng có thể rời đi nếu bạn tụt quá xa về ĐRL trong đêm. Đồng đội Gắn bó sẽ ở lại. Giữ họ bằng cách kiếm điểm và hoàn thành nhiệm vụ." },
+      { title: "Nhiệm vụ đồng đội", text: "Nói chuyện với người đủ Tin tưởng để nhận nhiệm vụ. Mở nhật ký bằng <b>Q</b> để xem tiến độ; hoàn thành từng bước bằng cách khám phá, thu thập hoặc chiến đấu theo yêu cầu. Thưởng gồm điểm Tài Năng và Gắn bó." },
+      { title: "Đội hình và AI", text: "Đồng đội tự chọn hành động trong trận; bạn điều khiển người chơi. Họ có thể hồi máu, hỗ trợ hoặc gây sát thương tùy Class. HP của họ cũng cần được quản lý giữa các trận." }
+    ] },
+    battle: { name: "Chiến đấu từ cơ bản đến nâng cao", icon: "⚔️", steps: [
+      { sel: "#pkAllyInfo", title: "Đọc thẻ chiến đấu", text: "<b>HP</b> là máu, <b>TL</b> là thể lực dùng kỹ năng, <b>Nộ</b> tích khi tấn công hoặc chịu đòn. Khi Nộ đầy và đạt cấp yêu cầu, bạn có thể dùng Ultimate." },
+      { sel: "#pkEnemyInfo", title: "Theo dõi đối thủ", text: "Xem HP, Nộ, hiệu ứng và trạng thái. Dòng nhắc cho biết hệ địch khi đã khám phá; dấu hỏi nghĩa là bạn chưa biết. Máy quay soi cung cấp thêm thông tin về đối thủ." },
+      { sel: "#pkMenu", title: "Lệnh mỗi lượt", text: "Chọn bằng nút, phím mũi tên + Enter, hoặc phím số. <b>Tấn công</b> tạo Nộ và hồi một ít TL; <b>Kỹ năng</b> tốn TL, có hồi chiêu; <b>Phòng thủ</b> giảm sát thương và hồi TL; vật phẩm có hiệu ứng riêng." },
+      { title: "Chọn mục tiêu và lượt đi", text: "Tốc độ quyết định thứ tự hành động. Kỹ năng có thể đánh một mục tiêu, nhiều mục tiêu hoặc hỗ trợ đồng đội. Một số kẻ địch bị khiêu khích, tàng hình hoặc được triệu hồi nên lựa chọn mục tiêu hợp lệ sẽ thay đổi." },
+      { sel: "#pkTextBox", title: "Hệ và điểm yếu", text: "Đòn trúng điểm yếu gây thêm sát thương; đòn bị kháng gây ít hơn. Điểm yếu: <b>Chém → Pháp sư</b>, <b>Lôi → Đấu sĩ</b>, <b>Băng → Sát thủ</b>, <b>Độc → Triệu hồi</b>, <b>Hỏa → Hộ tế</b>, <b>Hư Không → The TIU</b>. Thử đòn để khám phá hệ; thông tin đã biết được lưu lại." },
+      { title: "QTE cho Ultimate", text: "Ultimate mở chuỗi mũi tên. Bấm hướng đúng lúc con trỏ nằm trong vùng sáng để tăng hiệu quả; sai dưới ngưỡng chính xác có thể làm chiêu thất bại. Một số tình huống cho phép bỏ QTE để thi triển ở hiệu lực giảm." },
+      { title: "Hiệu ứng và khống chế", text: "Cháy, Độc, Đóng băng, Tê liệt và choáng gây sát thương hoặc hạn chế lượt. Buff/debuff có số lượt; Thuốc giải xóa một số hiệu ứng xấu. Độc có thể cộng dồn, còn đóng băng làm mục tiêu chịu thêm sát thương." },
+      { title: "Phòng thủ đúng nhịp", text: "Phòng thủ giảm sát thương nhận vào. Khi đỡ đúng Ultimate, sát thương giảm mạnh hơn và bạn nhận thêm Nộ. Nếu có mảnh <b>Spell Breaker</b>, bạn được QTE phản đòn Ultimate của địch; trong trận cuối, né đòn bằng QTE giúp giảm hoặc tránh sát thương." },
+      { sel: "#pkTurn", title: "Tài nguyên và hồi chiêu", text: "Đừng dùng hết TL ngay đầu trận. Đánh thường hoặc phòng thủ để hồi, theo dõi số lượt hồi chiêu. Canh Ultimate khi có thể kết liễu hoặc xoay chuyển trận; vật phẩm Nước tăng lực cho thêm Nộ và tốc độ." },
+      { title: "Kết quả trận", text: "HP còn lại được lưu sang trận kế tiếp; người thua còn tối thiểu 1 HP. Đánh bại đối thủ cho EXP và có thể cướp ĐRL, linh kiện hoặc Mảnh La Peace. Thua trận có thể mất một phần ĐRL." }
+    ] },
+    talent: { name: "Class, lên cấp & tài năng", icon: "⭐", steps: [
+      { title: "Class quyết định lối chơi", text: "Bài trắc nghiệm đầu game chọn một trong năm Class: Đấu sĩ, Sát thủ, Pháp sư, Hộ tế hoặc Triệu hồi. Mỗi Class có chỉ số, hệ cơ bản, bộ kỹ năng và Ultimate riêng; đọc mô tả kỹ năng trước khi chọn hướng build." },
+      { sel: "#hud", title: "EXP và cấp độ", text: "EXP từ trận đấu giúp lên cấp, tăng chỉ số và mở kỹ năng theo cấp. Đối thủ được điều chỉnh theo đêm và cấp của bạn nên các đêm sau vẫn có thử thách." },
+      { sel: "#talentBtn", title: "Ba nhánh Tài Năng", text: "Mở bằng <b>T</b> hoặc nút ⭐. Ba nhánh: Công kích, Bền bỉ và Thể lực. Mỗi 2 cấp nhận một điểm; nhiệm vụ đồng đội cũng thưởng điểm. Trong mỗi nhánh phải học từ bậc thấp lên bậc cao." },
+      { title: "Chọn build có chủ đích", text: "Điểm tài năng có giới hạn, nên chọn giữa sát thương/chí mạng, HP/phòng thủ hoặc hồi TL/kỹ năng. Bạn có thể <b>Tẩy điểm</b> miễn phí để đổi cách xây dựng nhân vật." },
+      { title: "Ultimate thức tỉnh", text: "Khi đạt cấp thức tỉnh, Ultimate được tăng sức mạnh. Tài năng và trang bị có thể bổ trợ thêm; xem mô tả ở bảng Tài Năng và chỉ số nhân vật để biết build hiện tại." }
+    ] },
+    gear: { name: "Túi đồ, chế tạo & La Peace", icon: "🎒", steps: [
+      { sel: "#bagBtn", title: "Túi đồ", text: "Mở bằng <b>B</b>. Túi hiển thị vật phẩm tiêu hao, linh kiện, trang bị và La Peace. Một số vật phẩm dùng ngoài trận, một số chỉ dùng trong chiến đấu; đọc mô tả trước khi dùng." },
+      { title: "Nhặt vật phẩm và linh kiện", text: "Trong mỗi phòng có thể có đồ giấu. Đi quanh bản đồ, đến gần điểm nhặt và bấm <b>E</b>. Linh kiện dùng để chế tạo; một số món hồi HP, giải hiệu ứng, làm choáng, gây sát thương hoặc đặt bẫy." },
+      { title: "Quầy Căn tin", text: "Quầy bán Bim Bim, Nước tăng lực và Thuốc giải bằng ĐRL. Mua đồ làm giảm số ĐRL đang giữ; cân nhắc giữ điểm để bảo vệ thứ hạng và lòng trung thành đồng đội." },
+      { title: "Bàn chế tạo", text: "Ở Căn tin, mở Bàn chế tạo để biến linh kiện thành vật phẩm chiến đấu hoặc trang bị. Có ba ô trang bị: vũ khí, giáp, bùa. Trang bị chế xong tự mang vào và thay món cũ cùng ô." },
+      { title: "La Peace", text: "Tìm ba loại Mảnh La Peace trước hạn 03:00. Mảnh chưa nhặt sẽ có thể rơi vào tay đối thủ; bạn có thể đánh bại họ để cướp lại. Theo dõi số mảnh ở túi, bản đồ và mục tiêu đêm." },
+      { title: "Sức mạnh của từng mảnh", text: "<b>Spell Breaker</b> mở QTE phá Ultimate của địch; <b>Mana Transfer</b> hồi một phần Nộ sau Ultimate; <b>Die Twice</b> hồi sinh một lần trong trận. Mỗi mảnh chỉ có một và có thể bị đối thủ nắm giữ." },
+      { title: "ĐRL vấy bẩn", text: "Hạ The TIU có thể nhận ĐRL vấy bẩn và mở vật phẩm đặc biệt ở Căn tin. Chúng rất mạnh nhưng cũng liên quan đến lựa chọn và kết thúc câu chuyện." }
+    ] },
+    story: { name: "Chương, lựa chọn & kết thúc", icon: "📖", steps: [
+      { title: "Chapter 1: vòng loại", text: "Ba đêm đầu là giai đoạn loại trừ. Tăng ĐRL, sống sót và giữ đồng đội bên mình. Mỗi đêm có thể đổi biến cố, đường đi và cơ hội thu thập." },
+      { title: "Chapter 2: chuẩn bị", text: "Sau vòng loại, bạn được hồi phục và bước vào đêm chuẩn bị trước đại chiến. Dùng thời gian để hồi máu, hoàn thiện trang bị, nhiệm vụ, tài năng và đội hình." },
+      { title: "Đại chiến và lựa chọn", text: "Trận cuối kiểm tra khả năng chiến đấu và né QTE. Tùy những gì bạn đã làm, có thể chọn đối đầu theo luật, dùng La Peace cùng đồng đội Gắn bó hoặc đi theo sức mạnh vấy bẩn." },
+      { title: "Điều kiện kết thúc", text: "Xây dựng Gắn bó, thu thập đủ La Peace và hạ The TIU nhiều lần để mở các nhánh kết thúc khác nhau. Màn kết thúc cho biết còn bao nhiêu kết cục chưa khám phá." },
+      { title: "New Game+", text: "Sau khi hoàn thành, New Game+ giữ lại cấp, tài năng và trang bị cùng phần thưởng theo kết thúc. Địch và The TIU mạnh hơn, đồng thời biến cố xuất hiện mọi đêm." }
+    ] },
+    arena: { name: "Đấu trường & đồng bộ (tùy chọn)", icon: "☁️", steps: [
+      { title: "Chế độ trực tuyến là tùy chọn", text: "Đấu trường và đồng bộ không cần để chơi cốt truyện. Nếu chưa cấu hình dịch vụ, phần chơi đơn vẫn hoạt động bình thường." },
+      { title: "Key tài khoản", text: "Tạo key trong màn Đấu trường để liên kết nhân vật. Hãy giữ key riêng tư; mất key có thể đồng nghĩa không truy cập lại dữ liệu gắn với key đó." },
+      { title: "Lưu và tải build", text: "Bạn có thể lưu build nhân vật lên dịch vụ, tải lại hoặc công khai để người khác thách đấu. Build gồm Class, cấp, tài năng và trang bị." },
+      { title: "Đấu giao hữu và xếp hạng", text: "Chọn đối thủ để mô phỏng trận tự động theo luật chiến đấu. Kết quả, điểm xếp hạng và lịch sử trận được đồng bộ khi dịch vụ được bật." }
     ] }
   };
 
@@ -149,7 +204,7 @@
     if (typeof showModal !== "function") return;
     const rows = Object.keys(TOURS).map((k) => `<div class="shopItem"><span>${TOURS[k].icon} <b>${TOURS[k].name}</b><br><span style="font-size:12px;color:var(--text-dim);">${TOURS[k].steps.length} bước${done()[k] ? " · đã xem" : ""}</span></span><button class="btn primary" data-tut="${k}">Xem</button></div>`).join("");
     try { showModal("❓ HƯỚNG DẪN", rows + `<p style="font-size:12px;color:var(--text-dim);margin-top:8px;">Bài Chiến đấu cần đang trong một trận để rọi đúng vào từng phần giao diện.</p>`, [
-      { label: "Đặt lại tất cả (xem lại từ đầu)", onClick: () => { try { localStorage.removeItem(LS); } catch (e) { /* bỏ qua */ } openMenu(); } },
+      { label: "Đặt lại tất cả (xem lại từ đầu)", onClick: () => { try { localStorage.removeItem(LS); } catch (e) { /* bỏ qua */ } Object.keys(snoozed).forEach((k) => delete snoozed[k]); idleSince = 0; openMenu(); } },
       { label: "Đóng", primary: true, onClick: () => closeModal() }]); } catch (e) { toast("Không mở được menu hướng dẫn: " + (e && e.message)); try { console.error(e); } catch (x) { /* bỏ qua */ } return; }
     document.querySelectorAll("#mgBody [data-tut]").forEach((b) => {
       b.onclick = () => { const k = b.getAttribute("data-tut"); delete snoozed[k]; closeModal(); setTimeout(() => start(k, true), 60); };
@@ -176,7 +231,11 @@
     }
     if (!idle() || !settled) return;
     if (!d.basic && !snoozed.basic && !(S.ng > 0) && S.chapter === 1 && S.night === 1) { start("basic"); return; }
-    if (d.basic && !d.talent && !snoozed.talent && RPG.getState && RPG.getState() && RPG.player().level >= 3 && RPG.talentPoints(RPG.player()) > 0) start("talent");
+    if (d.basic && !d.talent && !snoozed.talent && RPG.getState && RPG.getState() && RPG.player().level >= 3 && RPG.talentPoints(RPG.player()) > 0) { start("talent"); return; }
+    // Dạy đúng lúc gặp cơ chế lần đầu thay vì bắt người chơi phải tự tìm trong menu.
+    if (!d.events && !snoozed.events && S.activeEvents && S.activeEvents[S.playerRoom]) { start("events"); return; }
+    if (!d.social && !snoozed.social && typeof getRoomNPCs === "function" && getRoomNPCs(S.playerRoom).length) { start("social"); return; }
+    if (!d.gear && !snoozed.gear && S.scavenge && S.scavenge[S.playerRoom]) start("gear");
   }
 
   function mount() {
