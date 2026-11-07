@@ -173,8 +173,8 @@ const NIGHT_NAMES = {
   2: [null, 'ĐÊM 1 — CHUẨN BỊ', 'ĐÊM 2 — ĐẠI CHIẾN']
 };
 function nightName(ch, n){ return (NIGHT_NAMES[ch] || NIGHT_NAMES[1])[n] || ('ĐÊM '+n); }
-const TIU_MOVE_EVERY = { 1:[22,34], 2:[16,26], 3:[11,19] };
-const EVENT_EVERY = { 1:[55,85], 2:[42,68], 3:[30,52] };   // sự cố do The TIU gây ra (chỉ Chapter 1)
+const TIU_MOVE_EVERY = { 1:[28,40], 2:[16,26], 3:[11,19] };
+const EVENT_EVERY = { 1:[70,90], 2:[42,68], 3:[30,52] };   // sự cố do The TIU gây ra (chỉ Chapter 1)
 const TIU_INVULN_MIN = 40;      // sau khi bị bắt, TIU bị đẩy đi và không bắt lại trong khoảng này
 const TIU_CHASE_CHANCE = 0.35;  // xác suất mỗi bước TIU tiến thẳng về phía người chơi
 const NPC_MOVE_EVERY = [45,75]; // các NPC đi lang thang theo chu kỳ này (phút game)
@@ -790,6 +790,17 @@ function refreshMap(){
 function refreshHud(){
   updateTalentBadge();
   ['blackout','midterm','fog','bloodmoon'].forEach(m=>document.body.classList.toggle('mod-'+m, !!S && S.mod===m && S.running));
+  const arenaCard = $('playerArenaBtn');
+  const player = RPG.getState && RPG.getState() ? RPG.player() : null;
+  if(arenaCard){
+    arenaCard.classList.toggle('hidden', !player);
+    if(player){
+      const klass = RPG.CLASSES[player.classId];
+      $('playerArenaName').textContent = player.name || RPG.DEFAULT_PLAYER_NAME;
+      $('playerArenaClass').textContent = (klass ? klass.name : player.classId)+' · Lv'+player.level;
+      arenaCard.setAttribute('aria-label', 'Mở hồ sơ và PvP: '+player.name+', '+(klass ? klass.name : player.classId)+' cấp '+player.level);
+    }
+  }
   if(!S) return;
   const me = RPG.player();
   $('clockVal').textContent = formatClock(S.gameMinutes);
@@ -1567,7 +1578,7 @@ function processGuardian(){
   const k = RPG.MOB_KINDS[g.kind], me = RPG.player();
   addLog('⚔ '+k.name+' đang canh giữ '+ROOM_DEF[room].name+'!', 'warn');
   showModal(k.icon+' '+k.name.toUpperCase()+' CHẶN ĐƯỜNG', `<p style="font-size:13px;">${k.name} cùng 2 tay sai canh giữ <b>${ROOM_DEF[room].name}</b>. Đánh bại chúng để nhận <b>linh kiện</b>, <b>ĐRL</b> và EXP.</p>
-    <p style="font-size:12px;color:var(--text-dim);">Mini-boss mạnh hơn đối thủ thường. Thua: mất tối đa 3 ĐRL và bị đẩy lui. Trận kéo dài ${RPG.CFG.BATTLE_MINUTES} phút.</p>`,
+    <p style="font-size:12px;color:var(--text-dim);">Mini-boss mạnh hơn đối thủ thường. Thua: mất tối đa 3 ĐRL và bị đẩy lui. Trận kéo dài ${RPG.CFG.BATTLE_MOB_MINUTES} phút.</p>`,
     [{ label:'⚔ Chiến đấu', danger:true, onClick:()=>{ closeModal(true); startGuardianBattle(room); } },
      { label:'↩ Lùi lại', primary:true, onClick:()=>{ closeModal(); retreatFromRoom(); } }]);
 }
@@ -1624,7 +1635,8 @@ function spawnEvent(){
     room = near.length ? pick(near) : null;
   }
   if(!room) return;
-  S.activeEvents[room] = {deadline: S.gameMinutes + rand(70,110), start: S.gameMinutes};
+  const firstNight = S.chapter===1 && S.night===1;
+  S.activeEvents[room] = {deadline: S.gameMinutes + rand(firstNight ? 90 : 70, firstNight ? 120 : 110), start: S.gameMinutes};
   addLog('⚠ The TIU gây ra sự cố tại '+ROOM_DEF[room].name+': '+eventLabel(ROOM_DEF[room].event)+'!','warn');
 }
 function expireEvents(){
@@ -1642,7 +1654,7 @@ function expireEvents(){
     const ev = S.activeEvents[room];
     if(ev.chainChecked) continue;
     const total = ev.deadline - ev.start, elapsed = S.gameMinutes - ev.start;
-    if(total>0 && elapsed/total >= 0.5){
+    if(!(S.chapter===1 && S.night===1) && total>0 && elapsed/total >= 0.5){
       ev.chainChecked = true;
       if(Math.random() < 0.45){
         const cand = ROOM_DEF[room].connects.filter(r=>!ROOM_DEF[r].safe && !ROOM_DEF[r].noEvent && !S.activeEvents[r]);
@@ -1873,7 +1885,7 @@ function startTiuBattle(){
    Bố cục: thanh HP đỏ của địch ở góc trên-trái, bảng TRẬN/ĐỊCH/LƯỢT ở góc trên-phải, địch đứng giữa sân,
    phe mình là các thẻ nhân vật ở dưới-trái; dưới-phải là nút ATTACK tròn (CHIẾN ĐẤU) + thẻ ULTIMATE + TÚI ĐỒ/PHÒNG THỦ,
    bấm CHIẾN ĐẤU sẽ xòe các lá bài lệnh (Tấn công / kỹ năng). Chọn mục tiêu bằng cách bấm thẳng vào địch.
-   Mỗi trận tốn RPG.CFG.BATTLE_MINUTES (60 phút) đồng hồ game và HP được giữ lại sau trận. */
+   Trận thường tốn 40 phút, mini-boss 55 phút, The TIU 60 phút; HP được giữ lại sau trận. */
 const STATUS_ICON = { burn:'🔥', poison:'☠️', freeze:'❄️', paralyze:'⚡', stun:'💫', stealth:'👁️', immune:'🛡️', reflect:'🔁' };
 const STATUS_NAME = { burn:'Thiêu đốt', poison:'Trúng độc', freeze:'Đóng băng', paralyze:'Tê liệt', stun:'Choáng', stealth:'Ẩn thân', immune:'Miễn nhiễm', reflect:'Phản đòn' };
 const STAT_NAME = { atk:'Công', def:'Thủ', spd:'Tốc độ', hp:'HP', sp:'Thể lực', rage:'Nộ' };
@@ -1907,6 +1919,9 @@ function aiLevelNow(){
 }
 function startBattle(opts){
   const me = RPG.player();
+  // Trận thường gọn hơn để dành thời gian cho khám phá; trận nhóm và The TIU
+  // vẫn có trọng lượng lớn hơn. Trận cuối không tính thời gian đêm.
+  opts.battleMinutes = opts.final ? 0 : (opts.tiu ? RPG.CFG.BATTLE_TIU_MINUTES : (opts.mob ? RPG.CFG.BATTLE_MOB_MINUTES : ((opts.ambush || opts.exhausted) ? RPG.CFG.BATTLE_AMBUSH_MINUTES : RPG.CFG.BATTLE_MINUTES)));
   if(!opts.arena) RPG.scaleOpponents(oppLevelFloor());   // đối thủ luôn có Lv >= Lv người chơi và >= mốc theo đêm
   const allies = [me].concat(opts.allyFighters || (opts.final ? [] : RPG.partyAllies()));
   const enemies = opts.enemyFighters || opts.enemyIds.map(id=>RPG.get(id));
@@ -2012,7 +2027,8 @@ function pkSay(text, done){
 function pkPrompt(text){            // dòng nhắc (không gõ chữ, không tự chuyển)
   if(BATTLE){ clearTimeout(BATTLE.sayTimer); BATTLE.say = null; }
   $('pkArrow').classList.remove('on');
-  $('pkText').textContent = text;
+  const intent = BATTLE && BATTLE.intentText;
+  $('pkText').textContent = text + (intent && text.indexOf(intent)<0 ? '\n'+intent : '');
 }
 $('pkTextBox').onclick = ()=>{
   const s = BATTLE && BATTLE.say;
@@ -2330,14 +2346,24 @@ function showBattleMenu(uid){
   const B = BATTLE.B, u = RPGCombat.unit(B, uid), op = RPGCombat.options(B, u);
   const ult = op.ultimate;
   const signs = B.units.filter(x=>x.side==='E' && x.alive && !x.isSummon).map(x=>{
-      if(x.f.tiu) return x.rage>=RPG.CFG.RAGE_MAX ? `${x.name}: Nộ đầy — Ultimate đã sẵn sàng (${RPG.getUltimate(x.f).name})` : `${x.name}: mang đủ skill 5 class · Nộ ${x.rage}/${RPG.CFG.RAGE_MAX}`;
-    const skills = RPG.getSkills(x.f).filter(s=>s.unlocked && !(x.cds[s.id]>0));
-    if(x.rage>=RPG.CFG.RAGE_MAX) return `${x.name}: Nộ đầy — Ultimate sẵn sàng`;
-    if(skills.length) return `${x.name}: có thể dùng ${skills.map(s=>s.name).join(', ')}`;
-    return `${x.name}: Nộ ${x.rage}/${RPG.CFG.RAGE_MAX}`;
+    const a = x.action;
+    if(!a){
+      const why = x.st.stun ? 'bị choáng, mất lượt' : (x.st.paralyze ? 'bị tê liệt, mất lượt' : 'chưa lộ ý đồ');
+      return `${x.name}: ${why}`;
+    }
+    let move = 'Tấn công thường';
+    if(a.type==='defend') move = 'Phòng thủ';
+    else if(a.type==='ultimate') move = 'ULTIMATE '+RPG.getUltimate(x.f).name;
+    else if(a.type==='skill'){
+      const skill = RPG.getSkills(x.f).find(s=>s.id===a.id);
+      move = 'Kỹ năng '+(skill ? skill.name : a.id);
+    } else if(a.type==='item') move = 'Dùng vật phẩm';
+    const target = a.target ? RPGCombat.unit(B,a.target) : null;
+    return `${x.name}: ${move}${target ? ' → '+target.name : ''}`;
   });
   const elInfo = B.units.filter(x=>x.side==='E' && x.alive && !x.isSummon && x.f).map(elAffinityText);
-  pkPrompt(u.name+' sẽ làm gì? · Thể Lực '+Math.round(u.sp)+'/'+RPG.CFG.SP_MAX+(signs.length?'\nDẤU HIỆU ĐỊCH · '+signs.join(' · '):'')+(elInfo.length?'\nHỆ ĐỊCH · '+elInfo.join(' · '):''));
+  BATTLE.intentText = signs.length ? 'Ý ĐỊNH ĐỊCH · '+signs.join(' · ') : '';
+  pkPrompt(u.name+' sẽ làm gì? · Thể Lực '+Math.round(u.sp)+'/'+RPG.CFG.SP_MAX+(elInfo.length?'\nHỆ ĐỊCH · '+elInfo.join(' · '):''));
   pkActive(uid);
   pkMenuSet('main', [
     { label:'CHIẾN ĐẤU', cls:'fgoAtk', icon:'⚔️', hint:'Tấn công thường hoặc dùng kỹ năng.', onClick:()=>showFightMenu(uid) },
@@ -2548,7 +2574,7 @@ function battleFinish(){
   });
   sum.allyExp.forEach(a=>{ if(a.exp.gained) html += `<p style="font-size:12px;color:var(--text-dim);">${RPG.get(a.id).name}: +${a.exp.gained} EXP</p>`; });
   html += `<p style="color:var(--text-dim);font-size:12px;">ĐRL: <b>${me.drl}</b> · HP còn lại: <b>${me.hp}/${me.maxHp}</b> (được giữ cho trận sau)</p>`;
-  if(!opts.final) html += `<p style="color:var(--text-dim);font-size:12px;">⏳ Trận đấu kéo dài ${RPG.CFG.BATTLE_MINUTES} phút (${formatClock(S.gameMinutes)} → ${formatClock(S.gameMinutes+RPG.CFG.BATTLE_MINUTES)}).</p>`;
+  if(!opts.final) html += `<p style="color:var(--text-dim);font-size:12px;">⏳ Trận đấu kéo dài ${opts.battleMinutes} phút (${formatClock(S.gameMinutes)} → ${formatClock(S.gameMinutes+opts.battleMinutes)}).</p>`;
 
   const afterLines = opts.final ? null : (won ? DLG.AFTER_WIN : DLG.AFTER_LOSE)[opts.enemyIds[0]];
   showModal(won ? '★ CHIẾN THẮNG!' : '✖ THẤT BẠI', html, [{ label:'Tiếp tục', primary:true, onClick:()=>{
@@ -2560,9 +2586,9 @@ function battleFinish(){
       if(opts.tiu){   // sau trận với TIU: nó bị đẩy đi chỗ khác, người chơi được yên một lúc
         const others = ROOM_KEYS.filter(r=>r!==S.playerRoom && !isRoomSafe(r));
         S.monsterRoom = pick(others.length ? others : ROOM_KEYS.filter(r=>r!==S.playerRoom));
-        S.invulnUntil = S.gameMinutes + RPG.CFG.BATTLE_MINUTES + rand(15,20);
+        S.invulnUntil = S.gameMinutes + opts.battleMinutes + rand(15,20);
       }
-      spendTime(RPG.CFG.BATTLE_MINUTES, 'Trận đấu kéo dài '+RPG.CFG.BATTLE_MINUTES+' phút');
+      spendTime(opts.battleMinutes, 'Trận đấu kéo dài '+opts.battleMinutes+' phút');
       if(S.running) refreshAll();
     };
     if(afterLines) playDLG(afterLines, proceed, { npcId:opts.enemyIds[0] }); else proceed();

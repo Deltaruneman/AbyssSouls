@@ -34,7 +34,10 @@
     DRL_PLAYER_LOSS_PCT: 0.25,            // người chơi THUA: bị trừ 25% ĐRL (NPC đánh nhau với nhau: kẻ thua mất đúng phần bị cướp)
     TIU_PENALTY: 5,                      // The TIU bắt được người chơi (chỉ Chapter 1)
 
-    BATTLE_MINUTES: 60,                  // 1 trận đấu tốn 60 phút đồng hồ trong game
+    BATTLE_MINUTES: 40,                  // trận thường tốn 40 phút game
+    BATTLE_AMBUSH_MINUTES: 45,           // phục kích/kiệt sức
+    BATTLE_MOB_MINUTES: 55,              // mini-boss và nhóm tay sai
+    BATTLE_TIU_MINUTES: 60,              // The TIU
     REGEN_PER_HOUR: 0.10,                // hồi dần 10% HP tối đa mỗi giờ game (ngoài trận)
     REST_HEAL_PCT: 0.35,                 // "Nghỉ ngơi 1 giờ" ở Căn tin: +35% HP tối đa
 

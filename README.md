@@ -63,7 +63,7 @@ Sau ba đêm đầu, Chapter 2 có một đêm chuẩn bị và một trận cu�
 
 ### Sự cố và mini-boss
 
-The TIU có thể gây sự cố ở một số phòng. Hãy đến nơi được báo trong mục tiêu đêm và hoàn thành mini-game trước khi hết hạn để nhận ĐRL. Thử thách có thể yêu cầu tìm hình khác biệt, chỉnh đèn, nối dây, trả lời câu hỏi, nhập chuỗi phím hoặc sắp xếp số. Mini-boss có tay sai canh một số phòng; thắng nhận ĐRL, EXP và linh kiện, còn thua có thể mất tối đa 3 ĐRL.
+The TIU có thể gây sự cố ở một số phòng. Hãy đến nơi được báo trong mục tiêu đêm và hoàn thành mini-game trước khi hết hạn để nhận ĐRL. Thử thách có thể yêu cầu tìm hình khác biệt, chỉnh đèn, nối dây, trả lời câu hỏi, nhập chuỗi phím hoặc sắp xếp số. Đêm đầu cho người chơi thêm thời gian làm quen: The TIU tuần tra chậm hơn, sự cố xuất hiện muộn hơn, thời hạn xử lý dài hơn và sự cố không lan dây chuyền. Từ các đêm sau, nhịp đe dọa tăng dần. Mini-boss có tay sai canh một số phòng; thắng nhận ĐRL, EXP và linh kiện, còn thua có thể mất tối đa 3 ĐRL.
 
 ### NPC và đồng đội
 
@@ -75,7 +75,8 @@ The TIU có thể gây sự cố ở một số phòng. Hãy đến nơi đượ
 ### Chiến đấu và phát triển nhân vật
 
 - Mỗi lượt, chọn tấn công, phòng thủ, kỹ năng, Ultimate hoặc vật phẩm. Tấn công và phòng thủ giúp hồi Thể Lực chiến đấu; kỹ năng tiêu Thể Lực và có hồi chiêu.
-- Mỗi trận tiêu tốn 60 phút trong đồng hồ game; HP và hồi chiêu còn lại ảnh hưởng các trận sau.
+- Đầu lượt, game tiết lộ hành động đã khóa của từng địch, gồm mục tiêu nếu có. Dùng thông tin này để cân nhắc phòng thủ, hạ gục hoặc khống chế kẻ địch trước khi chúng ra tay.
+- Trận thường tiêu tốn 40 phút, trận phục kích 45 phút, trận mini-boss 55 phút và trận The TIU 60 phút trong đồng hồ game. HP và hồi chiêu còn lại ảnh hưởng các trận sau.
 - Nộ tích lũy trong trận. Khi đầy, Ultimate có thể được dùng; QTE mũi tên giúp tăng hiệu quả. Một số trận có QTE để né hoặc đỡ đòn.
 - Hệ thuộc tính có điểm yếu và kháng. Trạng thái như Cháy, Độc, Đóng băng, Tê liệt và Choáng có thể ảnh hưởng sát thương hoặc lượt hành động; biểu tượng trên thẻ cho biết số lượt còn lại, chạm/bấm biểu tượng để đọc tên trạng thái.
 - HP được giữ lại giữa các trận; nhân vật thua còn ít nhất 1 HP. Đầu đêm mới, đội hình hồi phục. Thắng trận có thể cho EXP, ĐRL, linh kiện hoặc vật phẩm.
@@ -97,7 +98,7 @@ The TIU có thể gây sự cố ở một số phòng. Hãy đến nơi đượ
 
 ## Đấu trường và đồng bộ (tùy chọn)
 
-Chế độ này cần dịch vụ Supabase hoạt động; phần chơi đơn không phụ thuộc vào nó. Trong game, mở **☁ ĐẤU TRƯỜNG & ĐỒNG BỘ** để tạo hoặc dùng key, lưu nhân vật riêng tư, công khai build, tải dữ liệu, đấu giao hữu, đấu xếp hạng và xem lịch sử.
+Chế độ này cần dịch vụ Supabase hoạt động; phần chơi đơn không phụ thuộc vào nó. Sau khi tạo nhân vật, mở thẻ **NHÂN VẬT · PvP** ở góc phải HUD hoặc chọn **☁ ĐẤU TRƯỜNG** trong menu tạm dừng. Không cần hoàn thành ending: lưu & công khai build ngay trong ván đầu để tham gia xếp hạng; đấu thử dùng nhân vật của ván đang chơi. Bạn cũng có thể tạo hoặc dùng key, lưu nhân vật riêng tư, tải dữ liệu và xem lịch sử.
 
 `supabase_config.js` chứa URL và khóa công khai phía client. Chỉ dùng anon/publishable key tại đây; tuyệt đối không đặt `service_role` key trong game. Phần mã nguồn hiện có frontend và các file Edge Function (`arena.js`, `arena_core.js`, `handler.mjs`, `index.ts`, `engine.mjs`), nhưng checkout này chưa có SQL schema và thư mục triển khai Supabase chuẩn. Vì vậy, việc dựng một backend Supabase mới chưa phải quy trình một bước từ README này; cần chuẩn bị schema, RPC và bố trí Edge Function theo cấu trúc Supabase trước khi deploy.
 

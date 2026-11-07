@@ -125,7 +125,7 @@
     modal("☁ " + p.name.toUpperCase(), `<p style="font-size:14px;">🔑 <b>${esc(maskKey(key))}</b></p>
       <p style="font-size:14px;">${ch}</p>
       <p style="font-size:14px;">🏅 Điểm xếp hạng: <b style="color:var(--amber);">${p.rating}</b> · Thắng ${p.wins} · Thua ${p.losses}</p>
-      <p style="font-size:12px;color:var(--text-dim);">Hoàn thành game sẽ tự động lưu nhân vật lên đây. Đấu thử cần đang trong một ván chơi; đấu xếp hạng dùng nhân vật đã lưu.</p>`, [
+      <p style="font-size:12px;color:var(--text-dim);">Không cần hoàn thành ending để PvP. Ngay sau khi tạo nhân vật, chọn <b>Lưu nhân vật → Lưu & công khai</b> để tham gia xếp hạng. Đấu thử dùng nhân vật trong ván đang chơi và không ảnh hưởng tiến trình.</p>`, [
       { label: "⬆ Lưu nhân vật", onClick: pageSave, disabled: !hasChar() },
       { label: "⬇ Tải nhân vật", onClick: pageLoad, disabled: !p.has_character },
       { label: "⚔ Đối thủ", primary: true, onClick: pageOpponents },
@@ -274,6 +274,8 @@
     const b1 = $("arenaBtn"), b2 = $("pauseArenaBtn");
     if (b1) b1.onclick = openArena;
     if (b2) b2.onclick = openArena;
+    const playerCard = $("playerArenaBtn");
+    if (playerCard) playerCard.onclick = openArena;
     // Gõ chữ trong ô nhập không được kích hoạt phím tắt của game
     window.addEventListener("keydown", (e) => { const t = e.target; if (t && t.tagName === "INPUT") e.stopPropagation(); }, true);
     window.addEventListener("keyup", (e) => { const t = e.target; if (t && t.tagName === "INPUT") e.stopPropagation(); }, true);
