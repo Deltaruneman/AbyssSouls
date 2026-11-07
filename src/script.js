@@ -4348,6 +4348,13 @@ function startTravel(dest){
 /* ============== LƯU GAME KHI RỜI TRANG ============== */
 window.addEventListener('beforeunload', ()=>{ persistSave(); });
 
+/* API dùng chung cho các module UI được nạp sau script.js (tutorial.js, arena.js).
+   Game chạy trong IIFE nên các hàm này không tự trở thành window.*. */
+window.showModal = showModal;
+window.closeModal = closeModal;
+window.isBattleActive = isBattleActive;
+Object.defineProperty(window, 'S', { configurable: true, get: ()=>S });
+
 buildMap();
 rafId = requestAnimationFrame(tick);
 showTitle();
