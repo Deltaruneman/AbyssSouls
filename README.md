@@ -14,9 +14,10 @@ Game là ứng dụng web tĩnh, không cần cài gói hay chạy bước build
    ```
 
    Sau đó mở <http://localhost:8000>. Nếu lệnh `py` không có, thử `python -m http.server 8000`.
-3. Chọn **BẮT ĐẦU**, nhập tên, rồi làm bài trắc nghiệm để chọn Class. Chọn **TIẾP TỤC** để tải bản lưu hiện có.
+3. Ở cổng người chơi, chọn **Đăng nhập** hoặc **Tạo tài khoản** để dùng hồ sơ và Đấu trường; hoặc chọn **Chơi với tư cách khách** để vào chơi ngay.
+4. Sau khi vào game, chọn **BẮT ĐẦU**, nhập tên, rồi làm bài trắc nghiệm để chọn Class. Chọn **TIẾP TỤC** để tải bản lưu hiện có.
 
-Không cần Supabase để chơi cốt truyện.
+Chế độ khách lưu tiến trình, kết thúc đã mở và hướng dẫn đã xem trong phiên tab hiện tại, rồi xóa dữ liệu tạm khi rời trang/đóng tab; khách không thể dùng Đấu trường hoặc đồng bộ hồ sơ nhân vật. Tài khoản cần cấu hình Supabase để đăng nhập và dùng các tính năng trực tuyến. Có thể chơi khách mà không cần Supabase.
 
 ## Điều khiển
 

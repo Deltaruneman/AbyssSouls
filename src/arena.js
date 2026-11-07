@@ -98,7 +98,9 @@
   function saveAuthSession(session) {
     if (!session || !session.access_token) return false;
     session.expires_at = session.expires_at || Math.floor(Date.now()/1000) + (session.expires_in || 3600);
-    setAuth(session); return true;
+    setAuth(session);
+    if (window.TiuAccess) window.TiuAccess.account();
+    return true;
   }
   const matchApi = (body) => http("/functions/v1/arena-match", body);
   let livePollTimer = null;
@@ -119,9 +121,9 @@
   }
   function startLiveInboxPolling() {
     if(liveInboxTimer) clearInterval(liveInboxTimer);
-    if(!ENABLED || !getKey()) return;
+    if(!ENABLED || !getKey() || (window.TiuAccess && window.TiuAccess.mode() === "guest")) return;
     const poll=async()=>{
-      if(!getKey() || (typeof isBattleActive==="function" && isBattleActive())) return;
+      if(!getKey() || (window.TiuAccess && window.TiuAccess.mode() === "guest") || (typeof isBattleActive==="function" && isBattleActive())) return;
       const vn=$("vnOverlay"); if(vn && !vn.classList.contains("hidden")) return;
       try {
         const matches=await rpc("list_live_matches",{p_key:getKey()});
@@ -156,6 +158,7 @@
     resumeGameOnClose=!!(typeof S!=="undefined"&&S&&S.running&&$("titleScreen").classList.contains("hidden")&&!wasPauseOpen);
     if (pm && wasPauseOpen) pm.classList.add("hidden");
     if (!ENABLED) return pageNotConfigured();
+    if (window.TiuAccess && window.TiuAccess.mode() === "guest") return pageAuth("Bạn đang chơi khách. Đăng nhập hoặc tạo tài khoản để dùng Đấu trường.");
     if (getAuth()) return pageSlots();
     if (!getKey()) return pageAuth();
     pageHome();
@@ -164,15 +167,19 @@
     info("☁ ĐẤU TRƯỜNG & ĐỒNG BỘ", `<p style="font-size:14px;">Tính năng này cần máy chủ <b>Supabase</b>. Hãy mở <b>config/supabase_config.js</b> và điền <code>url</code> + <code>anonKey</code> của dự án (xem <b>supabase/README.md</b>).</p>
       <p style="font-size:13px;color:var(--text-dim);">Phần chơi đơn không bị ảnh hưởng.</p>`);
   }
-  function pageAuth(message) {
+  function openEntryAuth(mode) {
+    if (!ENABLED) return pageNotConfigured();
+    pageAuth(null, mode);
+  }
+  function pageAuth(message, preferredAction) {
     modal("⚔ ĐẤU TRƯỜNG · TÀI KHOẢN", '<div class="arenaAuthIntro"><span class="arenaEyebrow">THE TIU COMPETITIVE HUB</span><p>Đăng nhập để quản lý <b>3 slot nhân vật</b>, lưu hồ sơ và mở các chế độ đấu.</p></div>' +
       (message ? '<p class="arenaNotice">' + esc(message) + '</p>' : '') +
       '<label class="arenaFieldLabel" for="accountEmail">Email</label><input id="accountEmail" type="email" maxlength="254" autocomplete="email" placeholder="ban@email.com">' +
       '<label class="arenaFieldLabel" for="accountPassword">Mật khẩu</label><input id="accountPassword" type="password" maxlength="128" autocomplete="current-password" placeholder="Tối thiểu 8 ký tự">' +
       '<label class="arenaFieldLabel" for="accountDisplay">Tên hiển thị (chỉ khi đăng ký)</label><input id="accountDisplay" type="text" maxlength="20" autocomplete="nickname" placeholder="Tên trên bảng đấu">' +
       '<div class="arenaAuthFine">Tài khoản mới có sẵn ba slot PvP độc lập. Nhân vật có thể vào đấu trường ngay sau khi tạo, không cần hoàn thành ending.</div>',
-      [{ label: "Đăng nhập", primary: true, onClick: doAuthLogin },
-       { label: "Tạo tài khoản", onClick: doAuthRegister },
+      [{ label: "Đăng nhập", primary: preferredAction !== "register", onClick: doAuthLogin },
+       { label: "Tạo tài khoản", primary: preferredAction === "register", onClick: doAuthRegister },
        { label: "🔑 Dùng key cũ", onClick: pageLegacyAuth },
        { label: "Đóng", onClick: closeArena }]);
   }
@@ -251,6 +258,7 @@
     const res = await guard("Đang tạo key...", () => rpc("register_player", { p_name: name }), pageLegacyAuth);
     if (!res) return;
     setKey(res.key);
+    if (window.TiuAccess) window.TiuAccess.account();
     startLiveInboxPolling();
     modal("🔑 KEY CỦA BẠN", `<p style="font-size:14px;">Chào <b>${esc(res.name)}</b>! Đây là key của bạn:</p>
       <p style="font-size:22px;letter-spacing:2px;text-align:center;margin:14px 0;color:var(--amber);user-select:all;">${esc(res.key)}</p>
@@ -262,7 +270,7 @@
     if (!/^TIU-[0-9A-F]{5}-[0-9A-F]{5}-[0-9A-F]{5}-[0-9A-F]{5}$/.test(k)) { info("⚠ KEY SAI ĐỊNH DẠNG", `<p style="font-size:14px;">Key có dạng <b>TIU-XXXXX-XXXXX-XXXXX-XXXXX</b>.</p>`, pageLegacyAuth); return; }
     const p = await guard("Đang kiểm tra key...", () => rpc("get_profile", { p_key: k }), pageLegacyAuth);
     if (!p) return;
-    setKey(k); startLiveInboxPolling(); pageHome();
+    setKey(k); if (window.TiuAccess) window.TiuAccess.account(); startLiveInboxPolling(); pageHome();
   }
   function copy(text) {
     try { navigator.clipboard.writeText(text).then(() => { if (typeof addLog === "function" && typeof S !== "undefined" && S) addLog("📋 Đã sao chép.", ""); }); } catch (e) { /* người dùng tự bôi đen */ }
@@ -313,6 +321,7 @@
   }
   async function autoSave(options) {   // đồng bộ lúc tạo nhân vật đầu tiên hoặc khi kết thúc game
     const initialOnly = !!(options && options.initialOnly);
+    if (window.TiuAccess && window.TiuAccess.mode() === "guest") return false;
     if (initialOnly) { if (!getAuth() || !isNewActiveSlot()) return false; }
     if (!ENABLED || !getKey() || !hasChar()) return false;
     try {
@@ -594,6 +603,7 @@
     if (session) { try { await authHttp("/auth/v1/logout", {}, session); } catch (e) { /* vẫn xóa phiên cục bộ */ } }
     const scopedSlot = accountScopedKey(LS_SLOT), scopedNewSlot = accountScopedKey("tiu_active_slot_new");
     setAuth(null); setKey(""); accountSlotPlayerIds = new Set();
+    if (window.TiuAccess) window.TiuAccess.logout();
     try { localStorage.removeItem(scopedSlot); localStorage.removeItem(scopedNewSlot); } catch (e) { /* bỏ qua */ }
     if (liveInboxTimer) { clearInterval(liveInboxTimer); liveInboxTimer = null; }
     pageAuth("Bạn đã đăng xuất khỏi tài khoản này trên thiết bị.");
@@ -606,11 +616,14 @@
     if (b2) b2.onclick = openArena;
     const playerCard = $("playerArenaBtn");
     if (playerCard) playerCard.onclick = openArena;
+    const loginEntry = $("entryLoginBtn"), registerEntry = $("entryRegisterBtn");
+    if (loginEntry) loginEntry.onclick = () => openEntryAuth("login");
+    if (registerEntry) registerEntry.onclick = () => openEntryAuth("register");
     startLiveInboxPolling();
     // Gõ chữ trong ô nhập không được kích hoạt phím tắt của game
     window.addEventListener("keydown", (e) => { const t = e.target; if (t && t.tagName === "INPUT") e.stopPropagation(); }, true);
     window.addEventListener("keyup", (e) => { const t = e.target; if (t && t.tagName === "INPUT") e.stopPropagation(); }, true);
   }
-  window.TiuCloud = { enabled: ENABLED, open: openArena, autoSave: autoSave, getKey: getKey };
+  window.TiuCloud = { enabled: ENABLED, open: openArena, openAuth: openEntryAuth, autoSave: autoSave, getKey: getKey };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mount); else mount();
 })();

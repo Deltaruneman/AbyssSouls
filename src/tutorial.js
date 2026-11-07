@@ -3,14 +3,15 @@
    Nạp SAU script.js. Hiện "đèn rọi" (spotlight) vào đúng phần giao diện đang được giải thích.
    - Hướng dẫn theo chủ đề, có thể mở lại bất cứ lúc nào; một số bài tự bật khi gặp cơ chế lần đầu.
    - Phím: Enter / → / Space = tiếp · ← = lùi · Esc = bỏ qua · H = mở menu hướng dẫn bất cứ lúc nào.
-   - Trạng thái "đã xem" lưu ở localStorage (tiu_tut_done).
+   - Trạng thái "đã xem" lưu theo phiên với khách, lưu lâu dài với tài khoản (tiu_tut_done).
    ========================================================================= */
 (function () {
   "use strict";
   const LS = "tiu_tut_done";
+  const storage = () => { try { return window.TiuAccess && window.TiuAccess.mode() === "guest" ? sessionStorage : localStorage; } catch (e) { return localStorage; } };
   const $ = (id) => document.getElementById(id);
-  const done = () => { try { return JSON.parse(localStorage.getItem(LS) || "{}"); } catch (e) { return {}; } };
-  const markDone = (k) => { try { const d = done(); d[k] = true; localStorage.setItem(LS, JSON.stringify(d)); } catch (e) { /* bỏ qua */ } };
+  const done = () => { try { return JSON.parse(storage().getItem(LS) || "{}"); } catch (e) { return {}; } };
+  const markDone = (k) => { try { const d = done(); d[k] = true; storage().setItem(LS, JSON.stringify(d)); } catch (e) { /* bỏ qua */ } };
 
   /* ------------------------------ NỘI DUNG CÁC BÀI ------------------------------ */
   const TOURS = {
@@ -204,7 +205,7 @@
     if (typeof showModal !== "function") return;
     const rows = Object.keys(TOURS).map((k) => `<div class="shopItem"><span>${TOURS[k].icon} <b>${TOURS[k].name}</b><br><span style="font-size:12px;color:var(--text-dim);">${TOURS[k].steps.length} bước${done()[k] ? " · đã xem" : ""}</span></span><button class="btn primary" data-tut="${k}">Xem</button></div>`).join("");
     try { showModal("❓ HƯỚNG DẪN", rows + `<p style="font-size:12px;color:var(--text-dim);margin-top:8px;">Bài Chiến đấu cần đang trong một trận để rọi đúng vào từng phần giao diện.</p>`, [
-      { label: "Đặt lại tất cả (xem lại từ đầu)", onClick: () => { try { localStorage.removeItem(LS); } catch (e) { /* bỏ qua */ } Object.keys(snoozed).forEach((k) => delete snoozed[k]); idleSince = 0; openMenu(); } },
+      { label: "Đặt lại tất cả (xem lại từ đầu)", onClick: () => { try { storage().removeItem(LS); } catch (e) { /* bỏ qua */ } Object.keys(snoozed).forEach((k) => delete snoozed[k]); idleSince = 0; openMenu(); } },
       { label: "Đóng", primary: true, onClick: () => closeModal() }]); } catch (e) { toast("Không mở được menu hướng dẫn: " + (e && e.message)); try { console.error(e); } catch (x) { /* bỏ qua */ } return; }
     document.querySelectorAll("#mgBody [data-tut]").forEach((b) => {
       b.onclick = () => { const k = b.getAttribute("data-tut"); delete snoozed[k]; closeModal(); setTimeout(() => start(k, true), 60); };

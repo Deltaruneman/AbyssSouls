@@ -186,6 +186,27 @@ const QTE_COUNT = { fighter:3, assassin:3, mage:3, healer:3, summoner:3 };
 
 const SAVE_KEY = 'uit_savegame_v2';
 const CHECKPOINT_KEY = 'uit_checkpoint_v2';
+const ENTRY_MODE_KEY = 'tiu_entry_mode';
+function entryMode(){ try{return sessionStorage.getItem(ENTRY_MODE_KEY)||'';}catch(e){return '';} }
+function isGuestSession(){ return entryMode()==='guest'; }
+function saveStorage(){ try{return isGuestSession()?sessionStorage:localStorage;}catch(e){return localStorage;} }
+function clearGuestData(){
+  try{[SAVE_KEY,CHECKPOINT_KEY,'tiu_endings','tiu_bad_endings','tiu_tut_done',ENTRY_MODE_KEY].forEach(k=>sessionStorage.removeItem(k));}catch(e){}
+}
+function storedAccountSession(){
+  try{const s=JSON.parse(localStorage.getItem('tiu_auth_session')||'null');return !!(s&&s.access_token&&s.user&&s.user.id);}catch(e){return false;}
+}
+function hasEntryAccess(){return entryMode()==='guest'||entryMode()==='account'||storedAccountSession();}
+function showAccessGate(){const gate=$('accessGate');if(gate)gate.classList.remove('hidden');$('titleScreen').classList.add('hidden');}
+function activateGuestEntry(){
+  clearGuestData();try{sessionStorage.setItem(ENTRY_MODE_KEY,'guest');}catch(e){}
+  $('accessGate').classList.add('hidden');showTitle();
+}
+function activateAccountEntry(){
+  clearGuestData();try{sessionStorage.setItem(ENTRY_MODE_KEY,'account');}catch(e){}
+  $('accessGate').classList.add('hidden');$('titleScreen').classList.remove('hidden');refreshContinueBtn();
+}
+function lockEntry(){try{sessionStorage.removeItem(ENTRY_MODE_KEY);}catch(e){}showAccessGate();}
 
 function rand(a,b){return a+Math.random()*(b-a);}
 function pick(arr){return arr[Math.floor(Math.random()*arr.length)];}
@@ -283,11 +304,11 @@ function persistSave(){
   if(!S || !S.running) return;
   try{
     const data = serializeSave();
-    if(data) localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+    if(data) saveStorage().setItem(SAVE_KEY, JSON.stringify(data));
   }catch(e){}
 }
 function saveCheckpoint(){
-  try{ const data = serializeSave(); if(data) localStorage.setItem(CHECKPOINT_KEY, JSON.stringify(data)); }catch(e){}
+  try{ const data = serializeSave(); if(data) saveStorage().setItem(CHECKPOINT_KEY, JSON.stringify(data)); }catch(e){}
 }
 let _autoSaveTimer = null;
 function scheduleAutoSave(){
@@ -296,7 +317,7 @@ function scheduleAutoSave(){
 }
 function readSlot(key){
   try{
-    const raw = localStorage.getItem(key);
+    const raw = saveStorage().getItem(key);
     if(!raw) return null;
     const d = JSON.parse(raw);
     return (d && d.v===2 && d.state && d.rpg) ? d : null;
@@ -304,7 +325,7 @@ function readSlot(key){
 }
 function readSaveGame(){ return readSlot(SAVE_KEY); }
 function hasSaveGame(){ return !!readSaveGame(); }
-function deleteSaveGame(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} }
+function deleteSaveGame(){ try{ saveStorage().removeItem(SAVE_KEY); }catch(e){} }
 function restoreFrom(data){
   stopBattleOst(false);
   S = data.state;
@@ -1845,8 +1866,9 @@ function jumpscare(){
 /* ---- BAD ENDING: bỏ cuộc khi bị The TIU bắt ---- */
 function recordBadEnding(key){
   try{
-    const got = JSON.parse(localStorage.getItem('tiu_bad_endings')||'[]');
-    if(got.indexOf(key)<0){ got.push(key); localStorage.setItem('tiu_bad_endings', JSON.stringify(got)); }
+    const storage = saveStorage();
+    const got = JSON.parse(storage.getItem('tiu_bad_endings')||'[]');
+    if(got.indexOf(key)<0){ got.push(key); storage.setItem('tiu_bad_endings', JSON.stringify(got)); }
     return got.length;
   }catch(e){ return 1; }
 }
@@ -2772,8 +2794,9 @@ function computeEnding(path){
 }
 function recordEnding(key){
   try{
-    const got = JSON.parse(localStorage.getItem('tiu_endings')||'[]');
-    if(got.indexOf(key)<0){ got.push(key); localStorage.setItem('tiu_endings', JSON.stringify(got)); }
+    const storage = saveStorage();
+    const got = JSON.parse(storage.getItem('tiu_endings')||'[]');
+    if(got.indexOf(key)<0){ got.push(key); storage.setItem('tiu_endings', JSON.stringify(got)); }
     return got.length;
   }catch(e){ return 1; }
 }
@@ -2868,6 +2891,12 @@ function showTitle(){
   stopBattleOst(false);
   hideAllOverlays();
   $('mgModal').classList.add('hidden');
+  if(!hasEntryAccess()){
+    showAccessGate();
+    refreshContinueBtn();
+    return;
+  }
+  $('accessGate').classList.add('hidden');
   $('titleScreen').classList.remove('hidden');
   refreshContinueBtn();
 }
@@ -2996,6 +3025,7 @@ function buildSaveGameSection(wrap){
 
 let settingsOrigin = 'title';
 $('startBtn').onclick = startNewGame;
+$('entryGuestBtn').onclick = activateGuestEntry;
 $('settingsBtn').onclick = ()=>{
   settingsOrigin = 'title';
   hideAllOverlays(); buildSettings();
@@ -4354,6 +4384,17 @@ window.showModal = showModal;
 window.closeModal = closeModal;
 window.isBattleActive = isBattleActive;
 Object.defineProperty(window, 'S', { configurable: true, get: ()=>S });
+window.TiuAccess = { guest:activateGuestEntry, account:activateAccountEntry, logout:lockEntry, mode:entryMode };
+window.addEventListener('pagehide', ()=>{
+  if(!isGuestSession()) return;
+  clearGuestData();
+});
+window.addEventListener('pageshow', (e)=>{
+  if(!e.persisted || hasEntryAccess()) return;
+  S = null;
+  BATTLE = null;
+  showTitle();
+});
 
 buildMap();
 rafId = requestAnimationFrame(tick);

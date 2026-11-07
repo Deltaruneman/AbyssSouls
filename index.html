@@ -99,7 +99,21 @@
 <button id="mapToggleBtn" class="panelToggleBtn" title="Bật/tắt sơ đồ">🗺️</button>
 <button id="logToggleBtn" class="panelToggleBtn" title="Bật/tắt nhật ký">📜</button>
 
-<div class="overlay" id="titleScreen">
+<div class="overlay" id="accessGate">
+  <section id="accessCard" aria-labelledby="accessTitle">
+    <span class="accessEyebrow">THE TIU · CỔNG NGƯỜI CHƠI</span>
+    <h1 id="accessTitle">BẠN SẼ VÀO CA TRỰC BẰNG CÁCH NÀO?</h1>
+    <p>Đăng nhập để lưu hồ sơ nhân vật và dùng Đấu trường. Chơi khách để thử game; dữ liệu khách sẽ bị xóa khi rời trang.</p>
+    <div id="accessActions">
+      <button class="bigbtn" id="entryLoginBtn">ĐĂNG NHẬP</button>
+      <button class="bigbtn secondary" id="entryRegisterBtn">TẠO TÀI KHOẢN</button>
+      <button class="bigbtn neutral" id="entryGuestBtn">CHƠI VỚI TƯ CÁCH KHÁCH</button>
+    </div>
+    <div class="accessFoot">Tài khoản giữ hồ sơ nhân vật trên Supabase. Khách chỉ lưu tạm trong tab hiện tại.</div>
+  </section>
+</div>
+
+<div class="overlay hidden" id="titleScreen">
   <div id="titleLeft">
     <h1>The TIU</h1>
     <h2>GIẢI ĐẤU SINH VIÊN NĂM CUỐI</h2>
