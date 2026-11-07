@@ -105,7 +105,7 @@ Chế độ này cần dịch vụ Supabase hoạt động; phần chơi đơn k
 
 Sau khi chạy schema chính của game, chạy migration [`20261107000000_live_pvp.sql`](supabase/migrations/20261107000000_live_pvp.sql) một lần trong **Supabase Dashboard → SQL Editor**. Migration thêm bảng trận trực tiếp và các RPC có xác thực bằng key; bảng vẫn bật RLS và client không được đọc/ghi trực tiếp. Cả hai người phải lưu & công khai build để xuất hiện trong danh sách thách đấu. Nếu chưa chạy migration, PvP AI và phần chơi đơn vẫn hoạt động.
 
-Để bật đăng ký/đăng nhập và ba slot, chạy tiếp [`20261107010000_account_auth_3_character_slots.sql`](supabase/migrations/20261107010000_account_auth_3_character_slots.sql). Supabase Auth cần bật nhà cung cấp **Email**. Nếu đang bật xác nhận email, người chơi phải xác nhận thư trước khi đăng nhập lần đầu.
+Để bật đăng ký/đăng nhập và ba slot, chạy tiếp [`20261107010000_account_auth_3_character_slots.sql`](supabase/migrations/20261107010000_account_auth_3_character_slots.sql). Supabase Auth cần bật nhà cung cấp **Email**. Để bỏ xác nhận email, tắt **Confirm Email** tại **Authentication → Sign In / Providers → Email** trong Supabase Dashboard; khi đó đăng ký thành công sẽ tự đăng nhập.
 
 `config/supabase_config.js` chứa URL và khóa công khai phía client; file này cần được đưa vào repository để bản deploy tải được. Chỉ dùng anon/publishable key tại đây; tuyệt đối không đặt `service_role` key trong game. File schema nền hiện không nằm trong checkout; cần có schema nền đã tạo các bảng `players`, `characters`, các RPC hồ sơ hiện có và hàm `_player_of(text)` trước khi chạy migration PvP trực tiếp. Cách cấu hình và deploy Edge Function được ghi trong [`supabase/README.md`](supabase/README.md).
 

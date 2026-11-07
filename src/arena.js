@@ -35,7 +35,7 @@
   /* ---------- gọi Supabase ---------- */
   const ERR_VI = {
     auth_required: "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại.", account_not_initialized: "Không tìm thấy hồ sơ tài khoản. Hãy đăng nhập lại.", invalid_slot: "Ô nhân vật không hợp lệ.", slot_not_found: "Không tìm thấy ô nhân vật.",
-    invalid_grant: "Email hoặc mật khẩu chưa đúng, hoặc email chưa được xác nhận.", invalid_credentials: "Email hoặc mật khẩu chưa đúng.", email_not_confirmed: "Hãy xác nhận địa chỉ email trước khi đăng nhập.", user_already_exists: "Email này đã có tài khoản. Hãy đăng nhập thay vì đăng ký lại.", weak_password: "Mật khẩu chưa đủ mạnh. Hãy dùng mật khẩu dài hơn.",
+    invalid_grant: "Email hoặc mật khẩu chưa đúng, hoặc Supabase vẫn đang yêu cầu xác nhận email.", invalid_credentials: "Email hoặc mật khẩu chưa đúng.", email_not_confirmed: "Supabase vẫn yêu cầu xác nhận email. Tắt Confirm Email trong Authentication → Sign In / Providers → Email.", user_already_exists: "Email này đã có tài khoản. Hãy đăng nhập thay vì đăng ký lại.", weak_password: "Mật khẩu chưa đủ mạnh. Hãy dùng mật khẩu dài hơn.",
     invalid_key: "Key không đúng hoặc không tồn tại.", too_many_registrations: "Đang có quá nhiều đăng ký, thử lại sau ít phút.",
     data_too_large: "Dữ liệu nhân vật quá lớn.", build_too_large: "Bản dựng quá lớn.", self_match: "Không thể đấu với chính mình.",
     no_build: "Bạn chưa lưu & công khai nhân vật (mục ⬆ Lưu nhân vật).", no_opponent: "Đối thủ không còn khả dụng.",
@@ -216,7 +216,7 @@
     const result = await guard("Đang tạo tài khoản...", () => authHttp("/auth/v1/signup", { email: email, password: password, data: { display_name: displayName || email.split("@")[0] } }), () => pageAuth());
     if (!result) return;
     if (result.access_token) { saveAuthSession(result); pageSlots(); return; }
-    info("📩 XÁC NHẬN EMAIL", "<p>Tài khoản đã được tạo. Hãy mở email xác nhận của Supabase, sau đó quay lại đăng nhập.</p>", () => pageAuth());
+    info("⚠ SUPABASE VẪN YÊU CẦU XÁC NHẬN EMAIL", "<p>Tài khoản đã được tạo nhưng Supabase chưa trả phiên đăng nhập. Để bỏ bước xác nhận, vào <b>Authentication → Sign In / Providers → Email</b> trong Supabase Dashboard và tắt <b>Confirm Email</b>, rồi thử đăng nhập lại.</p>", () => pageAuth());
   }
   async function pageSlots() {
     const session = await authSessionFresh();

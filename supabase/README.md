@@ -23,9 +23,12 @@ compatible with running through the Supabase CLI migration workflow.
 
 Then apply `supabase/migrations/20261107010000_account_auth_3_character_slots.sql`
 to enable email/password registration and three character slots per account.
-Enable the Email provider under Supabase Auth. With email confirmation enabled,
-players must confirm their address before their first sign-in. Each slot uses
-its own `players`/`characters` identity, so build, rating, and match history stay
+Enable the Email provider under Supabase Auth. To let new accounts sign in
+without verifying an email, turn off **Confirm Email** under
+**Authentication → Sign In / Providers → Email** in the Supabase Dashboard.
+With this setting off, Supabase returns a session on successful signup and the
+game signs the new account in automatically. Each slot uses its own
+`players`/`characters` identity, so build, rating, and match history stay
 separate. The old key-based login remains available for existing players.
 
 ## Ranked arena Edge Function
