@@ -1,6 +1,6 @@
 /* =========================================================================
    arena.js — ĐỒNG BỘ NHÂN VẬT (KEY) + ĐẤU TRƯỜNG (Supabase)
-   Nạp SAU script.js. Cần supabase_config.js (URL + anon key). Nếu chưa cấu hình -> hiện hướng dẫn, game vẫn chạy bình thường.
+   Nạp SAU script.js. Cần config/supabase_config.js (URL + anon key). Nếu chưa cấu hình -> hiện hướng dẫn, game vẫn chạy bình thường.
 
    - Người chơi đăng ký -> được cấp 1 KEY (chỉ hiện 1 lần). Nhập key ở thiết bị khác để tải nhân vật về.
    - ⬆ Lưu nhân vật: bản lưu đầy đủ + (tùy chọn) công khai "bản dựng" cho đấu trường.
@@ -38,7 +38,7 @@
   function niceError(e) {
     const code = (e && (e.code || e.message)) || "";
     for (const k in ERR_VI) if (String(code).indexOf(k) >= 0) return ERR_VI[k];
-    if (e && e.name === "TypeError") return "Không kết nối được máy chủ. Kiểm tra mạng và cấu hình supabase_config.js.";
+    if (e && e.name === "TypeError") return "Không kết nối được máy chủ. Kiểm tra mạng và cấu hình config/supabase_config.js.";
     return (e && e.message) ? String(e.message).slice(0, 160) : "Lỗi không xác định.";
   }
   async function http(path, body) {
@@ -113,7 +113,7 @@
     pageHome();
   }
   function pageNotConfigured() {
-    info("☁ ĐẤU TRƯỜNG & ĐỒNG BỘ", `<p style="font-size:14px;">Tính năng này cần máy chủ <b>Supabase</b>. Hãy mở <b>supabase_config.js</b> và điền <code>url</code> + <code>anonKey</code> của dự án (xem <b>supabase/README.md</b>).</p>
+    info("☁ ĐẤU TRƯỜNG & ĐỒNG BỘ", `<p style="font-size:14px;">Tính năng này cần máy chủ <b>Supabase</b>. Hãy mở <b>config/supabase_config.js</b> và điền <code>url</code> + <code>anonKey</code> của dự án (xem <b>supabase/README.md</b>).</p>
       <p style="font-size:13px;color:var(--text-dim);">Phần chơi đơn không bị ảnh hưởng.</p>`);
   }
   function pageAuth() {
@@ -240,7 +240,7 @@
       return `<div class="shopItem"><span>⚔ <b>${esc(peer)}</b><br><span style="font-size:12px;color:var(--text-dim);">${incoming?'Đang chờ bạn chấp nhận lời mời':(m.status==='pending'?'Đang chờ đối thủ chấp nhận':'Đang đấu · lượt '+m.current_round)}</span></span>
         <span style="display:flex;gap:6px;"><button class="btn ${incoming?'primary':''}" data-live="${i}">${incoming?'Chấp nhận':'Mở trận'}</button>${incoming?'':`<button class="btn danger" data-live-forfeit="${i}">Bỏ trận</button>`}</span></div>`;
     }).join("") : `<p style="font-size:12px;color:var(--text-dim);">Chưa có lời mời hoặc trận PvP trực tiếp nào.</p>`;
-    const body = liveHtml + (liveReady ? "" : `<p style="font-size:12px;color:var(--blood-bright);">PvP trực tiếp chưa được bật trong Supabase. Chạy migration <b>live_pvp.sql</b> trước.</p>`) + (directoryRows.length ? directoryRows.map((o, i) => `<div class="shopItem"><span>⚔ <b>${esc(o.name)}</b> — ${esc(CLASS_NAME[o.class_id] || o.class_id)} Lv${esc(o.level)}<br><span style="font-size:12px;color:var(--text-dim);">${liveReady?(o.online?'🟢 Đang online':'⚪ Offline')+' · ':''}Điểm ${o.rating} · ${o.wins}T/${o.losses}B</span></span>
+    const body = liveHtml + (liveReady ? "" : `<p style="font-size:12px;color:var(--blood-bright);">PvP trực tiếp chưa được bật trong Supabase. Chạy migration <b>20261107000000_live_pvp.sql</b> trước.</p>`) + (directoryRows.length ? directoryRows.map((o, i) => `<div class="shopItem"><span>⚔ <b>${esc(o.name)}</b> — ${esc(CLASS_NAME[o.class_id] || o.class_id)} Lv${esc(o.level)}<br><span style="font-size:12px;color:var(--text-dim);">${liveReady?(o.online?'🟢 Đang online':'⚪ Offline')+' · ':''}Điểm ${o.rating} · ${o.wins}T/${o.losses}B</span></span>
         <span style="display:flex;gap:6px;flex-wrap:wrap;"><button class="btn primary" data-live-invite="${i}" ${inGame()&&liveReady&&o.online?"":"disabled"}>PvP trực tiếp</button><button class="btn" data-friendly="${i}" ${inGame() ? "" : "disabled"}>Đấu thử AI</button><button class="btn" data-ranked="${i}">Xếp hạng AI</button></span></div>`).join("")
       : `<p style="font-size:14px;">Chưa có đối thủ nào công khai. Hãy là người đầu tiên: lưu & công khai nhân vật của bạn!</p>`);
     modal("⚔ ĐỐI THỦ GỢI Ý", body + `<p style="font-size:12px;color:var(--text-dim);margin-top:8px;">PvP trực tiếp giao hữu: hai người cùng chọn hành động từng lượt, đồng bộ gần thời gian thực; không cộng/trừ điểm xếp hạng. Cần cả hai online và đã công khai nhân vật. Đấu thử/Xếp hạng AI vẫn là hai chế độ riêng.</p>`,

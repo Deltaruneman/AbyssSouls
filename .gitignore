@@ -6,8 +6,8 @@ supabase/functions/.env
 supabase/.temp/
 supabase/.branches/
 
-# --- Cấu hình riêng của từng máy / môi trường (tùy chọn, xem supabase_config.example.js) ---
-supabase_config.js
+# --- Cấu hình riêng của từng máy / môi trường ---
+config/supabase_config.js
 
 # --- Khác ---
 node_modules/

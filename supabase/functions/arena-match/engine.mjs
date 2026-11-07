@@ -1,4 +1,4 @@
-/* FILE TỰ SINH bởi tools/build_engine.js — KHÔNG sửa tay. */
+/* FILE TỰ SINH bởi tools/build_engine.cjs — KHÔNG sửa tay. */
 /* =========================================================================
    rpg_core.js — MODULE 1: LÕI RPG (Battle Royale ĐRL)
    Nạp TRƯỚC script.js (index.html: dialogue.js, map.js, rpg_core.js, script.js).

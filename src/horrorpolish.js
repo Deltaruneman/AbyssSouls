@@ -1,6 +1,6 @@
 /* =========================================================================
    horror-polish.js
-   Bổ sung hành vi cho các hiệu ứng mới trong style.css:
+   Bổ sung hành vi cho các hiệu ứng mới trong styles/style.css:
      1) Toggle nút cho #miniMapWrap / #logPane trên màn hình < 900px
      2) Tự động kích hoạt hiệu ứng .vhs-glitch mỗi khi #roomTitle đổi nội dung
         (tức là mỗi khi người chơi chuyển phòng) — không cần sửa script.js

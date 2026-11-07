@@ -102,19 +102,19 @@ Chế độ này cần dịch vụ Supabase hoạt động; phần chơi đơn k
 
 ### Bật PvP trực tiếp trên Supabase
 
-Sau khi chạy schema chính của game, chạy thêm [`live_pvp.sql`](live_pvp.sql) một lần trong **Supabase Dashboard → SQL Editor**. Migration thêm bảng trận trực tiếp và các RPC có xác thực bằng key; bảng vẫn bật RLS và client không được đọc/ghi trực tiếp. Cả hai người phải lưu & công khai build để xuất hiện trong danh sách thách đấu. Nếu chưa chạy migration, PvP AI và phần chơi đơn vẫn hoạt động.
+Sau khi chạy schema chính của game, chạy migration [`20261107000000_live_pvp.sql`](supabase/migrations/20261107000000_live_pvp.sql) một lần trong **Supabase Dashboard → SQL Editor**. Migration thêm bảng trận trực tiếp và các RPC có xác thực bằng key; bảng vẫn bật RLS và client không được đọc/ghi trực tiếp. Cả hai người phải lưu & công khai build để xuất hiện trong danh sách thách đấu. Nếu chưa chạy migration, PvP AI và phần chơi đơn vẫn hoạt động.
 
-`supabase_config.js` chứa URL và khóa công khai phía client. Chỉ dùng anon/publishable key tại đây; tuyệt đối không đặt `service_role` key trong game. File schema nền hiện không nằm trong checkout; cần có schema nền đã tạo các bảng `players`, `characters`, các RPC hồ sơ hiện có và hàm `_player_of(text)` trước khi chạy migration PvP trực tiếp. Các file Edge Function hiện có xử lý xếp hạng AI; PvP trực tiếp dùng RPC bổ sung trong migration.
+`config/supabase_config.js` chứa URL và khóa công khai phía client. Chỉ dùng anon/publishable key tại đây; tuyệt đối không đặt `service_role` key trong game. File schema nền hiện không nằm trong checkout; cần có schema nền đã tạo các bảng `players`, `characters`, các RPC hồ sơ hiện có và hàm `_player_of(text)` trước khi chạy migration PvP trực tiếp. Cách cấu hình và deploy Edge Function được ghi trong [`supabase/README.md`](supabase/README.md).
 
 ## Cấu trúc mã nguồn
 
-- `index.html`, `style.css`: giao diện và điểm vào game.
-- `script.js`: vòng chơi, thời gian, bản đồ, tương tác, lưu game và giao diện chiến đấu.
-- `rpg_core.js`, `rpg_combat.js`: dữ liệu nhân vật, Class, tài năng, vật phẩm và luật chiến đấu.
-- `map.js`, `dialogue.js`, `tutorial.js`, `kbnav.js`: bản đồ nội thất, thoại, hướng dẫn và điều hướng bàn phím.
-- `arena.js`, `arena_core.js`, `handler.mjs`, `index.ts`, `engine.mjs`: phần đấu trường và đồng bộ trực tuyến.
-- `build_engine.js`: helper đóng gói engine cho Edge Function; hiện vẫn giả định cấu trúc thư mục cũ.
-- `assets/`: ảnh, nhạc và tài nguyên giao diện.
+- `index.html`: điểm vào game; giữ ở thư mục gốc để host tĩnh phục vụ game trực tiếp.
+- `src/`: mã gameplay, RPG, chiến đấu, bản đồ, thoại, tutorial, đấu trường và điều khiển bàn phím.
+- `styles/style.css`: toàn bộ giao diện và bố cục.
+- `assets/`: ảnh, bản đồ, nhạc, âm thanh và gói VFX.
+- `config/supabase_config.js`: URL và khóa anon/publishable dùng ở phía trình duyệt; file này bị `.gitignore` bỏ qua, hãy tạo từ file mẫu nếu thiếu.
+- `supabase/migrations/`: các migration SQL; `supabase/functions/arena-match/`: mã Edge Function và engine được tạo.
+- `tools/build_engine.cjs`: tạo lại `engine.mjs` cho Edge Function từ các file lõi trong `src/`.
 - VFX chiến đấu dùng theme **Flat Night** tại `assets/vfx/Cooked_FX_FREE_Flat_Night/Cooked_FX_FREE/Flat_Night/PNG_1x/`; metadata frame nằm trong `Flat_Night/anims.json`, giấy phép gốc được giữ cùng gói tải về.
 
-Frontend không cần bước build. Thư mục dự án hiện chưa có lệnh test chung; helper `build_engine.js` cũng cần được chỉnh lại đường dẫn trước khi dùng với cấu trúc checkout hiện tại. Khi chỉnh gameplay, mở game qua máy chủ tĩnh và kiểm tra trực tiếp các luồng bị ảnh hưởng.
+Frontend không cần bước build. Chạy game bằng máy chủ web tĩnh như hướng dẫn đầu README. Sau khi chỉnh `src/rpg_core.js`, `src/rpg_combat.js` hoặc `src/arena_core.js`, chạy `node tools/build_engine.cjs` rồi deploy lại Edge Function nếu muốn cập nhật mô phỏng PvP xếp hạng.

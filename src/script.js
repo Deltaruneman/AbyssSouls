@@ -3,7 +3,7 @@
 const $ = id => document.getElementById(id);
 
 /* ============== CONFIG ============== */
-const MAP_IMG = {src:"map.png", w:446, h:448};
+const MAP_IMG = {src:"assets/images/map.png", w:446, h:448};
 const ROOM_DEF = {
   A:      {name:"TÒA A", sub:"Hội trường", x:48, y:65, connects:["LIB","E","B"], event:"stage"},
   B:      {name:"TÒA B", sub:"Khu học tập", x:33, y:38, connects:["A","C","E","CANTEEN","PARK"], event:"floors"},
@@ -3021,7 +3021,7 @@ let tutorialScriptLoading = false;
 function tutorialModuleUrl(){
   const scripts = Array.prototype.slice.call(document.getElementsByTagName('script'));
   const mainScript = scripts.find(s=>/(^|\/)script\.js(?:[?#]|$)/i.test(s.getAttribute('src')||''));
-  return new URL('tutorial.js', mainScript && mainScript.src ? mainScript.src : document.baseURI).href;
+  return new URL('tutorial.js', mainScript && mainScript.src ? mainScript.src : new URL('src/script.js', document.baseURI)).href;
 }
 function escapeTutorialHtml(value){ return String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function showTutorialFallback(reason){
@@ -3061,16 +3061,16 @@ function openTutorialMenuSafe(retry){
           loaded.openMenu();
           if($('mgTitle').textContent!=='❓ HƯỚNG DẪN' || !$('mgBody').querySelector('[data-tut]')) showTutorialFallback('File đã tải nhưng menu hướng dẫn không khởi tạo được.');
         }catch(e){ showTutorialFallback('File đã tải nhưng menu hướng dẫn không khởi tạo được.'); }
-      } else showTutorialFallback('Không tìm thấy module hướng dẫn sau khi tải lại. Hãy kiểm tra tutorial.js có nằm cạnh index.html không.');
+      } else showTutorialFallback('Không tìm thấy module hướng dẫn sau khi tải lại. Hãy kiểm tra src/tutorial.js.');
     };
     tag.onerror = ()=>{
       tutorialScriptLoading = false;
-      showTutorialFallback('Không tải được tutorial.js từ <code>'+escapeTutorialHtml(moduleUrl)+'</code>. Hãy kiểm tra game đang mở đúng thư mục và file tutorial.js nằm cạnh script.js.');
+      showTutorialFallback('Không tải được tutorial.js từ <code>'+escapeTutorialHtml(moduleUrl)+'</code>. Hãy kiểm tra game đang mở đúng thư mục và file src/tutorial.js tồn tại.');
     };
     document.head.appendChild(tag);
     return;
   }
-  showTutorialFallback(retry ? 'Vẫn chưa nạp được tutorial.js. Hãy kiểm tra file nằm cạnh index.html.' : 'Menu hướng dẫn chưa mở được.');
+  showTutorialFallback(retry ? 'Vẫn chưa nạp được tutorial.js. Hãy kiểm tra file src/tutorial.js.' : 'Menu hướng dẫn chưa mở được.');
 }
 // Gắn đường mở độc lập để menu vẫn phản hồi nếu module tutorial chưa kịp mount.
 document.addEventListener('click',e=>{
