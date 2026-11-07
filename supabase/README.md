@@ -5,9 +5,10 @@ and live PvP require a configured project.
 
 ## Client configuration
 
-Copy `config/supabase_config.example.js` to `config/supabase_config.js` and set
-the project URL and public anon/publishable key. The local config is ignored by
-Git. Never put a `service_role` key in a browser file.
+Set `url` and the public anon/publishable key in `config/supabase_config.js`.
+This file must be included in the deployed site so the browser can configure
+Supabase. The publishable key is intended for client use; never put a
+`service_role` key in a browser file.
 
 ## Database
 

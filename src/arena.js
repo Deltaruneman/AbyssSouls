@@ -164,7 +164,10 @@
     pageHome();
   }
   function pageNotConfigured() {
-    info("☁ ĐẤU TRƯỜNG & ĐỒNG BỘ", `<p style="font-size:14px;">Tính năng này cần máy chủ <b>Supabase</b>. Hãy mở <b>config/supabase_config.js</b> và điền <code>url</code> + <code>anonKey</code> của dự án (xem <b>supabase/README.md</b>).</p>
+    const reason = window.TIU_CLOUD
+      ? 'File cấu hình đã nạp nhưng thiếu <code>url</code> hoặc <code>anonKey</code>, hay vẫn còn giá trị mẫu.'
+      : 'Trang deploy chưa nạp được <code>config/supabase_config.js</code>. Hãy thêm file này vào repository rồi deploy lại.';
+    info("☁ ĐẤU TRƯỜNG & ĐỒNG BỘ", `<p style="font-size:14px;">Tính năng này cần máy chủ <b>Supabase</b>. ${reason}</p><p style="font-size:13px;">Cấu hình <code>url</code> + <code>anonKey</code> tại <b>config/supabase_config.js</b>, rồi tải lại trang sau khi deploy. Chỉ dùng anon/publishable key ở đây; không dùng service_role.</p>
       <p style="font-size:13px;color:var(--text-dim);">Phần chơi đơn không bị ảnh hưởng.</p>`);
   }
   function openEntryAuth(mode) {

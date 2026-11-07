@@ -107,7 +107,7 @@ Sau khi chạy schema chính của game, chạy migration [`20261107000000_live_
 
 Để bật đăng ký/đăng nhập và ba slot, chạy tiếp [`20261107010000_account_auth_3_character_slots.sql`](supabase/migrations/20261107010000_account_auth_3_character_slots.sql). Supabase Auth cần bật nhà cung cấp **Email**. Nếu đang bật xác nhận email, người chơi phải xác nhận thư trước khi đăng nhập lần đầu.
 
-`config/supabase_config.js` chứa URL và khóa công khai phía client. Chỉ dùng anon/publishable key tại đây; tuyệt đối không đặt `service_role` key trong game. File schema nền hiện không nằm trong checkout; cần có schema nền đã tạo các bảng `players`, `characters`, các RPC hồ sơ hiện có và hàm `_player_of(text)` trước khi chạy migration PvP trực tiếp. Cách cấu hình và deploy Edge Function được ghi trong [`supabase/README.md`](supabase/README.md).
+`config/supabase_config.js` chứa URL và khóa công khai phía client; file này cần được đưa vào repository để bản deploy tải được. Chỉ dùng anon/publishable key tại đây; tuyệt đối không đặt `service_role` key trong game. File schema nền hiện không nằm trong checkout; cần có schema nền đã tạo các bảng `players`, `characters`, các RPC hồ sơ hiện có và hàm `_player_of(text)` trước khi chạy migration PvP trực tiếp. Cách cấu hình và deploy Edge Function được ghi trong [`supabase/README.md`](supabase/README.md).
 
 ## Cấu trúc mã nguồn
 
@@ -115,7 +115,7 @@ Sau khi chạy schema chính của game, chạy migration [`20261107000000_live_
 - `src/`: mã gameplay, RPG, chiến đấu, bản đồ, thoại, tutorial, đấu trường và điều khiển bàn phím.
 - `styles/style.css`: toàn bộ giao diện và bố cục.
 - `assets/`: ảnh, bản đồ, nhạc, âm thanh và gói VFX.
-- `config/supabase_config.js`: URL và khóa anon/publishable dùng ở phía trình duyệt; file này bị `.gitignore` bỏ qua, hãy tạo từ file mẫu nếu thiếu.
+- `config/supabase_config.js`: URL và khóa anon/publishable dùng ở phía trình duyệt; phải được đưa vào repository/deployment. Khóa publishable được thiết kế để dùng phía client; không đặt `service_role` key vào đây.
 - `supabase/migrations/`: các migration SQL; `supabase/functions/arena-match/`: mã Edge Function và engine được tạo.
 - `tools/build_engine.cjs`: tạo lại `engine.mjs` cho Edge Function từ các file lõi trong `src/`.
 - VFX chiến đấu dùng theme **Flat Night** tại `assets/vfx/Cooked_FX_FREE_Flat_Night/Cooked_FX_FREE/Flat_Night/PNG_1x/`; metadata frame nằm trong `Flat_Night/anims.json`, giấy phép gốc được giữ cùng gói tải về.
