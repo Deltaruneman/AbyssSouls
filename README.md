@@ -98,9 +98,13 @@ The TIU có thể gây sự cố ở một số phòng. Hãy đến nơi đượ
 
 ## Đấu trường và đồng bộ (tùy chọn)
 
-Chế độ này cần dịch vụ Supabase hoạt động; phần chơi đơn không phụ thuộc vào nó. Sau khi tạo nhân vật, mở thẻ **NHÂN VẬT · PvP** ở góc phải HUD hoặc chọn **☁ ĐẤU TRƯỜNG** trong menu tạm dừng. Không cần hoàn thành ending: lưu & công khai build ngay trong ván đầu để tham gia xếp hạng; đấu thử dùng nhân vật của ván đang chơi. Bạn cũng có thể tạo hoặc dùng key, lưu nhân vật riêng tư, tải dữ liệu và xem lịch sử.
+Chế độ này cần dịch vụ Supabase hoạt động; phần chơi đơn không phụ thuộc vào nó. Sau khi tạo nhân vật, mở thẻ **NHÂN VẬT · PvP** ở góc phải HUD hoặc chọn **☁ ĐẤU TRƯỜNG** trong menu tạm dừng. Không cần hoàn thành ending: lưu & công khai build ngay trong ván đầu để gửi lời mời PvP trực tiếp, tham gia xếp hạng AI hoặc đấu thử AI. PvP trực tiếp là trận giao hữu 1v1, không cộng/trừ điểm: hai người chọn hành động cùng lượt, trận đồng bộ qua Supabase và tự cập nhật khoảng mỗi giây. Đối thủ cần online để nhận/chấp nhận lời mời. Bạn cũng có thể tạo hoặc dùng key, lưu nhân vật riêng tư, tải dữ liệu và xem lịch sử.
 
-`supabase_config.js` chứa URL và khóa công khai phía client. Chỉ dùng anon/publishable key tại đây; tuyệt đối không đặt `service_role` key trong game. Phần mã nguồn hiện có frontend và các file Edge Function (`arena.js`, `arena_core.js`, `handler.mjs`, `index.ts`, `engine.mjs`), nhưng checkout này chưa có SQL schema và thư mục triển khai Supabase chuẩn. Vì vậy, việc dựng một backend Supabase mới chưa phải quy trình một bước từ README này; cần chuẩn bị schema, RPC và bố trí Edge Function theo cấu trúc Supabase trước khi deploy.
+### Bật PvP trực tiếp trên Supabase
+
+Sau khi chạy schema chính của game, chạy thêm [`live_pvp.sql`](live_pvp.sql) một lần trong **Supabase Dashboard → SQL Editor**. Migration thêm bảng trận trực tiếp và các RPC có xác thực bằng key; bảng vẫn bật RLS và client không được đọc/ghi trực tiếp. Cả hai người phải lưu & công khai build để xuất hiện trong danh sách thách đấu. Nếu chưa chạy migration, PvP AI và phần chơi đơn vẫn hoạt động.
+
+`supabase_config.js` chứa URL và khóa công khai phía client. Chỉ dùng anon/publishable key tại đây; tuyệt đối không đặt `service_role` key trong game. File schema nền hiện không nằm trong checkout; cần có schema nền đã tạo các bảng `players`, `characters`, các RPC hồ sơ hiện có và hàm `_player_of(text)` trước khi chạy migration PvP trực tiếp. Các file Edge Function hiện có xử lý xếp hạng AI; PvP trực tiếp dùng RPC bổ sung trong migration.
 
 ## Cấu trúc mã nguồn
 

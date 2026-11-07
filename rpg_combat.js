@@ -617,7 +617,7 @@
     // Khóa hành động AI của địch ngay đầu lượt để người chơi có thể đọc ý đồ
     // và chọn phòng thủ/khống chế trước khi các đơn vị ra tay.
     B.units.forEach(function (u) {
-      if (u.alive && u.side === "E" && !u.isSummon && !u.st.paralyze && !u.st.stun) u.action = aiChoose(B, u);
+      if (u.alive && u.side === "E" && u.controller === "ai" && !u.isSummon && !u.st.paralyze && !u.st.stun) u.action = aiChoose(B, u);
     });
     const pending = B.units.filter(function (u) {
       return u.alive && !u.isSummon && u.controller === "player" && !u.st.paralyze && !u.st.stun;

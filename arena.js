@@ -4,8 +4,8 @@
 
    - Người chơi đăng ký -> được cấp 1 KEY (chỉ hiện 1 lần). Nhập key ở thiết bị khác để tải nhân vật về.
    - ⬆ Lưu nhân vật: bản lưu đầy đủ + (tùy chọn) công khai "bản dựng" cho đấu trường.
-   - ⚔ Đấu thử: bạn TỰ ĐIỀU KHIỂN nhân vật đang chơi đấu với bản sao (AI) của người khác — không tính điểm.
-   - 🏆 Xếp hạng: máy chủ mô phỏng trận (2 bên AI, engine chạy trên server) -> không thể gian lận kết quả.
+   - ⚔ PvP trực tiếp: hai người thật chọn hành động mỗi lượt; trạng thái đồng bộ qua Supabase.
+   - 🤖 Đấu thử / 🏆 Xếp hạng AI: các chế độ mô phỏng riêng, không phải PvP trực tiếp.
    ========================================================================= */
 (function () {
   "use strict";
@@ -30,7 +30,10 @@
     no_build: "Bạn chưa lưu & công khai nhân vật (mục ⬆ Lưu nhân vật).", no_opponent: "Đối thủ không còn khả dụng.",
     invalid_own_build: "Nhân vật của bạn không hợp lệ.", invalid_opponent_build: "Nhân vật đối thủ không hợp lệ.",
     too_fast: "Chậm lại một chút giữa các trận.", daily_limit: "Hết lượt hôm nay.", same_opponent: "Đã đấu đủ số trận xếp hạng với người này hôm nay.",
-    rating_changed: "Điểm vừa thay đổi do trận khác, hãy thử lại.", server_error: "Lỗi máy chủ, thử lại sau."
+    rating_changed: "Điểm vừa thay đổi do trận khác, hãy thử lại.", server_error: "Lỗi máy chủ, thử lại sau.",
+    no_own_build: "Hãy lưu và công khai nhân vật của bạn trước khi thách đấu.", live_match_exists: "Bạn hoặc đối thủ đang có trận trực tiếp chưa kết thúc.",
+    action_already_submitted: "Bạn đã chọn hành động cho lượt này.", live_match_not_active: "Trận này chưa bắt đầu hoặc đã kết thúc.",
+    live_match_not_found: "Không tìm thấy trận trực tiếp.", live_match_expired: "Lời mời đã hết hạn.", live_match_not_pending: "Lời mời này không còn chờ phản hồi.", bad_action: "Hành động PvP không hợp lệ."
   };
   function niceError(e) {
     const code = (e && (e.code || e.message)) || "";
@@ -51,13 +54,41 @@
   }
   const rpc = (name, body) => http("/rest/v1/rpc/" + name, body);
   const matchApi = (body) => http("/functions/v1/arena-match", body);
+  let livePollTimer = null;
+  let liveMatchId = null;
+  let liveMenu = null;
+  let liveInboxTimer = null;
+  const liveInboxSeen = new Set();
 
   /* ---------- tiện ích UI ---------- */
   let wasPauseOpen = false;
+  let resumeGameOnClose = false;
   function modal(title, html, buttons) { showModal(title, html, buttons); }
   function closeArena() {
     closeModal(true);
     if (wasPauseOpen) { const pm = $("pauseMenu"); if (pm) pm.classList.remove("hidden"); wasPauseOpen = false; }
+    else if (resumeGameOnClose && typeof S!=="undefined" && S && S.running && typeof isBattleActive==="function" && !isBattleActive()) { S.paused=false; S.lastTick=performance.now(); }
+    resumeGameOnClose=false;
+  }
+  function startLiveInboxPolling() {
+    if(liveInboxTimer) clearInterval(liveInboxTimer);
+    if(!ENABLED || !getKey()) return;
+    const poll=async()=>{
+      if(!getKey() || (typeof isBattleActive==="function" && isBattleActive())) return;
+      const vn=$("vnOverlay"); if(vn && !vn.classList.contains("hidden")) return;
+      try {
+        const matches=await rpc("list_live_matches",{p_key:getKey()});
+        const incoming=(matches||[]).find(m=>m.status==="pending" && m.opponent_id===m.my_id && !liveInboxSeen.has(m.id));
+        if(!incoming) return;
+        if(!$("mgModal").classList.contains("hidden")) return;
+        liveInboxSeen.add(incoming.id);
+        modal("⚔ LỜI MỜI PvP TRỰC TIẾP",`<p><b>${esc(incoming.challenger_name)}</b> muốn đấu giao hữu với bạn theo lượt.</p><p style="font-size:12px;color:var(--text-dim);">Lời mời hết hạn sau 5 phút. Trận trực tiếp hiện không cộng/trừ điểm xếp hạng.</p>`,[
+          {label:"Chấp nhận",primary:true,onClick:async()=>{const resume=!!(typeof S!=="undefined"&&S&&S.running&&$("titleScreen").classList.contains("hidden"));const m=await guard("Đang kết nối trận...",()=>rpc("respond_live_match",{p_key:getKey(),p_match:incoming.id,p_accept:true}),()=>{});if(m&&m.status==="active"){resumeGameOnClose=resume;openLiveMatch(incoming.id);}}},
+          {label:"Từ chối",danger:true,onClick:async()=>{try{await rpc("respond_live_match",{p_key:getKey(),p_match:incoming.id,p_accept:false});}catch(e){}resumeGameOnClose=false;closeModal();}}
+        ]);
+      } catch(e) { /* migration chưa được cài; không ảnh hưởng phần chơi đơn */ }
+    };
+    poll(); liveInboxTimer=setInterval(poll,2500);
   }
   function info(title, html, back) {
     modal(title, html, [{ label: back ? "← Quay lại" : "Đóng", primary: true, onClick: back || closeArena }]);
@@ -75,6 +106,7 @@
   function openArena() {
     const pm = $("pauseMenu");
     wasPauseOpen = !!(pm && !pm.classList.contains("hidden"));
+    resumeGameOnClose=!!(typeof S!=="undefined"&&S&&S.running&&$("titleScreen").classList.contains("hidden")&&!wasPauseOpen);
     if (pm && wasPauseOpen) pm.classList.add("hidden");
     if (!ENABLED) return pageNotConfigured();
     if (!getKey()) return pageAuth();
@@ -99,6 +131,7 @@
     const res = await guard("Đang tạo key...", () => rpc("register_player", { p_name: name }), pageAuth);
     if (!res) return;
     setKey(res.key);
+    startLiveInboxPolling();
     modal("🔑 KEY CỦA BẠN", `<p style="font-size:14px;">Chào <b>${esc(res.name)}</b>! Đây là key của bạn:</p>
       <p style="font-size:22px;letter-spacing:2px;text-align:center;margin:14px 0;color:var(--amber);user-select:all;">${esc(res.key)}</p>
       <p style="font-size:13px;color:var(--blood-bright);"><b>Lưu key này ngay.</b> Máy chủ chỉ lưu bản băm — nếu mất key, KHÔNG có cách khôi phục nhân vật. Ai có key này đều dùng được nhân vật của bạn.</p>`,
@@ -109,7 +142,7 @@
     if (!/^TIU-[0-9A-F]{5}-[0-9A-F]{5}-[0-9A-F]{5}-[0-9A-F]{5}$/.test(k)) { info("⚠ KEY SAI ĐỊNH DẠNG", `<p style="font-size:14px;">Key có dạng <b>TIU-XXXXX-XXXXX-XXXXX-XXXXX</b>.</p>`, pageAuth); return; }
     const p = await guard("Đang kiểm tra key...", () => rpc("get_profile", { p_key: k }), pageAuth);
     if (!p) return;
-    setKey(k); pageHome();
+    setKey(k); startLiveInboxPolling(); pageHome();
   }
   function copy(text) {
     try { navigator.clipboard.writeText(text).then(() => { if (typeof addLog === "function" && typeof S !== "undefined" && S) addLog("📋 Đã sao chép.", ""); }); } catch (e) { /* người dùng tự bôi đen */ }
@@ -195,13 +228,166 @@
   async function pageOpponents() {
     const rows = await guard("Đang tìm đối thủ...", () => rpc("list_opponents", { p_key: getKey(), p_limit: 8 }), pageHome);
     if (!rows) return;
-    const body = rows.length ? rows.map((o, i) => `<div class="shopItem"><span>⚔ <b>${esc(o.name)}</b> — ${esc(CLASS_NAME[o.class_id] || o.class_id)} Lv${esc(o.level)}<br><span style="font-size:12px;color:var(--text-dim);">Điểm ${o.rating} · ${o.wins}T/${o.losses}B</span></span>
-        <span style="display:flex;gap:6px;flex-wrap:wrap;"><button class="btn" data-friendly="${i}" ${inGame() ? "" : "disabled"}>Đấu thử</button><button class="btn primary" data-ranked="${i}">Xếp hạng</button></span></div>`).join("")
-      : `<p style="font-size:14px;">Chưa có đối thủ nào công khai. Hãy là người đầu tiên: lưu & công khai nhân vật của bạn!</p>`;
-    modal("⚔ ĐỐI THỦ GỢI Ý", body + `<p style="font-size:12px;color:var(--text-dim);margin-top:8px;">Đấu thử: bạn tự điều khiển nhân vật đang chơi (cần đang trong ván), không tính điểm. Xếp hạng: máy chủ mô phỏng bằng nhân vật đã lưu, AI điều khiển cả hai.</p>`,
+    let liveMatches = [], liveReady = true, directoryRows = rows;
+    try {
+      const results=await Promise.all([rpc("list_live_matches",{p_key:getKey()}),rpc("list_live_opponents",{p_key:getKey(),p_limit:8})]);
+      liveMatches=results[0]||[]; directoryRows=results[1]||rows;
+    } catch (e) { liveReady = false; }
+    const liveList = liveMatches.filter(m=>m.status==='active' || m.status==='pending');
+    const liveHtml = liveList.length ? `<h3 style="color:var(--amber);margin:8px 0;">PvP TRỰC TIẾP</h3>`+liveList.map((m,i)=>{
+      const incoming=m.status==='pending' && m.opponent_id===m.my_id;
+      const peer=m.challenger_id===m.my_id ? m.opponent_name : m.challenger_name;
+      return `<div class="shopItem"><span>⚔ <b>${esc(peer)}</b><br><span style="font-size:12px;color:var(--text-dim);">${incoming?'Đang chờ bạn chấp nhận lời mời':(m.status==='pending'?'Đang chờ đối thủ chấp nhận':'Đang đấu · lượt '+m.current_round)}</span></span>
+        <span style="display:flex;gap:6px;"><button class="btn ${incoming?'primary':''}" data-live="${i}">${incoming?'Chấp nhận':'Mở trận'}</button>${incoming?'':`<button class="btn danger" data-live-forfeit="${i}">Bỏ trận</button>`}</span></div>`;
+    }).join("") : `<p style="font-size:12px;color:var(--text-dim);">Chưa có lời mời hoặc trận PvP trực tiếp nào.</p>`;
+    const body = liveHtml + (liveReady ? "" : `<p style="font-size:12px;color:var(--blood-bright);">PvP trực tiếp chưa được bật trong Supabase. Chạy migration <b>live_pvp.sql</b> trước.</p>`) + (directoryRows.length ? directoryRows.map((o, i) => `<div class="shopItem"><span>⚔ <b>${esc(o.name)}</b> — ${esc(CLASS_NAME[o.class_id] || o.class_id)} Lv${esc(o.level)}<br><span style="font-size:12px;color:var(--text-dim);">${liveReady?(o.online?'🟢 Đang online':'⚪ Offline')+' · ':''}Điểm ${o.rating} · ${o.wins}T/${o.losses}B</span></span>
+        <span style="display:flex;gap:6px;flex-wrap:wrap;"><button class="btn primary" data-live-invite="${i}" ${inGame()&&liveReady&&o.online?"":"disabled"}>PvP trực tiếp</button><button class="btn" data-friendly="${i}" ${inGame() ? "" : "disabled"}>Đấu thử AI</button><button class="btn" data-ranked="${i}">Xếp hạng AI</button></span></div>`).join("")
+      : `<p style="font-size:14px;">Chưa có đối thủ nào công khai. Hãy là người đầu tiên: lưu & công khai nhân vật của bạn!</p>`);
+    modal("⚔ ĐỐI THỦ GỢI Ý", body + `<p style="font-size:12px;color:var(--text-dim);margin-top:8px;">PvP trực tiếp giao hữu: hai người cùng chọn hành động từng lượt, đồng bộ gần thời gian thực; không cộng/trừ điểm xếp hạng. Cần cả hai online và đã công khai nhân vật. Đấu thử/Xếp hạng AI vẫn là hai chế độ riêng.</p>`,
       [{ label: "↻ Làm mới", onClick: pageOpponents }, { label: "← Quay lại", onClick: pageHome }]);
-    document.querySelectorAll("#mgBody [data-ranked]").forEach((b) => { b.onclick = () => doMatch(rows[+b.getAttribute("data-ranked")], true); });
-    document.querySelectorAll("#mgBody [data-friendly]").forEach((b) => { b.onclick = () => startFriendly(rows[+b.getAttribute("data-friendly")]); });
+    document.querySelectorAll("#mgBody [data-ranked]").forEach((b) => { b.onclick = () => doMatch(directoryRows[+b.getAttribute("data-ranked")], true); });
+    document.querySelectorAll("#mgBody [data-friendly]").forEach((b) => { b.onclick = () => startFriendly(directoryRows[+b.getAttribute("data-friendly")]); });
+    document.querySelectorAll("#mgBody [data-live-invite]").forEach((b) => { b.onclick = () => inviteLiveMatch(directoryRows[+b.getAttribute("data-live-invite")]); });
+    document.querySelectorAll("#mgBody [data-live]").forEach((b) => { b.onclick = () => handleLiveEntry(liveList[+b.getAttribute("data-live")]); });
+    document.querySelectorAll("#mgBody [data-live-forfeit]").forEach((b) => { b.onclick = () => forfeitLiveMatch(liveList[+b.getAttribute("data-live-forfeit")]); });
+  }
+  async function inviteLiveMatch(opp) {
+    const m = await guard("Đang gửi lời mời PvP trực tiếp...", () => rpc("invite_live_match", { p_key: getKey(), p_opponent: opp.id }), pageOpponents);
+    if (m) openLiveMatch(m.id);
+  }
+  async function handleLiveEntry(m) {
+    if (m.status === "pending" && m.opponent_id === m.my_id) {
+      const accepted = await guard("Đang chấp nhận lời mời...", () => rpc("respond_live_match", { p_key: getKey(), p_match: m.id, p_accept: true }), pageOpponents);
+      if (accepted) openLiveMatch(m.id);
+    } else openLiveMatch(m.id);
+  }
+  async function forfeitLiveMatch(m) {
+    const done = await guard("Đang kết thúc trận...", () => rpc("forfeit_live_match", { p_key: getKey(), p_match: m.id }), pageOpponents);
+    if (done) { if(liveMatchId===m.id) stopLivePolling(); pageOpponents(); }
+  }
+  function liveRng(seed) {
+    let a = seed | 0;
+    return function () { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  }
+  function liveSnapshot(m) {
+    const va = TiuArena.validateBuild(m.challenger_build), vb = TiuArena.validateBuild(m.opponent_build);
+    if (!va.ok || !vb.ok) throw new Error("Build PvP không hợp lệ.");
+    const rng = liveRng(Number(m.seed) || 1);
+    RPG.setRng(rng); RPGCombat.setRng(rng);
+    try {
+      const a = TiuArena.makeGhost(va.build, "LIVE_A"), b = TiuArena.makeGhost(vb.build, "LIVE_B");
+      const B = RPGCombat.create({ allies:[a], enemies:[b], controlAllies:true, pvp:true, loseOnPlayerDeath:false });
+      B.units.forEach(u=>{ u.controller="player"; });
+      const bySide = { A:B.units.find(u=>u.side==="A"), E:B.units.find(u=>u.side==="E") };
+      const history = Array.isArray(m.actions) ? m.actions : [];
+      const endRound = Math.max(1, Number(m.current_round)||1);
+      for(let round=1;round<endRound && !B.over;round++){
+        const pair = history.filter(x=>Number(x.round)===round);
+        if(pair.length<2) break;
+        RPGCombat.beginRound(B);
+        [m.challenger_id,m.opponent_id].forEach(pid=>{
+          const entry=pair.find(x=>x.player_id===pid);
+          if(!entry || !entry.action || entry.action.type==="skip") return;
+          const unit=pid===m.challenger_id?bySide.A:bySide.E;
+          RPGCombat.submit(B,unit.uid,entry.action);
+        });
+        RPGCombat.runRound(B);
+      }
+      const info = (!B.over && m.status==="active") ? RPGCombat.beginRound(B) : {pending:[]};
+      return { B:B, bySide:bySide, info:info, roundActions:history.filter(x=>Number(x.round)===Number(m.current_round)) };
+    } finally {
+      RPG.setRng(Math.random); RPGCombat.setRng(Math.random);
+    }
+  }
+  function stopLivePolling() {
+    if(livePollTimer){ clearInterval(livePollTimer); livePollTimer=null; }
+    liveMatchId=null; liveMenu=null;
+  }
+  function setLiveFooter(items, key) {
+    if(!liveMenu || liveMenu.footerKey===key) return;
+    liveMenu.footerKey=key;
+    const footer=$("mgFooter"); footer.innerHTML="";
+    items.forEach(item=>{
+      const b=document.createElement("button"); b.className="btn"+(item.primary?" primary":"")+(item.danger?" danger":"");
+      b.textContent=item.label; b.disabled=!!item.disabled; b.onclick=item.onClick||(()=>{}); footer.appendChild(b);
+    });
+  }
+  function liveMainButtons(m, snap, mine, localUnit, options) {
+    const mode=liveMenu.mode||"main", round=Number(m.current_round)||1;
+    const mineAct=snap.roundActions.find(x=>x.player_id===mine);
+    if(m.status!=="active") return [{label:"← Đóng",primary:true,onClick:()=>{stopLivePolling();closeArena();}}];
+    if(mineAct) return [{label:"Đang chờ đối thủ…",disabled:true},{label:"Đóng cửa sổ",onClick:()=>{stopLivePolling();closeArena();}}];
+    if(!snap.info.pending.includes(localUnit.uid)) return [{label:"Đang bỏ lượt…",disabled:true},{label:"Đóng cửa sổ",onClick:()=>{stopLivePolling();closeArena();}}];
+    const submit=async action=>{
+      try { await rpc("submit_live_action",{p_key:getKey(),p_match:m.id,p_action:action}); liveMenu.mode="main"; liveMenu.footerKey=""; await liveTick(m.id); }
+      catch(e){ info("⚠ KHÔNG GỬI ĐƯỢC LƯỢT",`<p>${esc(niceError(e))}</p>`,()=>openLiveMatch(m.id)); }
+    };
+    const back={label:"← Quay lại",onClick:()=>{liveMenu.mode="main";liveMenu.footerKey="";liveTick(m.id);}};
+    if(mode==="targets"){
+      const targets=RPGCombat.legalTargets(snap.B,localUnit,false);
+      return targets.map(t=>({label:"🎯 "+t.name+" · HP "+Math.ceil(t.hp)+"/"+t.maxHp,onClick:()=>submit(Object.assign({},liveMenu.pendingAction,{target:t.uid}))})).concat([back]);
+    }
+    if(mode==="skills"){
+      return options.skills.filter(s=>s.ready).map(s=>({label:"✦ "+s.name+(s.cost?" · "+s.cost+" TL":""),onClick:()=>{
+        const a={type:"skill",id:s.id,quality:1}; if(s.target==="single"){liveMenu.pendingAction=a;liveMenu.mode="targets";} else submit(a);
+        liveMenu.footerKey="";liveTick(m.id);
+      }})).concat([back]);
+    }
+    const buttons=[{label:"⚔ Tấn công",primary:true,onClick:()=>{liveMenu.pendingAction={type:"attack",quality:1};liveMenu.mode="targets";liveMenu.footerKey="";liveTick(m.id);}},
+      {label:"🛡 Phòng thủ",onClick:()=>submit({type:"defend"})},
+      {label:"✨ Kỹ năng",disabled:!options.skills.some(s=>s.ready),onClick:()=>{liveMenu.mode="skills";liveMenu.footerKey="";liveTick(m.id);}}];
+    const ult=options.ultimate;
+    if(ult.ready) buttons.push({label:"✦ "+ult.name,onClick:()=>{const a={type:"ultimate",id:ult.id,quality:1};if(ult.target==="single"){liveMenu.pendingAction=a;liveMenu.mode="targets";liveMenu.footerKey="";liveTick(m.id);}else submit(a);}});
+    buttons.push({label:"Bỏ trận",danger:true,onClick:()=>forfeitLiveMatch({id:m.id})});
+    return buttons;
+  }
+  async function liveTick(id) {
+    if(!liveMenu || liveMatchId!==id || liveMenu.busy || $("mgModal").classList.contains("hidden")) return;
+    const openTitle=$("mgTitle").textContent;
+    if(!(openTitle.startsWith("⌛ ĐANG KẾT NỐI TRẬN PvP") || openTitle.startsWith("⚔ PvP TRỰC TIẾP") || openTitle==="⌛ ĐANG CHỜ ĐỐI THỦ" || openTitle==="⚔ TRẬN ĐÃ ĐÓNG")) return;
+    liveMenu.busy=true;
+    try {
+      const m=await rpc("get_live_match",{p_key:getKey(),p_match:id});
+      if(!liveMenu || liveMatchId!==id) return;
+      if(m.status==="active" || m.status==="completed" || m.status==="forfeit"){
+        const snap=liveSnapshot(m), mine=m.my_id, isA=mine===m.challenger_id;
+        const local=snap.bySide[isA?"A":"E"], foe=snap.bySide[isA?"E":"A"];
+        if(snap.B.over && m.status==="active" && !liveMenu.finishing){
+          liveMenu.finishing=true;
+          const winner=snap.B.winner==="A"?m.challenger_id:m.opponent_id;
+          await rpc("finish_live_match",{p_key:getKey(),p_match:id,p_winner:winner,p_is_draw:false});
+          liveMenu.finishing=false; liveMenu.footerKey=""; return await liveTick(id);
+        }
+        const logs=(snap.B.log||[]).slice(-8).map(x=>esc(x.msg||x.text||"")).filter(Boolean).join("<br>");
+        const mineAct=snap.roundActions.find(x=>x.player_id===mine);
+        const foeAct=snap.roundActions.find(x=>x.player_id!==mine);
+        const result=m.status==="completed"||m.status==="forfeit";
+        const title=result?(m.is_draw?"🤝 HÒA":m.winner===mine?"🏆 BẠN THẮNG":"💀 BẠN THUA"):"⚔ PvP TRỰC TIẾP · LƯỢT "+snap.B.round;
+        $("mgTitle").textContent=title;
+        $("mgBody").innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+          <div class="shopItem" style="display:block;border-left:2px solid var(--scan);"><b>${esc(local.name)}</b><br><small>${esc(CLASS_NAME[local.f.classId]||local.f.classId)} Lv${local.f.level} · HP ${Math.max(0,Math.ceil(local.hp))}/${local.maxHp} · Nộ ${local.rage}</small></div>
+          <div class="shopItem" style="display:block;border-left:2px solid var(--blood-bright);"><b>${esc(foe.name)}</b><br><small>${esc(CLASS_NAME[foe.f.classId]||foe.f.classId)} Lv${foe.f.level} · HP ${Math.max(0,Math.ceil(foe.hp))}/${foe.maxHp} · Nộ ${foe.rage}</small></div></div>
+          <p style="font-size:13px;color:var(--text-dim);">${result?(m.is_draw?"Trận giao hữu kết thúc hòa.":"Giao hữu — người thắng: "+esc(m.winner===m.challenger_id?m.challenger_name:m.opponent_name)):mineAct?"Đã gửi lượt của bạn · đang chờ "+esc(isA?m.opponent_name:m.challenger_name):foeAct?esc(isA?m.opponent_name:m.challenger_name)+" đã chọn lượt · hãy hành động":"Giao hữu 1v1 · cả hai chọn hành động trong cùng lượt; trận phân giải sau khi cả hai gửi."}</p>
+          <div style="max-height:24vh;overflow:auto;border:1px solid var(--line);padding:8px;font-size:12px;line-height:1.5;">${logs||"Trận đấu bắt đầu — hãy chọn hành động."}</div>`;
+        const op=RPGCombat.options(snap.B,local);
+        setLiveFooter(liveMainButtons(m,snap,mine,local,op),[m.status,m.current_round,!!mineAct,liveMenu.mode,liveMenu.pendingAction&&liveMenu.pendingAction.id].join("|"));
+        if(m.status==="active" && !mineAct && !snap.info.pending.includes(local.uid)){
+          const skipKey=m.current_round+":"+mine;
+          if(liveMenu.skipKey!==skipKey){liveMenu.skipKey=skipKey;await rpc("submit_live_action",{p_key:getKey(),p_match:id,p_action:{type:"skip"}});liveMenu.footerKey="";}
+        }
+      } else {
+        $("mgTitle").textContent=m.status==="pending"?"⌛ ĐANG CHỜ ĐỐI THỦ":"⚔ TRẬN ĐÃ ĐÓNG";
+        $("mgBody").innerHTML=`<p style="font-size:14px;">${m.status==="pending"?"Đã gửi lời mời cho "+esc(m.opponent_name)+". Trận bắt đầu khi họ chấp nhận.":m.status==="rejected"?"Đối thủ đã từ chối lời mời.":m.status==="expired"?"Lời mời hết hạn.":"Trận không còn hoạt động."}</p><p style="font-size:12px;color:var(--text-dim);">Cửa sổ này tự kiểm tra trạng thái mỗi giây.</p>`;
+        setLiveFooter([{label:"Bỏ lời mời",danger:true,onClick:()=>forfeitLiveMatch({id})},{label:"Đóng cửa sổ",onClick:()=>{stopLivePolling();closeArena();}}],[m.status,m.updated_at].join("|"));
+      }
+    } catch(e) {
+      if(liveMenu && liveMatchId===id){$("mgBody").innerHTML=`<p style="color:var(--blood-bright);">${esc(niceError(e))}</p>`;}
+    } finally { if(liveMenu && liveMatchId===id) liveMenu.busy=false; }
+  }
+  function openLiveMatch(id) {
+    stopLivePolling(); liveMatchId=id; liveMenu={mode:"main",pendingAction:null,footerKey:"",skipKey:null,busy:false,finishing:false};
+    modal("⌛ ĐANG KẾT NỐI TRẬN PvP",`<p>Đang đồng bộ trạng thái trận...</p>`,[{label:"Đóng",onClick:()=>{stopLivePolling();closeArena();}}]);
+    liveTick(id); livePollTimer=setInterval(()=>liveTick(id),1000);
   }
   async function doMatch(opp, ranked) {
     const r = await guard("Máy chủ đang mô phỏng trận...", () => matchApi({ key: getKey(), opponentId: opp.id, ranked: ranked }), pageOpponents);
@@ -276,6 +462,7 @@
     if (b2) b2.onclick = openArena;
     const playerCard = $("playerArenaBtn");
     if (playerCard) playerCard.onclick = openArena;
+    startLiveInboxPolling();
     // Gõ chữ trong ô nhập không được kích hoạt phím tắt của game
     window.addEventListener("keydown", (e) => { const t = e.target; if (t && t.tagName === "INPUT") e.stopPropagation(); }, true);
     window.addEventListener("keyup", (e) => { const t = e.target; if (t && t.tagName === "INPUT") e.stopPropagation(); }, true);
