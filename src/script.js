@@ -2911,6 +2911,7 @@ function showClassResult(name, classId){
         resetStory();
         beginNight(1, 1, {});
         addLog('⭐ Bạn có 1 điểm Tài Năng! Bấm T (hoặc nút ⭐) để chọn nhánh build.', 'good');
+        if (window.TiuCloud && window.TiuCloud.autoSave) window.TiuCloud.autoSave({ initialOnly: true });
       }}]);
 }
 

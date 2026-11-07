@@ -1,8 +1,9 @@
 /* =========================================================================
-   arena.js — ĐỒNG BỘ NHÂN VẬT (KEY) + ĐẤU TRƯỜNG (Supabase)
+   arena.js — TÀI KHOẢN, SLOT NHÂN VẬT + ĐẤU TRƯỜNG (Supabase)
    Nạp SAU script.js. Cần config/supabase_config.js (URL + anon key). Nếu chưa cấu hình -> hiện hướng dẫn, game vẫn chạy bình thường.
 
-   - Người chơi đăng ký -> được cấp 1 KEY (chỉ hiện 1 lần). Nhập key ở thiết bị khác để tải nhân vật về.
+   - Đăng nhập email/mật khẩu; tài khoản mới có ba nhân vật/slot PvP độc lập.
+   - Hỗ trợ key cũ để người chơi hiện tại không mất nhân vật.
    - ⬆ Lưu nhân vật: bản lưu đầy đủ + (tùy chọn) công khai "bản dựng" cho đấu trường.
    - ⚔ PvP trực tiếp: hai người thật chọn hành động mỗi lượt; trạng thái đồng bộ qua Supabase.
    - 🤖 Đấu thử / 🏆 Xếp hạng AI: các chế độ mô phỏng riêng, không phải PvP trực tiếp.
@@ -11,20 +12,30 @@
   "use strict";
   const CFG = window.TIU_CLOUD || {};
   const ENABLED = !!(CFG.url && CFG.anonKey && String(CFG.url).indexOf("YOUR_") < 0 && String(CFG.anonKey).indexOf("YOUR_") < 0);
-  const LS_KEY = "tiu_cloud_key", LS_PUBLISH = "tiu_cloud_publish";
+  const LS_KEY = "tiu_cloud_key", LS_PUBLISH = "tiu_cloud_publish", LS_AUTH = "tiu_auth_session", LS_SLOT = "tiu_active_slot";
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const CLASS_NAME = { fighter: "Đấu sĩ", assassin: "Sát thủ", mage: "Pháp sư", healer: "Hộ tế", summoner: "Triệu hồi" };
+  let accountSlotPlayerIds = new Set();
 
   /* ---------- lưu key trên thiết bị ---------- */
   function getKey() { try { return localStorage.getItem(LS_KEY) || ""; } catch (e) { return ""; } }
   function setKey(k) { try { if (k) localStorage.setItem(LS_KEY, k); else localStorage.removeItem(LS_KEY); } catch (e) { /* bỏ qua */ } }
-  function wantPublish() { try { return localStorage.getItem(LS_PUBLISH) !== "0"; } catch (e) { return true; } }
-  function setPublish(v) { try { localStorage.setItem(LS_PUBLISH, v ? "1" : "0"); } catch (e) { /* bỏ qua */ } }
+  function accountScopedKey(key) { const auth = getAuth(), id = auth && auth.user && auth.user.id; return id ? key + "_" + id : key; }
+  function publishStorageKey() { return getAuth() && activeSlot() ? accountScopedKey(LS_PUBLISH) + "_slot_" + activeSlot() : LS_PUBLISH; }
+  function wantPublish() { try { return localStorage.getItem(publishStorageKey()) !== "0"; } catch (e) { return true; } }
+  function setPublish(v) { try { localStorage.setItem(publishStorageKey(), v ? "1" : "0"); } catch (e) { /* bỏ qua */ } }
+  function getAuth() { try { return JSON.parse(localStorage.getItem(LS_AUTH) || "null"); } catch (e) { return null; } }
+  function setAuth(s) { try { if (s) localStorage.setItem(LS_AUTH, JSON.stringify(s)); else localStorage.removeItem(LS_AUTH); } catch (e) { /* bỏ qua */ } }
+  function activeSlot() { try { return Number(localStorage.getItem(accountScopedKey(LS_SLOT))) || 0; } catch (e) { return 0; } }
+  function setActiveSlot(slot) { try { localStorage.setItem(accountScopedKey(LS_SLOT), String(slot)); } catch (e) { /* bỏ qua */ } }
+  function isNewActiveSlot() { try { return localStorage.getItem(accountScopedKey("tiu_active_slot_new")) === "1"; } catch (e) { return false; } }
   const maskKey = (k) => k ? k.replace(/^(TIU-\w{5})-\w{5}-\w{5}-(\w{5})$/, "$1-•••••-•••••-$2") : "";
 
   /* ---------- gọi Supabase ---------- */
   const ERR_VI = {
+    auth_required: "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại.", account_not_initialized: "Không tìm thấy hồ sơ tài khoản. Hãy đăng nhập lại.", invalid_slot: "Ô nhân vật không hợp lệ.", slot_not_found: "Không tìm thấy ô nhân vật.",
+    invalid_grant: "Email hoặc mật khẩu chưa đúng, hoặc email chưa được xác nhận.", invalid_credentials: "Email hoặc mật khẩu chưa đúng.", email_not_confirmed: "Hãy xác nhận địa chỉ email trước khi đăng nhập.", user_already_exists: "Email này đã có tài khoản. Hãy đăng nhập thay vì đăng ký lại.", weak_password: "Mật khẩu chưa đủ mạnh. Hãy dùng mật khẩu dài hơn.",
     invalid_key: "Key không đúng hoặc không tồn tại.", too_many_registrations: "Đang có quá nhiều đăng ký, thử lại sau ít phút.",
     data_too_large: "Dữ liệu nhân vật quá lớn.", build_too_large: "Bản dựng quá lớn.", self_match: "Không thể đấu với chính mình.",
     no_build: "Bạn chưa lưu & công khai nhân vật (mục ⬆ Lưu nhân vật).", no_opponent: "Đối thủ không còn khả dụng.",
@@ -41,10 +52,17 @@
     if (e && e.name === "TypeError") return "Không kết nối được máy chủ. Kiểm tra mạng và cấu hình config/supabase_config.js.";
     return (e && e.message) ? String(e.message).slice(0, 160) : "Lỗi không xác định.";
   }
+  function supabaseHeaders(session) {
+    const headers = { "Content-Type": "application/json", apikey: CFG.anonKey };
+    if (session && session.access_token) headers.Authorization = "Bearer " + session.access_token;
+    else if (!/^sb_(publishable|secret)_/.test(String(CFG.anonKey || ""))) headers.Authorization = "Bearer " + CFG.anonKey;
+    return headers;
+  }
   async function http(path, body) {
+    const session = await authSessionFresh();
     const r = await fetch(CFG.url.replace(/\/$/, "") + path, {
       method: "POST",
-      headers: { "Content-Type": "application/json", apikey: CFG.anonKey, Authorization: "Bearer " + CFG.anonKey },
+      headers: supabaseHeaders(session),
       body: JSON.stringify(body || {})
     });
     let data = null; const text = await r.text();
@@ -53,6 +71,35 @@
     return data;
   }
   const rpc = (name, body) => http("/rest/v1/rpc/" + name, body);
+  async function authHttp(path, body, session) {
+    const headers = supabaseHeaders(session);
+    const r = await fetch(CFG.url.replace(/\/$/, "") + path, { method: "POST", headers: headers, body: JSON.stringify(body || {}) });
+    const text = await r.text(); let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch (e) { data = { message: text }; }
+    if (!r.ok) { const err = new Error((data && (data.msg || data.message || data.error_description || data.error)) || ("HTTP " + r.status)); err.code = (data && (data.error || data.code || data.msg)) || ""; err.status = r.status; throw err; }
+    return data;
+  }
+  async function authSessionFresh() {
+    let session = getAuth();
+    if (!session || !session.access_token) return null;
+    if (session.expires_at && session.expires_at * 1000 > Date.now() + 60000) return session;
+    if (!session.refresh_token) { setAuth(null); return null; }
+    try {
+      const fresh = await authHttp("/auth/v1/token?grant_type=refresh_token", { refresh_token: session.refresh_token });
+      session = Object.assign({}, session, fresh, { expires_at: fresh.expires_at || Math.floor(Date.now()/1000) + (fresh.expires_in || 3600) });
+      setAuth(session); return session;
+    } catch (e) { setAuth(null); return null; }
+  }
+  async function accountRpc(name, body) {
+    const session = await authSessionFresh();
+    if (!session) { const e = new Error("Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại."); e.code = "auth_required"; throw e; }
+    return authHttp("/rest/v1/rpc/" + name, body, session);
+  }
+  function saveAuthSession(session) {
+    if (!session || !session.access_token) return false;
+    session.expires_at = session.expires_at || Math.floor(Date.now()/1000) + (session.expires_in || 3600);
+    setAuth(session); return true;
+  }
   const matchApi = (body) => http("/functions/v1/arena-match", body);
   let livePollTimer = null;
   let liveMatchId = null;
@@ -109,6 +156,7 @@
     resumeGameOnClose=!!(typeof S!=="undefined"&&S&&S.running&&$("titleScreen").classList.contains("hidden")&&!wasPauseOpen);
     if (pm && wasPauseOpen) pm.classList.add("hidden");
     if (!ENABLED) return pageNotConfigured();
+    if (getAuth()) return pageSlots();
     if (!getKey()) return pageAuth();
     pageHome();
   }
@@ -116,19 +164,91 @@
     info("☁ ĐẤU TRƯỜNG & ĐỒNG BỘ", `<p style="font-size:14px;">Tính năng này cần máy chủ <b>Supabase</b>. Hãy mở <b>config/supabase_config.js</b> và điền <code>url</code> + <code>anonKey</code> của dự án (xem <b>supabase/README.md</b>).</p>
       <p style="font-size:13px;color:var(--text-dim);">Phần chơi đơn không bị ảnh hưởng.</p>`);
   }
-  function pageAuth() {
-    modal("☁ ĐĂNG NHẬP BẰNG KEY", `<p style="font-size:14px;">Mỗi người chơi có <b>1 key</b> để lưu nhân vật và đồng bộ giữa các thiết bị. Key chỉ hiện <b>một lần</b> khi tạo — hãy lưu lại.</p>
-      <p style="font-size:13px;margin-top:10px;"><b>Chưa có key?</b> Nhập tên hiển thị trên bảng xếp hạng:</p>
-      <input id="arenaName" type="text" maxlength="20" placeholder="Tên hiển thị" style="width:100%;padding:8px;font-size:16px;background:#0a0a0c;border:1px solid var(--line);color:var(--text);">
-      <p style="font-size:13px;margin-top:12px;"><b>Đã có key?</b> Dán vào đây để đồng bộ:</p>
-      <input id="arenaKeyIn" type="text" maxlength="40" placeholder="TIU-XXXXX-XXXXX-XXXXX-XXXXX" style="width:100%;padding:8px;font-size:16px;background:#0a0a0c;border:1px solid var(--line);color:var(--text);">`,
-      [{ label: "✨ Tạo key mới", primary: true, onClick: doRegister },
-       { label: "🔑 Dùng key này", onClick: doLogin },
+  function pageAuth(message) {
+    modal("⚔ ĐẤU TRƯỜNG · TÀI KHOẢN", '<div class="arenaAuthIntro"><span class="arenaEyebrow">THE TIU COMPETITIVE HUB</span><p>Đăng nhập để quản lý <b>3 slot nhân vật</b>, lưu hồ sơ và mở các chế độ đấu.</p></div>' +
+      (message ? '<p class="arenaNotice">' + esc(message) + '</p>' : '') +
+      '<label class="arenaFieldLabel" for="accountEmail">Email</label><input id="accountEmail" type="email" maxlength="254" autocomplete="email" placeholder="ban@email.com">' +
+      '<label class="arenaFieldLabel" for="accountPassword">Mật khẩu</label><input id="accountPassword" type="password" maxlength="128" autocomplete="current-password" placeholder="Tối thiểu 8 ký tự">' +
+      '<label class="arenaFieldLabel" for="accountDisplay">Tên hiển thị (chỉ khi đăng ký)</label><input id="accountDisplay" type="text" maxlength="20" autocomplete="nickname" placeholder="Tên trên bảng đấu">' +
+      '<div class="arenaAuthFine">Tài khoản mới có sẵn ba slot PvP độc lập. Nhân vật có thể vào đấu trường ngay sau khi tạo, không cần hoàn thành ending.</div>',
+      [{ label: "Đăng nhập", primary: true, onClick: doAuthLogin },
+       { label: "Tạo tài khoản", onClick: doAuthRegister },
+       { label: "🔑 Dùng key cũ", onClick: pageLegacyAuth },
        { label: "Đóng", onClick: closeArena }]);
+  }
+  function pageLegacyAuth() {
+    modal("☁ ĐĂNG NHẬP BẰNG KEY CŨ", '<p style="font-size:14px;">Dùng key đã tạo trước đây để truy cập hồ sơ PvP cũ.</p>' +
+      '<p style="font-size:13px;margin-top:12px;"><b>Chưa có key?</b> Nhập tên hiển thị:</p>' +
+      '<input id="arenaName" type="text" maxlength="20" placeholder="Tên hiển thị" style="width:100%;padding:8px;font-size:16px;background:#0a0a0c;border:1px solid var(--line);color:var(--text);">' +
+      '<p style="font-size:13px;margin-top:12px;"><b>Đã có key?</b> Dán key để đồng bộ:</p>' +
+      '<input id="arenaKeyIn" type="text" maxlength="40" placeholder="TIU-XXXXX-XXXXX-XXXXX-XXXXX" style="width:100%;padding:8px;font-size:16px;background:#0a0a0c;border:1px solid var(--line);color:var(--text);">',
+      [{ label: "✨ Tạo key cũ", onClick: doRegister },
+       { label: "🔑 Dùng key này", primary: true, onClick: doLogin },
+       { label: "← Tài khoản", onClick: () => pageAuth() }]);
+  }
+  async function doAuthLogin() {
+    const email = (($("accountEmail") && $("accountEmail").value) || "").trim();
+    const password = ($("accountPassword") && $("accountPassword").value) || "";
+    if (!email || !password) return pageAuth("Nhập email và mật khẩu để tiếp tục.");
+    const session = await guard("Đang đăng nhập...", async () => {
+      const data = await authHttp("/auth/v1/token?grant_type=password", { email: email, password: password });
+      if (!saveAuthSession(data)) throw new Error("Supabase không trả về phiên đăng nhập.");
+      return data;
+    }, () => pageAuth());
+    if (session) pageSlots();
+  }
+  async function doAuthRegister() {
+    const email = (($("accountEmail") && $("accountEmail").value) || "").trim();
+    const password = ($("accountPassword") && $("accountPassword").value) || "";
+    const displayName = (($("accountDisplay") && $("accountDisplay").value) || "").trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return pageAuth("Email chưa đúng định dạng.");
+    if (password.length < 8) return pageAuth("Mật khẩu cần ít nhất 8 ký tự.");
+    const result = await guard("Đang tạo tài khoản...", () => authHttp("/auth/v1/signup", { email: email, password: password, data: { display_name: displayName || email.split("@")[0] } }), () => pageAuth());
+    if (!result) return;
+    if (result.access_token) { saveAuthSession(result); pageSlots(); return; }
+    info("📩 XÁC NHẬN EMAIL", "<p>Tài khoản đã được tạo. Hãy mở email xác nhận của Supabase, sau đó quay lại đăng nhập.</p>", () => pageAuth());
+  }
+  async function pageSlots() {
+    const session = await authSessionFresh();
+    if (!session) { setKey(""); return pageAuth("Phiên đăng nhập hết hạn. Hãy đăng nhập lại."); }
+    const displayName = session.user && session.user.user_metadata && session.user.user_metadata.display_name;
+    const initialized = await guard("Đang chuẩn bị hồ sơ và 3 slot nhân vật...", () => accountRpc("tiu_account_init", { p_display_name: displayName || null }), () => pageAuth());
+    if (!initialized) return;
+    const data = await guard("Đang tải các nhân vật...", () => accountRpc("tiu_account_slots", {}), () => pageAuth());
+    if (!data) return;
+    const slots = Array.isArray(data.slots) ? data.slots : [];
+    accountSlotPlayerIds = new Set(slots.map(s => s.player_id).filter(Boolean));
+    const cards = [1,2,3].map(slotNo => {
+      const slot = slots.find(s => Number(s.slot_no) === slotNo) || { slot_no: slotNo };
+      const selected = activeSlot() === slotNo;
+      const occupied = !!slot.has_character;
+      const glyph = occupied ? ({ fighter:"⚔", assassin:"✦", mage:"◇", healer:"✚", summoner:"☽" }[slot.class_id] || "◆") : String(slotNo).padStart(2,"0");
+      return '<article class="arenaSlotCard ' + (selected ? "isCurrent" : "") + " " + (occupied ? "isOccupied" : "isEmpty") + '">' +
+        '<div class="arenaSlotTop"><span class="arenaSlotNo">SLOT 0' + slotNo + '</span><span class="arenaSlotState">' + (selected ? "ĐANG CHỌN" : occupied ? "ĐÃ TẠO" : "TRỐNG") + '</span></div>' +
+        '<div class="arenaSlotPortrait">' + glyph + '</div><h3>' + (occupied ? esc(CLASS_NAME[slot.class_id] || slot.class_id || "Nhân vật") : "Chưa có nhân vật") + '</h3>' +
+        '<p>' + (occupied ? "Cấp " + esc(slot.level || 1) + " · " + esc(slot.rating || 1000) + " điểm" : "Tạo nhân vật từ ván chơi của bạn") + '</p>' +
+        '<div class="arenaSlotStats">' + (occupied ? "<span>🏆 " + esc(slot.wins || 0) + " thắng</span><span>🛡 " + esc(slot.losses || 0) + " thua</span><span>" + (slot.has_build ? "🌐 Công khai" : "🔒 Riêng tư") + "</span>" : "<span>Hồ sơ và điểm PvP độc lập</span><span>Lưu build đầu tiên từ nhân vật đang chơi</span>") + '</div>' +
+        '<button class="btn ' + (selected ? "" : "primary") + ' arenaSlotAction" data-account-slot="' + slotNo + '" data-slot-new="' + (occupied ? "0" : "1") + '">' + (selected ? "Tiếp tục với nhân vật này" : occupied ? "Chọn nhân vật" : "Chọn slot trống") + '</button></article>';
+    }).join("");
+    modal("⚔ ĐẤU TRƯỜNG · CHỌN NHÂN VẬT", '<div class="arenaHubHero"><div><span class="arenaEyebrow">THE TIU COMPETITIVE HUB · ' + esc(data.display_name || "") + '</span><h2>Chọn nhân vật ra trận</h2><p>Mỗi slot có dữ liệu, trang bị và điểm PvP riêng.</p></div><span class="arenaHubMark">✦</span></div><div class="arenaSlotGrid">' + cards + '</div>', [
+      { label: "⚙ Tài khoản", onClick: pageAccount },
+      { label: "Đóng", onClick: closeArena }
+    ]);
+    document.querySelectorAll("#mgBody [data-account-slot]").forEach(button => { button.onclick = () => activateAccountSlot(Number(button.getAttribute("data-account-slot")), button.getAttribute("data-slot-new") === "1"); });
+  }
+  async function activateAccountSlot(slotNo, isNewSlot) {
+    const result = await guard("Đang mở nhân vật...", () => accountRpc("tiu_activate_character_slot", { p_slot: slotNo }), pageSlots);
+    if (!result || !result.key) return;
+    setKey(result.key);
+    setActiveSlot(slotNo);
+    try { localStorage.setItem(accountScopedKey("tiu_active_slot_new"), isNewSlot ? "1" : "0"); } catch (e) { /* bỏ qua */ }
+    startLiveInboxPolling();
+    if (isNewSlot && !inGame()) { closeArena(); if (typeof startNewGame === "function") { startNewGame(); return; } }
+    pageHome();
   }
   async function doRegister() {
     const name = ($("arenaName") && $("arenaName").value) || "";
-    const res = await guard("Đang tạo key...", () => rpc("register_player", { p_name: name }), pageAuth);
+    const res = await guard("Đang tạo key...", () => rpc("register_player", { p_name: name }), pageLegacyAuth);
     if (!res) return;
     setKey(res.key);
     startLiveInboxPolling();
@@ -139,8 +259,8 @@
   }
   async function doLogin() {
     const k = (($("arenaKeyIn") && $("arenaKeyIn").value) || "").trim().toUpperCase();
-    if (!/^TIU-[0-9A-F]{5}-[0-9A-F]{5}-[0-9A-F]{5}-[0-9A-F]{5}$/.test(k)) { info("⚠ KEY SAI ĐỊNH DẠNG", `<p style="font-size:14px;">Key có dạng <b>TIU-XXXXX-XXXXX-XXXXX-XXXXX</b>.</p>`, pageAuth); return; }
-    const p = await guard("Đang kiểm tra key...", () => rpc("get_profile", { p_key: k }), pageAuth);
+    if (!/^TIU-[0-9A-F]{5}-[0-9A-F]{5}-[0-9A-F]{5}-[0-9A-F]{5}$/.test(k)) { info("⚠ KEY SAI ĐỊNH DẠNG", `<p style="font-size:14px;">Key có dạng <b>TIU-XXXXX-XXXXX-XXXXX-XXXXX</b>.</p>`, pageLegacyAuth); return; }
+    const p = await guard("Đang kiểm tra key...", () => rpc("get_profile", { p_key: k }), pageLegacyAuth);
     if (!p) return;
     setKey(k); startLiveInboxPolling(); pageHome();
   }
@@ -150,18 +270,21 @@
 
   async function pageHome() {
     const key = getKey();
+    if (getAuth() && !key) return pageSlots();
     const p = await guard("Đang tải hồ sơ...", () => rpc("get_profile", { p_key: key }), pageAuth);
     if (!p) return;
     const ch = p.has_character
       ? `Nhân vật đã lưu: <b>${esc(CLASS_NAME[p.class_id] || p.class_id || "?")}</b> Lv${esc(p.level || "?")} ${p.has_build ? "· <span style=\"color:var(--amber);\">công khai đấu trường</span>" : "· riêng tư"}`
       : "Chưa lưu nhân vật nào.";
-    modal("☁ " + p.name.toUpperCase(), `<p style="font-size:14px;">🔑 <b>${esc(maskKey(key))}</b></p>
+    const slotLabel = getAuth() ? `<p class="arenaActiveSlot">NHÂN VẬT ĐANG CHỌN <b>SLOT 0${activeSlot()}</b> · ${esc(p.name)}</p>` : "";
+    modal("⚔ ĐẤU TRƯỜNG", `${slotLabel}<p style="font-size:14px;">🔑 <b>${esc(maskKey(key))}</b></p>
       <p style="font-size:14px;">${ch}</p>
       <p style="font-size:14px;">🏅 Điểm xếp hạng: <b style="color:var(--amber);">${p.rating}</b> · Thắng ${p.wins} · Thua ${p.losses}</p>
-      <p style="font-size:12px;color:var(--text-dim);">Không cần hoàn thành ending để PvP. Ngay sau khi tạo nhân vật, chọn <b>Lưu nhân vật → Lưu & công khai</b> để tham gia xếp hạng. Đấu thử dùng nhân vật trong ván đang chơi và không ảnh hưởng tiến trình.</p>`, [
+      <p style="font-size:12px;color:var(--text-dim);">Không cần hoàn thành ending để PvP. Nhân vật mới được lưu riêng tư vào slot ngay khi tạo; chọn <b>Lưu nhân vật → Lưu & công khai</b> để xuất hiện trong danh sách đấu. Đấu thử không ảnh hưởng tiến trình.</p>`, [
       { label: "⬆ Lưu nhân vật", onClick: pageSave, disabled: !hasChar() },
       { label: "⬇ Tải nhân vật", onClick: pageLoad, disabled: !p.has_character },
-      { label: "⚔ Đối thủ", primary: true, onClick: pageOpponents },
+      { label: "⚔ Vào đấu trường", primary: true, onClick: pageOpponents },
+      ...(getAuth() ? [{ label: "👥 Chọn nhân vật", onClick: pageSlots }] : []),
       { label: "🏆 Xếp hạng", onClick: pageLeaderboard },
       { label: "📜 Lịch sử", onClick: pageHistory },
       { label: "⚙ Tài khoản", onClick: pageAccount },
@@ -188,11 +311,14 @@
     setPublish(publish);
     info("✔ ĐÃ LƯU", `<p style="font-size:14px;">Nhân vật đã lên đám mây${publish ? " và đã công khai đấu trường" : " (riêng tư)"}.</p>`, pageHome);
   }
-  async function autoSave() {   // gọi khi hoàn thành game (ending)
+  async function autoSave(options) {   // đồng bộ lúc tạo nhân vật đầu tiên hoặc khi kết thúc game
+    const initialOnly = !!(options && options.initialOnly);
+    if (initialOnly) { if (!getAuth() || !isNewActiveSlot()) return false; }
     if (!ENABLED || !getKey() || !hasChar()) return false;
     try {
-      const me = RPG.player(), publish = wantPublish() && TiuArena.validateBuild(TiuArena.exportBuild(me)).ok;
+      const me = RPG.player(), publish = !initialOnly && wantPublish() && TiuArena.validateBuild(TiuArena.exportBuild(me)).ok;
       await rpc("save_character", { p_key: getKey(), p_data: TiuArena.exportCharacter(me), p_build: publish ? TiuArena.exportBuild(me) : null });
+      if (initialOnly) { setPublish(false); try { localStorage.setItem(accountScopedKey("tiu_active_slot_new"), "0"); } catch (e) { /* bỏ qua */ } }
       if (typeof addLog === "function" && typeof S !== "undefined" && S) addLog("☁ Đã lưu nhân vật lên đám mây" + (publish ? " (công khai đấu trường)." : "."), "good");
       return true;
     } catch (e) { return false; }
@@ -228,10 +354,10 @@
   async function pageOpponents() {
     const rows = await guard("Đang tìm đối thủ...", () => rpc("list_opponents", { p_key: getKey(), p_limit: 8 }), pageHome);
     if (!rows) return;
-    let liveMatches = [], liveReady = true, directoryRows = rows;
+    let liveMatches = [], liveReady = true, directoryRows = rows.filter(o => !accountSlotPlayerIds.has(o.id));
     try {
       const results=await Promise.all([rpc("list_live_matches",{p_key:getKey()}),rpc("list_live_opponents",{p_key:getKey(),p_limit:8})]);
-      liveMatches=results[0]||[]; directoryRows=results[1]||rows;
+      liveMatches=results[0]||[]; directoryRows=(results[1]||rows).filter(o => !accountSlotPlayerIds.has(o.id));
     } catch (e) { liveReady = false; }
     const liveList = liveMatches.filter(m=>m.status==='active' || m.status==='pending');
     const liveHtml = liveList.length ? `<h3 style="color:var(--amber);margin:8px 0;">PvP TRỰC TIẾP</h3>`+liveList.map((m,i)=>{
@@ -444,6 +570,15 @@
     });
   }
   function pageAccount() {
+    const auth = getAuth();
+    if (auth) {
+      modal("⚙ TÀI KHOẢN", '<div class="arenaAccountCard"><span class="arenaEyebrow">ĐANG ĐĂNG NHẬP</span><h3>' + esc(auth.user && auth.user.email || "Tài khoản The TIU") + '</h3><p>Slot nhân vật đang dùng: <b>0' + activeSlot() + '</b></p></div>', [
+        { label: "↔ Đổi nhân vật", primary: true, onClick: pageSlots },
+        { label: "🚪 Đăng xuất", danger: true, onClick: signOutAccount },
+        { label: "← Quay lại", onClick: pageHome }
+      ]);
+      return;
+    }
     modal("⚙ TÀI KHOẢN", `<p style="font-size:14px;">Key của bạn:</p>
       <p style="font-size:20px;letter-spacing:2px;text-align:center;margin:10px 0;color:var(--amber);user-select:all;">${esc(getKey())}</p>
       <p style="font-size:12px;color:var(--text-dim);">Nhập key này trên thiết bị khác để đồng bộ nhân vật. Không chia sẻ key cho người khác.</p>
@@ -453,6 +588,15 @@
       { label: "✏ Đổi tên", onClick: async () => { const n = $("arenaName2") && $("arenaName2").value; if (!n || !n.trim()) return; const r = await guard("Đang đổi tên...", () => rpc("set_name", { p_key: getKey(), p_name: n }), pageAccount); if (r) pageHome(); } },
       { label: "🚪 Đăng xuất khỏi thiết bị", danger: true, onClick: () => { setKey(""); pageAuth(); } },
       { label: "← Quay lại", primary: true, onClick: pageHome }]);
+  }
+  async function signOutAccount() {
+    const session = await authSessionFresh();
+    if (session) { try { await authHttp("/auth/v1/logout", {}, session); } catch (e) { /* vẫn xóa phiên cục bộ */ } }
+    const scopedSlot = accountScopedKey(LS_SLOT), scopedNewSlot = accountScopedKey("tiu_active_slot_new");
+    setAuth(null); setKey(""); accountSlotPlayerIds = new Set();
+    try { localStorage.removeItem(scopedSlot); localStorage.removeItem(scopedNewSlot); } catch (e) { /* bỏ qua */ }
+    if (liveInboxTimer) { clearInterval(liveInboxTimer); liveInboxTimer = null; }
+    pageAuth("Bạn đã đăng xuất khỏi tài khoản này trên thiết bị.");
   }
 
   /* ---------- gắn vào giao diện ---------- */

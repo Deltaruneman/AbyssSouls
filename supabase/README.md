@@ -20,6 +20,13 @@ After the base schema is installed, apply
 It adds the live match table and its RPC functions. The migration is also
 compatible with running through the Supabase CLI migration workflow.
 
+Then apply `supabase/migrations/20261107010000_account_auth_3_character_slots.sql`
+to enable email/password registration and three character slots per account.
+Enable the Email provider under Supabase Auth. With email confirmation enabled,
+players must confirm their address before their first sign-in. Each slot uses
+its own `players`/`characters` identity, so build, rating, and match history stay
+separate. The old key-based login remains available for existing players.
+
 ## Ranked arena Edge Function
 
 The `arena-match` function lives in `supabase/functions/arena-match/`. If RPG
