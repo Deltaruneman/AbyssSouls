@@ -1,10 +1,6 @@
 # --- Bí mật: KHÔNG BAO GIỜ commit ---
 .env
 .env.*
-supabase/.env
-supabase/functions/.env
-supabase/.temp/
-supabase/.branches/
 
 # --- Khác ---
 node_modules/

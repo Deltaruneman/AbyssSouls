@@ -29,6 +29,7 @@
 
   /* Xác định phạm vi đang hoạt động: trả về { name, items, back } hoặc null */
   function scope() {
+    if(window.TiuTutorial && window.TiuTutorial.isActive()) return null;
     // Trận đấu / modal / QTE đã có bộ điều khiển riêng
     if (typeof isBattleActive === "function" && isBattleActive()) return null;
     if (shown("mgModal")) return null;
@@ -48,14 +49,14 @@
       rows.push($("backFromSettings"));
       return { name: "settings", items: rows, back: $("backFromSettings") };
     }
-    if (shown("pauseMenu")) return { name: "list", items: pick(["pauseResumeBtn", "pauseSettingsBtn", "pauseArenaBtn", "pauseMainMenuBtn"]), back: $("pauseResumeBtn") };
+    if (shown("pauseMenu")) return { name: "list", items: pick(["pauseResumeBtn", "pauseSaveBtn", "pauseSettingsBtn", "pauseMainMenuBtn"]), back: $("pauseResumeBtn") };
     if (shown("jumpscareOverlay")) {
       var j = pick(["jsContinueBtn", "jsGiveUpBtn"]);
       return j.length ? { name: "list", items: j } : null;
     }
     if (shown("gameOverScreen")) return { name: "list", items: pick(["retryBtn", "menuFromGameOver"]) };
     if (shown("winScreen")) return { name: "list", items: pick(["nextNightBtn", "menuFromWin"]) };
-    if (shown("titleScreen")) return { name: "list", items: pick(["startBtn", "continueBtn", "settingsBtn", "arenaBtn"]) };
+    if (shown("titleScreen")) return { name: "list", items: pick(["continueBtn", "startBtn", "settingsBtn"]) };
     if (shown("mapModal")) {
       var rn = Array.prototype.slice.call(document.querySelectorAll("#mapSvgWrap .room-node.reachable"));
       return { name: "map", items: rn, back: $("closeMapBtn") };
@@ -69,7 +70,7 @@
   function sync() {
     var sc = scope();
     var key = sc ? sc.name + ":" + sc.items.length + ":" + (sc.items[0] ? (sc.items[0].id || sc.items[0].textContent.slice(0, 12)) : "") : "";
-    if (key !== lastKey) {
+    if (key !== lastKey || (cur && sc && sc.items.length && !sc.items.includes(cur))) {
       lastKey = key; clearMark();
       if (sc && sc.items.length && sc.name !== "vnChoices") mark(sc.items[0]);
       if (sc && sc.name === "vnChoices") { // chờ 350ms để tránh bấm nhầm khi đang spam J qua thoại
@@ -80,6 +81,18 @@
     return sc;
   }
   setInterval(sync, 120);
+  window.addEventListener('keydown',function(e){
+    if(e.key!=='Tab')return;
+    var ids=['tutLayer','mgModal','vnOverlay','settingsScreen','pauseMenu','jumpscareOverlay','gameOverScreen','winScreen','titleScreen','mapModal','battleOverlay'];
+    var panel=ids.map($).find(function(el){return el && visible(el) && (el.id!=='tutLayer'||el.classList.contains('on'));});
+    if(!panel)return;
+    var items=Array.from(panel.querySelectorAll('button,input,select,textarea,[tabindex="0"]')).filter(visible);
+    if(!items.length){e.preventDefault();return;}
+    var at=items.indexOf(document.activeElement);
+    e.preventDefault();
+    var next=at<0?(e.shiftKey?items.length-1:0):(at+(e.shiftKey?-1:1)+items.length)%items.length;
+    items[next].focus({preventScroll:true}); items[next].scrollIntoView({block:'nearest'});
+  },true);
 
   function activate(el) {
     if (!el) return;
@@ -88,6 +101,10 @@
     el.click();
   }
 
+  document.addEventListener('focusin',function(e){
+    var sc=scope(); if(sc && sc.items.includes(e.target)) mark(e.target);
+    else if(sc && sc.name==='settings' && e.target.type==='range') mark(e.target.closest('.settingRow'));
+  });
   document.addEventListener("keydown", function (e) {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     var t = e.target;
@@ -100,7 +117,7 @@
 
     /* Hội thoại thường: Enter/Space tiếp tục (J đã có sẵn) */
     if (sc.name === "vn") {
-      if ((k === "enter" || k === " ") && !e.repeat && typeof VN_ACTIVE !== "undefined" && VN_ACTIVE) { eat(); VN_ACTIVE.next(); }
+      if ((k === "enter" || k === " ") && window.TiuGame) { eat(); if(!e.repeat) window.TiuGame.nextDialogue(); }
       return;
     }
 
@@ -144,7 +161,7 @@
       if (n) { eat(); if (!e.repeat) activate(n); }
       return;
     }
-    if ((k === "escape" || k === "backspace" || k === "x") && sc.back && !e.repeat && sc.name !== "list") {
+    if ((k === "escape" || k === "backspace" || k === "x" || (k === "m" && sc.name === "map")) && sc.back && !e.repeat) {
       eat(); sc.back.click();
     }
   }, true);

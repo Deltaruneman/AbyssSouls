@@ -73,7 +73,12 @@ try{
   const _v = localStorage.getItem('uit_master_volume');
   if(_v!==null){ const n = parseInt(_v,10); if(!isNaN(n)) _storedVol = Math.max(0,Math.min(100,n)); }
 }catch(e){}
-const SETTINGS = { masterVolume:_storedVol, shake:true, flash:true };
+const SETTINGS = { masterVolume:_storedVol, shake:true, flash:true, storyPace:true, instantText:false };
+try{
+  const prefs = JSON.parse(localStorage.getItem('tiu_preferences') || '{}');
+  ['shake','flash','storyPace','instantText'].forEach(k=>{ if(typeof prefs[k]==='boolean') SETTINGS[k]=prefs[k]; });
+}catch(e){}
+function savePreferences(){ try{localStorage.setItem('tiu_preferences',JSON.stringify(SETTINGS));}catch(e){} }
 const TIU_IMAGE = "assets/images/TIU.png";
 const TIU_JUMPSCARE_SFX = "assets/sfx/TIUAttack.mp3";
 
@@ -145,7 +150,7 @@ function eventRoll(night){
 }
 const NIGHT_REAL_MS = GAME_MINUTES_TOTAL*1000;   // 1 phút game = 1000ms
 function realMsPerGameMin(){
-  return NIGHT_REAL_MS / ((S && S.nightTotalMin) || GAME_MINUTES_TOTAL);
+  return NIGHT_REAL_MS / ((S && S.nightTotalMin) || GAME_MINUTES_TOTAL) * (SETTINGS.storyPace ? 1.5 : 1);
 }
 const BASE_MOVE_COST_MIN = 10; // mỗi lượt đi giữa 2 tòa liền kề mất 10 phút game
 
@@ -186,27 +191,10 @@ const QTE_COUNT = { fighter:3, assassin:3, mage:3, healer:3, summoner:3 };
 
 const SAVE_KEY = 'uit_savegame_v2';
 const CHECKPOINT_KEY = 'uit_checkpoint_v2';
-const ENTRY_MODE_KEY = 'tiu_entry_mode';
-function entryMode(){ try{return sessionStorage.getItem(ENTRY_MODE_KEY)||'';}catch(e){return '';} }
-function isGuestSession(){ return entryMode()==='guest'; }
-function saveStorage(){ try{return isGuestSession()?sessionStorage:localStorage;}catch(e){return localStorage;} }
-function clearGuestData(){
-  try{[SAVE_KEY,CHECKPOINT_KEY,'tiu_endings','tiu_bad_endings','tiu_tut_done',ENTRY_MODE_KEY].forEach(k=>sessionStorage.removeItem(k));}catch(e){}
-}
-function storedAccountSession(){
-  try{const s=JSON.parse(localStorage.getItem('tiu_auth_session')||'null');return !!(s&&s.access_token&&s.user&&s.user.id);}catch(e){return false;}
-}
-function hasEntryAccess(){return entryMode()==='guest'||entryMode()==='account'||storedAccountSession();}
-function showAccessGate(){const gate=$('accessGate');if(gate)gate.classList.remove('hidden');$('titleScreen').classList.add('hidden');}
-function activateGuestEntry(){
-  clearGuestData();try{sessionStorage.setItem(ENTRY_MODE_KEY,'guest');}catch(e){}
-  $('accessGate').classList.add('hidden');showTitle();
-}
-function activateAccountEntry(){
-  clearGuestData();try{sessionStorage.setItem(ENTRY_MODE_KEY,'account');}catch(e){}
-  $('accessGate').classList.add('hidden');$('titleScreen').classList.remove('hidden');refreshContinueBtn();
-}
-function lockEntry(){try{sessionStorage.removeItem(ENTRY_MODE_KEY);}catch(e){}showAccessGate();}
+function saveStorage(){ return localStorage; }
+let campaignStore;
+try{ campaignStore = TiuSaveStore.create(localStorage); campaignStore.migrate(sessionStorage); }
+catch(e){ campaignStore = TiuSaveStore.create({getItem(){return null;},setItem(){throw new Error('storage unavailable');},removeItem(){throw new Error('storage unavailable');}}); }
 
 function rand(a,b){return a+Math.random()*(b-a);}
 function pick(arr){return arr[Math.floor(Math.random()*arr.length)];}
@@ -278,7 +266,7 @@ function freshState(night, chapter, opts){
   const tiuVariant = chapter===1 ? Math.min(night-1, 2) : 3;
   return {
     mod, guardians, tiuVariant, prevRoom:null, guardianPending:null, ng,
-    chapter, night, standalone:false,
+    chapter, night, standalone:false, introPending:true,
     gameMinutes:0, nightStartClockMin:0, nightTotalMin:GAME_MINUTES_TOTAL,
     running:true, paused:false, lastTick:performance.now(),
     playerRoom:startRoom,
@@ -300,35 +288,32 @@ function serializeSave(){
   if(!S) return null;
   return { v:2, savedAt:Date.now(), state:S, rpg:RPG.serialize(), story:STORY };
 }
+function canSaveCampaign(){
+  return !!(S && S.running && !isBattleActive() && !VN_ACTIVE && !TRAVEL.busy && !S.final &&
+    ($('mgModal').classList.contains('hidden') || ($('mgModal').dataset.kb==='1' && !$('mgModal').dataset.minigame)) &&
+    $('jumpscareOverlay').classList.contains('hidden'));
+}
 function persistSave(){
-  if(!S || !S.running) return;
-  try{
-    const data = serializeSave();
-    if(data) saveStorage().setItem(SAVE_KEY, JSON.stringify(data));
-  }catch(e){}
+  if(!canSaveCampaign()) return false;
+  return campaignStore.write(serializeSave());
 }
 function saveCheckpoint(){
-  try{ const data = serializeSave(); if(data) saveStorage().setItem(CHECKPOINT_KEY, JSON.stringify(data)); }catch(e){}
+  const data = serializeSave(); if(data) campaignStore.write(data,CHECKPOINT_KEY);
 }
 let _autoSaveTimer = null;
 function scheduleAutoSave(){
   if(_autoSaveTimer) clearTimeout(_autoSaveTimer);
   _autoSaveTimer = setTimeout(persistSave, 800);
 }
-function readSlot(key){
-  try{
-    const raw = saveStorage().getItem(key);
-    if(!raw) return null;
-    const d = JSON.parse(raw);
-    return (d && d.v===2 && d.state && d.rpg) ? d : null;
-  }catch(e){ return null; }
-}
+function readSlot(key){ return campaignStore.read(key); }
 function readSaveGame(){ return readSlot(SAVE_KEY); }
 function hasSaveGame(){ return !!readSaveGame(); }
-function deleteSaveGame(){ try{ saveStorage().removeItem(SAVE_KEY); }catch(e){} }
+function deleteSaveGame(){ clearTimeout(_autoSaveTimer); return campaignStore.clear(); }
 function restoreFrom(data){
+  clearTimeout(_autoSaveTimer);
   stopBattleOst(false);
-  S = data.state;
+  if(!TiuSaveStore.valid(data)) return false;
+  S = JSON.parse(JSON.stringify(data.state));
   if(typeof S.stamina!=='number') S.stamina = RPG.CFG.STAMINA_MAX;
   if(S.ambushArmed==null) S.ambushArmed = true;
   if(S.exhaustPending==null) S.exhaustPending = false;
@@ -339,7 +324,8 @@ function restoreFrom(data){
   if(S.drlSpent==null) S.drlSpent = 0;
   if(S.partyRef===undefined) S.partyRef = null;
   RPG.load(data.rpg);
-  STORY = Object.assign({ flags:{}, stage:{} }, data.story || {});
+  STORY = Object.assign({ flags:{}, stage:{}, history:[] }, JSON.parse(JSON.stringify(data.story || {})));
+  if(!Array.isArray(STORY.history)) STORY.history = [];
   S.lastTick = performance.now();
   S.paused = false;
   S.running = true;
@@ -352,6 +338,7 @@ function restoreFrom(data){
   refreshAll();
   refreshBagBadge();
   addLog('📂 Đã tải lại tiến trình đã lưu.', '');
+  resumeNightScene();
   return true;
 }
 function loadGame(){
@@ -366,8 +353,14 @@ function loadCheckpoint(){
 /* ============== VISUAL NOVEL (kiểu Genshin: thoại ở giữa, lựa chọn dạng bong bóng bên phải) ============== */
 let VN_ACTIVE = null;
 /* Cờ cốt truyện + tiến độ nói chuyện — sống xuyên suốt các đêm, được lưu cùng file save */
-let STORY = { flags:{}, stage:{} };
-function resetStory(){ STORY = { flags:{}, stage:{} }; }
+let STORY = { flags:{}, stage:{}, history:[] };
+function resetStory(){ STORY = { flags:{}, stage:{}, history:[] }; }
+function rememberStory(speaker,text){
+  if(!text) return;
+  STORY.history = STORY.history || [];
+  STORY.history.push({speaker:speaker||'Dẫn truyện',text,chapter:S.chapter,night:S.night});
+  if(STORY.history.length>120) STORY.history.shift();
+}
 function isChoiceLine(l){ return !!(l && l.choices && l.choices.length); }
 
 /* Điều kiện cờ: 'k' | 'k=v' | '!k' | mảng (phải thoả tất cả) */
@@ -432,6 +425,7 @@ function playVN(lines, onDone, ctx){
   function pick(choice){
     if(finished) return;
     clearChoices();
+    rememberStory(RPG.player().name, '→ '+choice.label);
     applyFx(choice.fx, ctx);
     if(choice.insert && choice.insert.length) queue.splice(i+1, 0, ...choice.insert);
     if(choice.onChoose) choice.onChoose(); // hook cho lựa chọn tác động cơ chế game
@@ -463,7 +457,7 @@ function playVN(lines, onDone, ctx){
     } else {
       nextBtn.classList.remove('hidden');
       nextBtn.textContent = isLastVisible() ? 'ĐÓNG ▶' : 'TIẾP TỤC ▶';
-      hintEl.textContent = 'Bấm vào hộp thoại để tiếp tục';
+      hintEl.textContent = 'Enter / Space / J: tiếp tục · Ctrl: tua đến lựa chọn';
     }
   }
   /* Phần đã gõ hiện bình thường, phần còn lại vẫn giữ chỗ nhưng ẩn → chữ chạy từ trái sang phải */
@@ -499,10 +493,11 @@ function playVN(lines, onDone, ctx){
     spkEl.style.visibility = l.spk ? 'visible' : 'hidden';
     txtEl.classList.toggle('vnNarration', !l.spk);
     fullText = l.text || '';
+    rememberStory(l.spk,fullText);
     clearChoices();
     nextBtn.classList.add('hidden');
     stopTyping();
-    if(!fullText){ reveal(); return; }
+    if(!fullText || SETTINGS.instantText){ reveal(); return; }
     let n = 0;
     typing = true;
     setTyped(0);
@@ -527,6 +522,7 @@ function playVN(lines, onDone, ctx){
       S.paused = false;
       S.lastTick = performance.now();
       if(onDone) onDone();
+      scheduleAutoSave();
       return;
     }
     showLine();
@@ -596,8 +592,8 @@ function addLog(msg, cls){
 }
 function renderLog(){
   const el = document.getElementById('logPane');
-  el.innerHTML = '<div class="logHead">NHẬT KÝ CA TRỰC</div>' +
-    S.log.map(l=>`<div class="entry ${l.cls||''}">[${l.t}] ${l.msg}</div>`).join('');
+  el.innerHTML = '<div class="logHead">NHẬT KÝ CA TRỰC</div>';
+  S.log.forEach(l=>{const row=document.createElement('div');row.className='entry '+(['good','warn','bad'].includes(l.cls)?l.cls:'');row.textContent='['+l.t+'] '+l.msg;el.appendChild(row);});
 }
 
 /* ============== CLOCK ============== */
@@ -620,7 +616,7 @@ var KB = { cur:null };
 function kbScope(){
   if(isVNOpen() || isPauseMenuOpen()) return null;
   if(isBattleActive()){
-    if(!$('mgModal').classList.contains('hidden') || !$('dodgeArena').classList.contains('hidden')) return null;
+    if(!$('mgModal').classList.contains('hidden') || !$('dodgeOverlay').classList.contains('hidden')) return null;
     if(BATTLE.say) return 'say';
     if($('pkMenu').querySelector('button')) return 'menu';
     return null;
@@ -642,7 +638,7 @@ function kbSelect(btn, how){          // how: 'init' | 'key' | 'mouse'
   const battleMenu = document.getElementById('pkMenu');
   if(battleMenu && battleMenu.contains(btn) && battleMenu._showHint) battleMenu._showHint(btn);
   if(btn._enterHover) btn._enterHover();
-  if(how==='key'){ btn.scrollIntoView({ block:'nearest' }); if(btn.onmouseenter) btn.onmouseenter(); }
+  if(how==='key'){ btn.focus({preventScroll:true}); btn.scrollIntoView({ block:'nearest' }); if(btn.onmouseenter) btn.onmouseenter(); }
   else if(how==='init' && btn.dataset.hover && btn.onmouseenter) btn.onmouseenter();
 }
 function kbReset(scope){
@@ -653,6 +649,10 @@ function kbReset(scope){
   if(first) kbSelect(first, 'init');
 }
 document.addEventListener('keydown', (e)=>{
+  if(e.target && e.target.id==='playerNameInput' && !e.isComposing && !e.repeat){
+    if(e.key==='Enter'){e.preventDefault();e.stopImmediatePropagation();$('mgFooter').querySelector('button').click();return;}
+    if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();$('mgFooter').querySelector('[data-back]').click();return;}
+  }
   if(isTypingTarget(e.target) || e.ctrlKey || e.metaKey || e.altKey) return;
   const scope = kbScope();
   if(!scope) return;
@@ -682,15 +682,22 @@ document.addEventListener('keydown', (e)=>{
     if(b && !b.disabled && !e.repeat) b.click();
   }
   else if(k==='escape' || k==='backspace' || k==='x'){
-    const back = scope==='modal' ? list[list.length-1] : list.find(b=>b.classList.contains('fgoBack'));
+    const back = scope==='modal' ? list.find(b=>b.dataset.back==='1') : list.find(b=>b.classList.contains('fgoBack'));
     if(back && !back.disabled){ eat(); if(!e.repeat) back.click(); }
   }
   else if(k==='f' && scope==='menu'){ eat(); if(!e.repeat) $('pkFast').click(); }
 }, true);
 
+document.addEventListener('focusin',e=>{
+  const scope=kbScope();
+  if(scope && scope!=='say' && kbButtons(scope).includes(e.target)) kbSelect(e.target,'focus');
+});
 function showModal(title, html, buttons){
+  persistSave();
   const modal = $('mgModal');
+  TD.keys = {};
   modal.dataset.kb = '';
+  modal.dataset.minigame = '';
   KB.cur = null;
   modal.classList.remove('hidden');
   $('mgTitle').textContent = title;
@@ -703,6 +710,7 @@ function showModal(title, html, buttons){
     el.className = 'btn' + (b.primary?' primary':'') + (b.danger?' danger':'');
     el.textContent = b.label;
     if(b.disabled) el.disabled = true;
+    if(b.back || /^(Đóng|Quay lại|Rời|Ở lại|Hủy|Lùi lại|Tiếp tục ca)/i.test(b.label.replace(/^[^\p{L}]+/u,''))) el.dataset.back='1';
     el.onclick = b.onClick || (()=>closeModal());
     footer.appendChild(el);
   });
@@ -764,7 +772,9 @@ function buildMapInto(wrapId, prefix){
     node.style.left = def.x+'%';
     node.style.top = def.y+'%';
     node.innerHTML = `<div class="room-box">${def.name}</div>`;
+    node.setAttribute('role','button');node.setAttribute('aria-label',def.name);
     node.addEventListener('click', ()=>onRoomClick(k));
+    node.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();if(!e.repeat)onRoomClick(k);}});
     wrap.appendChild(node);
   });
 }
@@ -788,6 +798,8 @@ function refreshMapInto(prefix){
     if(badge) badge.remove();
     if(k===S.playerRoom) node.classList.add('current-marker');
     else if(ROOM_DEF[S.playerRoom].connects.includes(k)) node.classList.add('reachable');
+    node.tabIndex=node.classList.contains('reachable')?0:-1;
+    node.setAttribute('aria-disabled',String(!node.classList.contains('reachable')));
     if(S.activeEvents[k]){
       const b = document.createElement('div');
       b.className = 'event-badge';
@@ -811,17 +823,6 @@ function refreshMap(){
 function refreshHud(){
   updateTalentBadge();
   ['blackout','midterm','fog','bloodmoon'].forEach(m=>document.body.classList.toggle('mod-'+m, !!S && S.mod===m && S.running));
-  const arenaCard = $('playerArenaBtn');
-  const player = RPG.getState && RPG.getState() ? RPG.player() : null;
-  if(arenaCard){
-    arenaCard.classList.toggle('hidden', !player);
-    if(player){
-      const klass = RPG.CLASSES[player.classId];
-      $('playerArenaName').textContent = player.name || RPG.DEFAULT_PLAYER_NAME;
-      $('playerArenaClass').textContent = (klass ? klass.name : player.classId)+' · Lv'+player.level;
-      arenaCard.setAttribute('aria-label', 'Mở hồ sơ và PvP: '+player.name+', '+(klass ? klass.name : player.classId)+' cấp '+player.level);
-    }
-  }
   if(!S) return;
   const me = RPG.player();
   $('clockVal').textContent = formatClock(S.gameMinutes);
@@ -1289,7 +1290,9 @@ function openQuestLog(){
     const step = q.steps[st.step];
     return `<div class="shopItem"><span>📜 <b>${f.name}</b> — ${q.title} (${st.step+1}/${q.steps.length})<br><span style="font-size:11px;color:var(--text-dim);">${step.text}<br>${questProgressText(step)}</span></span></div>`;
   }).join('');
-  showModal('📜 NHIỆM VỤ ĐỒNG ĐỘI', rows+`<p style="font-size:11px;color:var(--text-dim);margin-top:8px;">Nói chuyện với NPC để nhận / nộp nhiệm vụ. Mini-boss xuất hiện ở các phòng được báo trong Mục tiêu đêm.</p>`, [{label:'Đóng', onClick:()=>closeModal()}]);
+  const history=(STORY.history||[]).slice().reverse().map(l=>'<article class="journalLine"><small>CHƯƠNG '+l.chapter+' · ĐÊM '+l.night+' · '+escapeTutorialHtml(l.speaker)+'</small><p>'+escapeTutorialHtml(l.text)+'</p></article>').join('');
+  const overview='<div class="journalOverview"><span class="storyEyebrow">CHƯƠNG '+S.chapter+' · '+nightName(S.chapter,S.night)+'</span><h3>'+(S.chapter===1?'Sống sót. Tìm đồng minh. Tìm sự thật.':'Quyết định cách đối đầu với The TIU.')+'</h3><p>Nói chuyện với những người còn ở lại, hoàn thành nhiệm vụ riêng và khám phá La Peace. Các mối quan hệ và lựa chọn của bạn sẽ mở những hướng kết thúc khác nhau.</p></div>';
+  showModal('📖 NHẬT KÝ HÀNH TRÌNH', overview+rows+'<h3>Lời thoại đã nghe</h3>'+(history||'<p>Chưa ghi nhận lời thoại.</p>')+`<p style="font-size:11px;color:var(--text-dim);margin-top:8px;">Nói chuyện với NPC để nhận / nộp nhiệm vụ. Mini-boss xuất hiện ở các phòng được báo trong Mục tiêu đêm.</p>`, [{label:'Đóng', onClick:()=>closeModal()}]);
 }
 
 /* ============== TÀI NĂNG ============== */
@@ -1384,14 +1387,15 @@ function openBagModal(){
 function onRoomClick(k){
   if(!S || k===S.playerRoom) return;
   if(!ROOM_DEF[S.playerRoom].connects.includes(k)) return;
-  if(movePlayer(k)) $('mapModal').classList.add('hidden');
+  if(isMapOpen()) closeMapModal();
+  if(window.TiuGame.canExplore()) movePlayer(k);
 }
 /* Điểm vào duy nhất để đổi phòng: hiện màn hình loading rồi mới thực sự chuyển (xem LOADING KHI ĐỔI PHÒNG) */
 /* Thể lực không đủ cho 1 lần đổi khu vực. KHÔNG còn chặn đi — nhưng đi lúc này sẽ bị đánh lén khi tới nơi. */
 function isExhausted(){ return !!(S && !S.final && (S.stamina||0) < moveCost()); }
 function movePlayer(dest, confirmed){
   if(!S || !S.running || S.paused) return false;
-  if(TRAVEL.busy) return false;
+  if(TRAVEL.busy || !ROOM_DEF[dest] || !ROOM_DEF[S.playerRoom].connects.includes(dest)) return false;
   if(isExhausted() && !confirmed && !isRoomSafe(dest)){
     const pct = Math.round(RPG.CFG.EXHAUST_HP_PCT*100);
     showModal('⚠ THỂ LỰC KHÔNG ĐỦ', `<p style="font-size:13px;">Thể lực còn <b>${Math.round(S.stamina||0)}</b>/${RPG.CFG.STAMINA_MAX} (cần ${moveCost()} để sang <b>${ROOM_DEF[dest].name}</b>).</p>
@@ -1770,7 +1774,7 @@ function npcChallenge(f){
 let rafId = null;
 let lastActionRebuild = 0;
 function tick(now){
-  if(S && S.running && !S.paused){
+  if(S && S.running && !S.paused && !document.hidden){
     const dtReal = Math.min(1000, now - S.lastTick);
     S.lastTick = now;
     const dGameMin = dtReal / realMsPerGameMin();
@@ -1940,14 +1944,15 @@ function aiLevelNow(){
   return Math.min(5, base + (S.ng||0));
 }
 function startBattle(opts){
+  persistSave();
   const me = RPG.player();
   // Trận thường gọn hơn để dành thời gian cho khám phá; trận nhóm và The TIU
   // vẫn có trọng lượng lớn hơn. Trận cuối không tính thời gian đêm.
   opts.battleMinutes = opts.final ? 0 : (opts.tiu ? RPG.CFG.BATTLE_TIU_MINUTES : (opts.mob ? RPG.CFG.BATTLE_MOB_MINUTES : ((opts.ambush || opts.exhausted) ? RPG.CFG.BATTLE_AMBUSH_MINUTES : RPG.CFG.BATTLE_MINUTES)));
-  if(!opts.arena) RPG.scaleOpponents(oppLevelFloor());   // đối thủ luôn có Lv >= Lv người chơi và >= mốc theo đêm
+  RPG.scaleOpponents(oppLevelFloor());   // đối thủ luôn có Lv >= Lv người chơi và >= mốc theo đêm
   const allies = [me].concat(opts.allyFighters || (opts.final ? [] : RPG.partyAllies()));
   const enemies = opts.enemyFighters || opts.enemyIds.map(id=>RPG.get(id));
-  const aiL = opts.arena ? 3 : aiLevelNow();
+  const aiL = aiLevelNow();
   enemies.forEach(f=>{   // NPC thật: random cấp theo tỉ lệ (trận cuối: giữ cấp cao); tài năng tự học theo cấp + đêm
     if(f.tiu || f.mob || f.ghost) return;
     if(!opts.final){
@@ -1959,7 +1964,7 @@ function startBattle(opts){
   });
   const knownEl = {};
   enemies.forEach(f=>{ if((f.trust||0)>=1 || (S.knownElements && S.knownElements[f.id])) knownEl[f.id] = true; });   // đã quen / đã khám phá từ trận trước
-  const B = RPGCombat.create({ allies, enemies, dodge:!!opts.final, controlAllies:false, known:knownEl, aiLevel:aiL, pvp:!!opts.arena });
+  const B = RPGCombat.create({ allies, enemies, dodge:!!opts.final, controlAllies:false, known:knownEl, aiLevel:aiL });
   // Bẫy gài đã trúng: -HP và mất lượt đầu
   enemies.forEach(f=>{
     const d = S.npcDebuff && S.npcDebuff[f.id];
@@ -1998,10 +2003,9 @@ function startBattle(opts){
   $('battleBg').style.backgroundImage = img ? `url('${img}')` : '';
   renderBattle();
   const foe = enemies[0];
-  if(opts.final || opts.tiu || opts.mob || opts.arena) stopBattleOst(false); else startBattleOst(foe.id);   // mỗi trận 1 bản OST, trừ trận cuối
+  if(opts.final || opts.tiu || opts.mob) stopBattleOst(false); else startBattleOst(foe.id);   // mỗi trận 1 bản OST, trừ trận cuối
   let openLine;
   if(opts.final) openLine = '★ TRẬN QUYẾT ĐỊNH! '+foe.name+' chặn đường bạn!';
-  else if(opts.arena) openLine = '⚔ ĐẤU TRƯỜNG: bản sao của '+foe.name+' xuất hiện! (trận thử — không tính điểm)';
   else if(opts.mob) openLine = '⚔ '+foe.name+' cùng đồng bọn xông vào! Đánh bại cả nhóm!';
   else if(opts.tiu) openLine = '☠ THE TIU hiện hình — hiện thân của mọi người từng tham gia giải đấu này! Nó mang đủ skill của cả 5 class.';
   else if(opts.exhausted) openLine = '🪤 '+foe.name+' đánh lén! Bạn kiệt sức: chỉ còn '+Math.round(RPG.CFG.EXHAUST_HP_PCT*100)+'% HP và mọi skill đang hồi chiêu!';
@@ -2529,22 +2533,8 @@ function spendTime(minutes, label){
   markActionDirty();
 }
 
-/* Đấu thử đấu trường: KHÔNG settle (không EXP / ĐRL / thời gian) — chỉ đóng giao diện trận rồi gọi onDone */
-function arenaBattleFinish(){
-  const B = BATTLE.B, opts = BATTLE.opts, won = B.winner==='A';
-  BATTLE.closed = true;
-  stopBattleOst(true);
-  clearTimeout(BATTLE.sayTimer);
-  $('battleOverlay').classList.add('hidden');
-  const round = B.round;
-  BATTLE = null;
-  if(opts.cleanup) opts.cleanup();
-  markActionDirty(); refreshAll();
-  if(opts.onDone) opts.onDone(won, round);
-}
 function battleFinish(){
   const B = BATTLE.B, opts = BATTLE.opts;
-  if(opts.arena){ arenaBattleFinish(); return; }
   const sum = RPGCombat.settle(B);
   opts.enemyIds.forEach(id=>{ S.duelDone[id] = true; });
   S.knownElements = S.knownElements || {};
@@ -2833,7 +2823,6 @@ function endFinal(won, path){
     const showEnd = ()=>{
       playDLG(endingScenes(key, me), ()=>{
         const n = recordEnding(key), total = Object.keys(ENDINGS).length;
-        if(window.TiuCloud) window.TiuCloud.autoSave();
         const hint = n<total ? ' Còn '+(total-n)+' kết thúc chưa mở — thử Gắn bó với đồng đội, gom đủ La Peace, hoặc hạ The TIU nhiều lần.' : ' Bạn đã mở tất cả kết thúc!';
         const ws = $('winScreen');
         Object.keys(ENDINGS).forEach(k=>ws.classList.remove(ENDINGS[k].cls));
@@ -2869,19 +2858,23 @@ function beginNight(chapter, night, opts){
   refreshBagBadge();
   saveCheckpoint();
   persistSave();
-  if(chapter===1){
-    const lines = night===1 ? DLG.INTRO_CH1 : DLG.INTRO_CH1_NIGHT[night];
-    const tip = pick(DLG.LORE_TIPS || ['']);
-    if(tip) addLog(tip, '');
-    if(lines){
-      if(night===1 && !(S.ng>0)) playDLG(lines, ()=>playDLG(DLG.LORE_ORIGIN, ()=>{ S.lastTick = performance.now(); }));
-      else playDLG(lines, ()=>{ S.lastTick = performance.now(); });
-    }
-  } else if(chapter===2 && night===2){
-    S.tiuOn = false; S.final = true;
-    startFinalBattle();
-  }
+  resumeNightScene();
 }
+function resumeNightScene(){
+  const chapter=S.chapter,night=S.night;
+  if(chapter===2 && night===2){S.introPending=false;S.tiuOn=false;S.final=true;startFinalBattle();return;}
+  if(!S.introPending)return;
+  const done=()=>{S.introPending=false;S.lastTick=performance.now();scheduleAutoSave();};
+  if(chapter===1){
+    const lines=night===1?DLG.INTRO_CH1:DLG.INTRO_CH1_NIGHT[night];
+    const tip=pick(DLG.LORE_TIPS||['']);if(tip)addLog(tip,'');
+    if(lines){
+      if(night===1 && !(S.ng>0)) playDLG(lines,()=>playDLG(DLG.LORE_ORIGIN,done));
+      else playDLG(lines,done);
+    }else done();
+  }else done();
+}
+
 function hideAllOverlays(){
   ['titleScreen','settingsScreen','gameOverScreen','winScreen'].forEach(id=>{
     const el = $(id); if(el) el.classList.add('hidden');
@@ -2891,18 +2884,14 @@ function showTitle(){
   stopBattleOst(false);
   hideAllOverlays();
   $('mgModal').classList.add('hidden');
-  if(!hasEntryAccess()){
-    showAccessGate();
-    refreshContinueBtn();
-    return;
-  }
-  $('accessGate').classList.add('hidden');
   $('titleScreen').classList.remove('hidden');
   refreshContinueBtn();
 }
 function refreshContinueBtn(){
   const btn = $('continueBtn');
-  if(btn) btn.classList.toggle('hidden', !hasSaveGame());
+  const data=readSaveGame();
+  if(btn) btn.classList.toggle('hidden', !data);
+  $('continueSummary').textContent = data ? 'Hành trình đang dở · Chương '+data.state.chapter+' · '+nightName(data.state.chapter,data.state.night)+' · '+new Date(data.savedAt).toLocaleString('vi-VN') : 'Hành trình của bạn bắt đầu tại đây.';
 }
 
 /* ============== GAME MỚI: TÊN + TRẮC NGHIỆM CHỌN CLASS ============== */
@@ -2940,7 +2929,6 @@ function showClassResult(name, classId){
         resetStory();
         beginNight(1, 1, {});
         addLog('⭐ Bạn có 1 điểm Tài Năng! Bấm T (hoặc nút ⭐) để chọn nhánh build.', 'good');
-        if (window.TiuCloud && window.TiuCloud.autoSave) window.TiuCloud.autoSave({ initialOnly: true });
       }}]);
 }
 
@@ -2966,16 +2954,20 @@ function buildSettings(){
   };
   [
     {key:'shake', label:'Rung màn hình', desc:'Rung khi bị The TIU jumpscare.'},
-    {key:'flash', label:'Hiệu ứng chớp đỏ', desc:'Chớp đỏ toàn màn hình khi bị bắt.'}
+    {key:'flash', label:'Hiệu ứng chớp đỏ', desc:'Chớp đỏ toàn màn hình khi bị bắt.'},
+    {key:'storyPace', label:'Nhịp khám phá chậm', desc:'Thêm 50% thời gian thực để khám phá. Chi phí di chuyển, chiến đấu và phần thưởng giữ nguyên.'},
+    {key:'instantText', label:'Hiện lời thoại ngay', desc:'Hiện đầy đủ chữ, không chờ hiệu ứng đánh máy.'}
   ].forEach(r=>{
     const row = document.createElement('div');
     row.className = 'settingRow';
     row.innerHTML = `<div><div class="slabel">${r.label}</div><div class="sdesc">${r.desc}</div></div>
-      <div class="toggle ${SETTINGS[r.key]?'on':''}"><div class="knob"></div></div>`;
+      <button type="button" role="switch" aria-label="${r.label}" aria-checked="${SETTINGS[r.key]}" class="toggle ${SETTINGS[r.key]?'on':''}"><span class="knob"></span></button>`;
     wrap.appendChild(row);
     row.querySelector('.toggle').onclick = ()=>{
       SETTINGS[r.key] = !SETTINGS[r.key];
       row.querySelector('.toggle').classList.toggle('on', SETTINGS[r.key]);
+      row.querySelector('.toggle').setAttribute('aria-checked',String(SETTINGS[r.key]));
+      savePreferences();
     };
   });
   buildSaveGameSection(wrap);
@@ -3001,7 +2993,7 @@ function buildSaveGameSection(wrap){
   const loadBtn = block.querySelector('#loadGameBtn');
   const delBtn = block.querySelector('#deleteSaveBtn');
   function refresh(){
-    saveBtn.disabled = !S || !S.running || isBattleActive();
+    saveBtn.disabled = !canSaveCampaign();
     const data = readSaveGame();
     if(data){
       const d = new Date(data.savedAt);
@@ -3015,17 +3007,63 @@ function buildSaveGameSection(wrap){
   refresh();
   saveBtn.onclick = ()=>{
     if(!S || !S.running) return;
-    persistSave();
-    addLog('💾 Đã lưu tiến trình game.', '');
+    const saved=persistSave();
     refresh();
+    if(saved) addLog('💾 Đã lưu tiến trình game.', '');
+    else statusEl.textContent='Không lưu được trên thiết bị. Hãy xuất bản lưu để giữ hành trình.';
   };
   loadBtn.onclick = ()=>{ if(loadGame()) return; refresh(); };
-  delBtn.onclick = ()=>{ deleteSaveGame(); refresh(); refreshContinueBtn(); };
+  delBtn.onclick = ()=>{
+    showModal('XÓA BẢN LƯU?', '<p>Xóa hành trình, bản dự phòng và checkpoint trên thiết bị này. Các kết thúc đã khám phá vẫn được giữ.</p>',[
+      {label:'Quay lại',primary:true,onClick:()=>closeModal(settingsOrigin==='pause')},
+      {label:'Xóa bản lưu',danger:true,onClick:()=>{ const ok=deleteSaveGame(); closeModal(true); if(ok){if(S)S.running=false;settingsOrigin='title';} refresh(); refreshContinueBtn(); if(!ok)statusEl.textContent='Không xóa được dữ liệu.'; }}
+    ]);
+  };
+  buildSaveTransfer(block,refresh);
 }
 
+function buildSaveTransfer(block,refresh){
+  const row=document.createElement('div'); row.className='saveTransfer';
+  row.innerHTML='<button class="btn" id="exportSaveBtn">Xuất bản lưu (.json)</button><button class="btn" id="importSaveBtn">Nhập bản lưu</button><input id="importSaveFile" type="file" accept=".json,application/json" hidden><p>Bản lưu thuộc trình duyệt và thiết bị này. Xuất ra tệp để sao lưu hoặc chuyển máy.</p>';
+  block.appendChild(row);
+  const status=block.querySelector('#saveStatusText');
+  row.querySelector('#exportSaveBtn').onclick=()=>{
+    const data=canSaveCampaign()?serializeSave():readSaveGame();
+    if(!data){status.textContent='Chưa có hành trình để xuất.';return;}
+    const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
+    const a=document.createElement('a'); a.href=url; a.download='the-tiu-hanh-trinh.json'; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    status.textContent='Đã tạo tệp bản lưu. Kiểm tra thư mục tải xuống của trình duyệt.';
+  };
+  const input=row.querySelector('input');
+  row.querySelector('#importSaveBtn').onclick=()=>input.click();
+  input.onchange=async()=>{
+    const file=input.files[0]; input.value=''; if(!file)return;
+    if(file.size>2*1024*1024){status.textContent='Tệp quá lớn (tối đa 2 MB).';return;}
+    let data;
+    try{data=TiuSaveStore.parse(await file.text());}catch(e){}
+    if(!data){status.textContent='Bản lưu không hợp lệ hoặc không tương thích. Hành trình hiện tại được giữ nguyên.';return;}
+    showModal('KHÔI PHỤC HÀNH TRÌNH?', '<p>Tệp này ở chương '+data.state.chapter+', đêm '+data.state.night+'. Nhập sẽ thay thế hành trình và checkpoint hiện tại.</p>',[
+      {label:'Quay lại',primary:true,onClick:()=>closeModal(settingsOrigin==='pause')},
+      {label:'Khôi phục',onClick:()=>{
+        if(!campaignStore.write(data)){closeModal(settingsOrigin==='pause');status.textContent='Không ghi được bản lưu. Hãy kiểm tra dung lượng trình duyệt.';return;}
+        campaignStore.write(data,CHECKPOINT_KEY);
+        closeModal(true); restoreFrom(data);
+      }}
+    ]);
+  };
+}
 let settingsOrigin = 'title';
-$('startBtn').onclick = startNewGame;
-$('entryGuestBtn').onclick = activateGuestEntry;
+$('startBtn').onclick = ()=>{
+  if(!hasSaveGame()){ startNewGame(); return; }
+  showModal('BẮT ĐẦU HÀNH TRÌNH MỚI?', '<p>Hành trình hiện tại sẽ được thay thế khi bạn bắt đầu đêm đầu tiên. Bạn có thể xuất bản lưu trong Cài đặt trước khi bắt đầu.</p>',[
+    {label:'Quay lại',primary:true,onClick:()=>closeModal()},
+    {label:'Bắt đầu mới',danger:true,onClick:startNewGame}
+  ]);
+};
+$('journalBtn').onclick=()=>{if(window.TiuGame.canExplore()) openQuestLog();};
+$('pauseSaveBtn').onclick=()=>{ $('pauseSaveStatus').textContent=persistSave()?'Đã lưu hành trình trên thiết bị.':'Không lưu được. Kiểm tra dung lượng hoặc quyền lưu của trình duyệt.'; };
+
 $('settingsBtn').onclick = ()=>{
   settingsOrigin = 'title';
   hideAllOverlays(); buildSettings();
@@ -3045,6 +3083,7 @@ $('menuFromWin').onclick = showTitle;
 
 /* ============== PAUSE MENU (ESC) ============== */
 function isBlockingOverlayOpen(){
+  if(window.TiuTutorial && window.TiuTutorial.isActive()) return true;
   return ['mgModal','mapModal','vnOverlay','jumpscareOverlay','gameOverScreen','winScreen','settingsScreen','battleOverlay','titleScreen']
     .some(id=>{ const el=$(id); return el && !el.classList.contains('hidden'); });
 }
@@ -3062,6 +3101,7 @@ function showTutorialFallback(reason){
   ]);
 }
 function openTutorialMenuSafe(retry){
+  if(isBattleActive() || VN_ACTIVE || TRAVEL.busy) return;
   const tut = window.TiuTutorial;
   if(tut && typeof tut.openMenu==='function'){
     try{
@@ -3110,13 +3150,15 @@ document.addEventListener('click',e=>{
   e.preventDefault(); e.stopPropagation(); openTutorialMenuSafe();
 },true);
 window.addEventListener('keydown',e=>{
-  if((e.key||'').toLowerCase()!=='h' || e.ctrlKey || e.metaKey || e.altKey || isTypingTarget(e.target)) return;
-  if(typeof S==='undefined' || !S || !S.running || isBattleActive()) return;
+  if(e.repeat || (window.TiuTutorial && window.TiuTutorial.isActive()) || (e.key||'').toLowerCase()!=='h' || e.ctrlKey || e.metaKey || e.altKey || isTypingTarget(e.target)) return;
+  if(!window.TiuGame.canExplore() && !( !$('mgModal').classList.contains('hidden') && $('mgTitle').textContent==='❓ HƯỚNG DẪN')) return;
   e.preventDefault(); e.stopImmediatePropagation(); openTutorialMenuSafe();
 },true);
 function openPauseMenu(){
   if(!S || !S.running) return;
-  if(isBlockingOverlayOpen()) return;
+  if(isBlockingOverlayOpen() || TRAVEL.busy) return;
+  TD.keys = {};
+  $('pauseSaveStatus').textContent='';
   S.paused = true;
   $('pauseMenu').classList.remove('hidden');
 }
@@ -3140,7 +3182,7 @@ $('pauseMainMenuBtn').onclick = ()=>{
   showTitle();
 };
 document.addEventListener('keydown', (e)=>{
-  if(e.key !== 'Escape') return;
+  if(e.key !== 'Escape' || e.repeat || isTypingTarget(e.target)) return;
   if(!S || !S.running) return;
   if(!$('pauseMenu').classList.contains('hidden')){
     e.preventDefault(); closePauseMenu();
@@ -3185,6 +3227,7 @@ document.addEventListener('keydown', (e)=>{
   }
 
   if(k === 'q'){
+    if(!$('mgModal').classList.contains('hidden') && $('mgTitle').textContent==='📖 NHẬT KÝ HÀNH TRÌNH'){e.preventDefault();closeModal();return;}
     if(!S || !S.running || isPauseMenuOpen() || isBlockingOverlayOpen() || isBattleActive()) return;
     e.preventDefault(); openQuestLog(); return;
   }
@@ -3219,13 +3262,18 @@ document.addEventListener('keydown', (e)=>{
 function isMapOpen(){
   return !document.getElementById('mapModal').classList.contains('hidden');
 }
+let mapWasPaused=false;
 function openMapModal(){
+  if(!window.TiuGame.canExplore()) return;
+  mapWasPaused=S.paused; S.paused=true; TD.keys={};
   document.getElementById('mapModal').classList.remove('hidden');
   buildMap();
   refreshMap();
 }
 function closeMapModal(){
+  if(!isMapOpen()) return;
   document.getElementById('mapModal').classList.add('hidden');
+  if(S){S.paused=mapWasPaused;S.lastTick=performance.now();}
 }
 document.getElementById('miniMapExpand').onclick = openMapModal;
 document.getElementById('closeMapBtn').onclick = closeMapModal;
@@ -3376,9 +3424,17 @@ function stopMinigamePressureFx(){
 }
 
 function startMinigame(room){
+  if(!S || !S.running || !S.activeEvents[room] || isBattleActive()) return;
+  persistSave();
+  S.paused=true; TD.keys={};
+  const gameState=S; let finished=false;
+  const cleanups=[];
   const ev = ROOM_DEF[room].event;
   const isGridEvent = false;
   const modal = document.getElementById('mgModal');
+  modal.dataset.minigame='1';
+  modal.dataset.kb = ROOM_DEF[room].event==='wibu' ? 'sequence' : '1';
+  KB.cur=null;
   modal.classList.remove('hidden');
   document.getElementById('mgTitle').textContent = isGridEvent
     ? '⚡ KHỞI ĐỘNG LẠI CẦU DAO TỔNG — '+ROOM_DEF[room].name
@@ -3391,9 +3447,13 @@ function startMinigame(room){
   startMinigamePressureFx(document.getElementById('mgBox'));
 
   function finish(success){
+    if(finished)return; finished=true;
+    cleanups.forEach(fn=>fn());
     clearInterval(timerHandle);
     stopMinigamePressureFx();
-    modal.classList.add('hidden');
+    modal.classList.add('hidden'); modal.dataset.kb=''; modal.dataset.minigame=''; KB.cur=null;
+    if(S!==gameState)return;
+    S.paused=false;S.lastTick=performance.now();
     delete S.activeEvents[room];
     if(success){
       const gain = Math.round((EVENT_REWARD_BASE + S.night*EVENT_REWARD_PER_NIGHT) * (S.mod==='midterm' ? 1.5 : 1));
@@ -3411,6 +3471,7 @@ function startMinigame(room){
     timeLeft = seconds;
     timerEl.textContent = 'Thời gian còn lại: '+timeLeft+'s';
     timerHandle = setInterval(()=>{
+      if(document.hidden)return;
       timeLeft--;
       timerEl.textContent = 'Thời gian còn lại: '+timeLeft+'s';
       if(timeLeft<=0){ clearInterval(timerHandle); onTimeout(); }
@@ -3425,7 +3486,8 @@ function startMinigame(room){
       const grid = body.querySelector('.stageGrid');
       const oddIdx = Math.floor(Math.random()*20);
       for(let i=0;i<20;i++){
-        const c=document.createElement('div');
+        const c=document.createElement('button');
+        c.type='button';
         c.className='stageCell'+(i===oddIdx?' odd':'');
         c.textContent = i===oddIdx?'◆':'♦';
         c.onclick=()=>{
@@ -3434,6 +3496,7 @@ function startMinigame(room){
         };
         grid.appendChild(c);
       }
+      kbReset('modal');
     }
     newRound();
     startTimer(18, ()=>finish(false));
@@ -3506,7 +3569,8 @@ function startMinigame(room){
     const leftEls = {}, rightEls = {};
 
     function mkEndpoint(c){
-      const d = document.createElement('div');
+      const d = document.createElement('button');
+      d.type='button';d.setAttribute('aria-label',c.name);
       d.className = 'wireEndpoint';
       d.title = c.name;
       d.style.cssText = `width:${rowH}px;height:${rowH}px;border-radius:50%;background:${c.hex};
@@ -3532,7 +3596,7 @@ function startMinigame(room){
         if(!selectedLeft || d.classList.contains('done')) return;
         if(selectedLeft === c.id){
           drawWireLine(leftEls[selectedLeft], d, true);
-          leftEls[selectedLeft].classList.add('done');
+          leftEls[selectedLeft].classList.add('done');leftEls[selectedLeft].disabled=true;d.disabled=true;
           leftEls[selectedLeft].style.outlineColor = 'transparent';
           leftEls[selectedLeft].style.opacity = '0.35';
           d.classList.add('done');
@@ -3573,8 +3637,8 @@ function startMinigame(room){
       {q:'UIT tọa lạc chủ yếu ở khu vực nào của TP.HCM?', opts:['Thủ Đức','Quận 1','Bình Thạnh'], a:0},
       {q:'Ca trực bắt đầu lúc mấy giờ?', opts:['22:00','00:00','01:00'], a:1},
       {q:'Khu vực an toàn để mua vật phẩm là?', opts:['Nhà E','Căn tin','Nhà C'], a:1},
-      {q:'Vật phẩm nào giúp hồi 1 HP?', opts:['Nước tăng lực','Bim Bim','Thẻ ra vào'], a:1},
-      {q:'The TIU di chuyển nhanh hơn khi nào?', opts:['Thanh meter cao','Trời sáng','Bạn đứng yên'], a:0},
+      {q:'Vật phẩm nào giúp hồi HP?', opts:['Nước tăng lực','Bim Bim','Thẻ ra vào'], a:1},
+      {q:'Biến cố nào khiến The TIU tuần tra nhanh hơn?', opts:['Mất điện','Sương mù','Bạn đứng yên'], a:0},
       {q:'Nhà nào có tủ điện cần nối lại dây?', opts:['Nhà B','Nhà C','Nhà D'], a:1},
     ];
     const q = pick(QUESTIONS);
@@ -3600,7 +3664,7 @@ function startMinigame(room){
 
     body.innerHTML = `<p style="font-size:12px;color:var(--text-dim);">Wibu Việt Nhật đang chạy trốn qua các tầng — gõ đúng các phím mũi tên theo thứ tự để đuổi kịp!</p>
       <div id="arrowSeq" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:18px 0;"></div>
-      <div style="text-align:center;font-size:12px;color:var(--text-dim);">Dùng phím mũi tên trên bàn phím ⌨</div>`;
+      <div style="text-align:center;font-size:12px;color:var(--text-dim);">Mũi tên hoặc WASD · Esc: bỏ cuộc</div>`;
     const seqEl = body.querySelector('#arrowSeq');
     const boxes = pattern.map(a=>{
       const d=document.createElement('div');
@@ -3619,9 +3683,11 @@ function startMinigame(room){
     }
     markCurrent();
     function onKey(e){
-      if(!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) return;
-      e.preventDefault();
-      if(e.key === pattern[idx].key){
+      if(e.repeat || e.ctrlKey || e.metaKey || e.altKey)return;
+      const direction=QTE_KEYMAP[e.key]||e.key;
+      if(!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(direction)) return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      if(direction === pattern[idx].key){
         idx++;
         if(idx>=pattern.length){
           document.removeEventListener('keydown', onKey);
@@ -3638,6 +3704,7 @@ function startMinigame(room){
       }
     }
     document.addEventListener('keydown', onKey);
+    cleanups.push(()=>document.removeEventListener('keydown',onKey));
     startTimer(patternLen*2.6, ()=>{ document.removeEventListener('keydown', onKey); finish(false); });
   }
 
@@ -3648,11 +3715,11 @@ function startMinigame(room){
     body.innerHTML = '<p style="font-size:12px;color:var(--text-dim);">Xếp lại sách theo đúng thứ tự số từ nhỏ đến lớn.</p><div class="bookRow"></div>';
     const row = body.querySelector('.bookRow');
     shuffled.forEach(n=>{
-      const t=document.createElement('div'); t.className='bookTile'; t.textContent=n;
+      const t=document.createElement('button'); t.type='button'; t.className='bookTile'; t.textContent=n;
       t.onclick=()=>{
         if(t.classList.contains('picked')) return;
         if(n===expected){
-          t.classList.add('picked'); expected++;
+          t.classList.add('picked'); t.disabled=true; expected++;
           if(expected>6) finish(true);
         } else {
           finish(false);
@@ -3671,11 +3738,11 @@ function startMinigame(room){
     body.innerHTML = '<p style="font-size:12px;color:var(--text-dim);">Xe bị dựng lộn xộn! Bấm vào từng xe theo đúng thứ tự số từ nhỏ đến lớn để dắt về hàng.</p><div class="bookRow"></div>';
     const row = body.querySelector('.bookRow');
     shuffled.forEach(n=>{
-      const t=document.createElement('div'); t.className='bookTile'; t.textContent='🏍'+n;
+      const t=document.createElement('button'); t.type='button'; t.className='bookTile'; t.textContent='🏍'+n;
       t.onclick=()=>{
         if(t.classList.contains('picked')) return;
         if(n===expected){
-          t.classList.add('picked'); expected++;
+          t.classList.add('picked'); t.disabled=true; expected++;
           if(expected>6) finish(true);
         } else {
           finish(false);
@@ -3694,7 +3761,8 @@ function startMinigame(room){
       const grid = body.querySelector('.stageGrid');
       const oddIdx = Math.floor(Math.random()*20);
       for(let i=0;i<20;i++){
-        const c=document.createElement('div');
+        const c=document.createElement('button');
+        c.type='button';
         c.className='stageCell'+(i===oddIdx?' odd':'');
         c.textContent = i===oddIdx?'⚽':'●';
         c.onclick=()=>{
@@ -3703,10 +3771,16 @@ function startMinigame(room){
         };
         grid.appendChild(c);
       }
+      kbReset('modal');
     }
     newRound();
     startTimer(18, ()=>finish(false));
   }
+  const quit=document.createElement('button'); quit.className='btn'; quit.dataset.back='1';quit.textContent='Bỏ cuộc · Esc';quit.onclick=()=>finish(false);footer.appendChild(quit);
+  if(modal.dataset.kb==='1')kbReset('modal');
+  const exitKey=e=>{if(e.key==='Escape'&&!e.repeat){e.preventDefault();e.stopImmediatePropagation();finish(false);}};
+  document.addEventListener('keydown',exitKey,true);cleanups.push(()=>document.removeEventListener('keydown',exitKey,true));
+
 }
 
 /* ============== QTE MŨI TÊN (dùng cho kỹ năng & phòng thủ) ============== */
@@ -3721,7 +3795,7 @@ const QTE_KEYMAP = {
 // Số mũi tên QTE của kỹ năng theo độ phức tạp từng nhân vật
 let QTE = null;
 function qteEnsureHost(){
-  const arena = document.getElementById('dodgeArena');
+  const overlay = document.getElementById('dodgeOverlay');
   const box = document.getElementById('dodgeBox');
   const soul = document.getElementById('soulCircle');
   if(soul) soul.style.display = 'none';
@@ -3734,16 +3808,16 @@ function qteEnsureHost(){
     host.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;font-family:inherit;color:#fff;user-select:none;';
     box.appendChild(host);
   }
-  arena.classList.remove('hidden');
+  overlay.classList.remove('hidden');
   return host;
 }
 function qteReleaseHost(){
-  const arena = document.getElementById('dodgeArena');
+  const overlay = document.getElementById('dodgeOverlay');
   const host = document.getElementById('qteHost');
   if(host) host.remove();
   const soul = document.getElementById('soulCircle');
   if(soul) soul.style.display = '';
-  arena.classList.add('hidden');
+  overlay.classList.add('hidden');
 }
 
 /* opts: { title, subtitle, count, windowMs, feintChance, mode:'attack'|'defend',
@@ -4279,14 +4353,14 @@ document.addEventListener('keydown', (e)=>{
   if(e.key==='F3'){ e.preventDefault(); TD.debug = !TD.debug; return; }
   if(e.key==='F4'){ e.preventDefault(); TD.testColors = !TD.testColors; return; }
   if(e.ctrlKey || e.metaKey || e.altKey) return;
-  const k = (e.key||'').toLowerCase();
+  const k = /^Key[WASDE]$/.test(e.code||'') ? e.code.slice(3).toLowerCase() : (e.key||'').toLowerCase();
   if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(k)){
     if(tdCanControl()){ e.preventDefault(); TD.keys[k] = true; }
   } else if(k==='e' && !e.repeat){
     if(tdCanControl()){ e.preventDefault(); tdInteract(); }
   }
 });
-document.addEventListener('keyup', (e)=>{ delete TD.keys[(e.key||'').toLowerCase()]; });
+document.addEventListener('keyup', (e)=>{ delete TD.keys[(e.key||'').toLowerCase()]; const code=e.code||''; if(/^Key[WASD]$/.test(code)) delete TD.keys[code.slice(3).toLowerCase()]; });
 window.addEventListener('blur', ()=>{ TD.keys = {}; });
 requestAnimationFrame(tdLoop);
 
@@ -4378,23 +4452,27 @@ function startTravel(dest){
 /* ============== LƯU GAME KHI RỜI TRANG ============== */
 window.addEventListener('beforeunload', ()=>{ persistSave(); });
 
-/* API dùng chung cho các module UI được nạp sau script.js (tutorial.js, arena.js).
+/* API dùng chung cho các module UI được nạp sau script.js (tutorial.js, kbnav.js).
    Game chạy trong IIFE nên các hàm này không tự trở thành window.*. */
 window.showModal = showModal;
 window.closeModal = closeModal;
 window.isBattleActive = isBattleActive;
 Object.defineProperty(window, 'S', { configurable: true, get: ()=>S });
-window.TiuAccess = { guest:activateGuestEntry, account:activateAccountEntry, logout:lockEntry, mode:entryMode };
-window.addEventListener('pagehide', ()=>{
-  if(!isGuestSession()) return;
-  clearGuestData();
-});
-window.addEventListener('pageshow', (e)=>{
-  if(!e.persisted || hasEntryAccess()) return;
-  S = null;
-  BATTLE = null;
-  showTitle();
-});
+window.TiuGame = {
+  nextDialogue:()=>VN_ACTIVE && VN_ACTIVE.next(),
+  canExplore:()=>!!(S && S.running && !S.paused && !isBlockingOverlayOpen() && !isPauseMenuOpen() && !TRAVEL.busy),
+  roomNPCs:()=>S ? getRoomNPCs(S.playerRoom) : []
+};
+function suspendExploration(){
+  TD.keys = {};
+  if(S) S.lastTick = performance.now();
+  persistSave();
+  if(window.TiuGame.canExplore()) openPauseMenu();
+}
+window.addEventListener('blur',suspendExploration);
+document.addEventListener('visibilitychange',()=>{ if(document.hidden) suspendExploration(); });
+window.addEventListener('pagehide',()=>{persistSave();});
+setInterval(()=>{ if(canSaveCampaign() && !S.paused) persistSave(); },15000);
 
 buildMap();
 rafId = requestAnimationFrame(tick);

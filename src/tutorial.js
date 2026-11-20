@@ -3,12 +3,12 @@
    Nạp SAU script.js. Hiện "đèn rọi" (spotlight) vào đúng phần giao diện đang được giải thích.
    - Hướng dẫn theo chủ đề, có thể mở lại bất cứ lúc nào; một số bài tự bật khi gặp cơ chế lần đầu.
    - Phím: Enter / → / Space = tiếp · ← = lùi · Esc = bỏ qua · H = mở menu hướng dẫn bất cứ lúc nào.
-   - Trạng thái "đã xem" lưu theo phiên với khách, lưu lâu dài với tài khoản (tiu_tut_done).
+   - Trạng thái "đã xem" lưu lâu dài trên thiết bị (tiu_tut_done).
    ========================================================================= */
 (function () {
   "use strict";
   const LS = "tiu_tut_done";
-  const storage = () => { try { return window.TiuAccess && window.TiuAccess.mode() === "guest" ? sessionStorage : localStorage; } catch (e) { return localStorage; } };
+  const storage = () => localStorage;
   const $ = (id) => document.getElementById(id);
   const done = () => { try { return JSON.parse(storage().getItem(LS) || "{}"); } catch (e) { return {}; } };
   const markDone = (k) => { try { const d = done(); d[k] = true; storage().setItem(LS, JSON.stringify(d)); } catch (e) { /* bỏ qua */ } };
@@ -17,7 +17,7 @@
   const TOURS = {
     basic: { name: "Bắt đầu & điều khiển", icon: "🧭", steps: [
       { title: "Chào mừng đến The TIU", text: "Năm sinh viên cạnh tranh suất tốt nghiệp loại Giỏi. Bạn cần sống sót, kiếm <b>ĐRL</b> và chọn cách đối đầu với The TIU. Bấm <b>Enter / → / Space</b> để tiếp, <b>←</b> để lùi, <b>Esc</b> để đóng bài." },
-      { sel: "#hud", title: "Thanh trạng thái", text: "Theo dõi giờ ca, HP, mức hoạt động của The TIU, thể lực đi lại và vị trí nó được nhìn thấy lần cuối. Khi hết giờ, đêm kết thúc và thứ hạng ĐRL được tính." },
+      { sel: "#hud", title: "Thanh trạng thái", text: "Theo dõi giờ ca, ĐRL, cấp/EXP, HP, thể lực đi lại và vị trí nó được nhìn thấy lần cuối. Khi hết giờ, đêm kết thúc và thứ hạng ĐRL được tính." },
       { sel: "#roomBanner", title: "Đi lại trong tòa nhà", text: "Dùng <b>WASD</b> hoặc phím mũi tên để đi trong sơ đồ tòa nhà. Đến gần vật thể sẽ thấy nhãn tương tác; bấm <b>E</b> để dùng NPC, cửa, điểm nhặt đồ, sự cố, quầy hoặc bàn chế tạo. Nếu bản đồ tòa nhà không khả dụng, dùng nút hành động bên dưới." },
       { sel: "#actionPane", title: "Hành động luôn có nút bấm", text: "Các hành động hợp lệ trong phòng hiện ở đây. Bạn có thể bấm nút trực tiếp; di chuyển giữa phòng cũng có nút đích đến, nên không cần dùng phím tắt để chơi." },
       { title: "Thoại và lựa chọn", text: "Bấm vào khung thoại hoặc dùng <b>J / Enter / Space</b> để hiện chữ và sang câu tiếp. <b>Ctrl</b> tua đến lựa chọn tiếp theo; phím <b>1–4</b> chọn nhanh, hoặc bấm đáp án trên màn hình. Lựa chọn có thể thay đổi quan hệ và kết thúc." },
@@ -88,12 +88,6 @@
       { title: "Điều kiện kết thúc", text: "Xây dựng Gắn bó, thu thập đủ La Peace và hạ The TIU nhiều lần để mở các nhánh kết thúc khác nhau. Màn kết thúc cho biết còn bao nhiêu kết cục chưa khám phá." },
       { title: "New Game+", text: "Sau khi hoàn thành, New Game+ giữ lại cấp, tài năng và trang bị cùng phần thưởng theo kết thúc. Địch và The TIU mạnh hơn, đồng thời biến cố xuất hiện mọi đêm." }
     ] },
-    arena: { name: "Đấu trường & đồng bộ (tùy chọn)", icon: "☁️", steps: [
-      { title: "Chế độ trực tuyến là tùy chọn", text: "Đấu trường và đồng bộ không cần để chơi cốt truyện. Nếu chưa cấu hình dịch vụ, phần chơi đơn vẫn hoạt động bình thường." },
-      { title: "Key tài khoản", text: "Tạo key trong màn Đấu trường để liên kết nhân vật. Hãy giữ key riêng tư; mất key có thể đồng nghĩa không truy cập lại dữ liệu gắn với key đó." },
-      { title: "Lưu và tải build", text: "Bạn có thể lưu build nhân vật lên dịch vụ, tải lại hoặc công khai để người khác thách đấu. Build gồm Class, cấp, tài năng và trang bị." },
-      { title: "Đấu giao hữu và xếp hạng", text: "Chọn đối thủ để mô phỏng trận tự động theo luật chiến đấu. Kết quả, điểm xếp hạng và lịch sử trận được đồng bộ khi dịch vụ được bật." }
-    ] }
   };
 
   /* ------------------------------ ENGINE ĐÈN RỌI ------------------------------ */
@@ -214,9 +208,8 @@
 
   /* ------------------------------ TỰ BẬT ĐÚNG LÚC ------------------------------ */
   function idle() {
-    return typeof S !== "undefined" && S && S.running && !active &&
-      !(typeof isBlockingOverlayOpen === "function" && isBlockingOverlayOpen()) &&
-      !(typeof VN_ACTIVE !== "undefined" && VN_ACTIVE) && !(typeof TRAVEL !== "undefined" && TRAVEL.busy);
+    return typeof S !== "undefined" && S && S.running && !S.paused && !active &&
+      window.TiuGame && window.TiuGame.canExplore();
   }
   function poll() {
     if (active) { if (layer && !layerWorks()) finish("snooze"); return; }
@@ -235,7 +228,7 @@
     if (d.basic && !d.talent && !snoozed.talent && RPG.getState && RPG.getState() && RPG.player().level >= 3 && RPG.talentPoints(RPG.player()) > 0) { start("talent"); return; }
     // Dạy đúng lúc gặp cơ chế lần đầu thay vì bắt người chơi phải tự tìm trong menu.
     if (!d.events && !snoozed.events && S.activeEvents && S.activeEvents[S.playerRoom]) { start("events"); return; }
-    if (!d.social && !snoozed.social && typeof getRoomNPCs === "function" && getRoomNPCs(S.playerRoom).length) { start("social"); return; }
+    if (!d.social && !snoozed.social && window.TiuGame && window.TiuGame.roomNPCs().length) { start("social"); return; }
     if (!d.gear && !snoozed.gear && S.scavenge && S.scavenge[S.playerRoom]) start("gear");
   }
 
@@ -247,6 +240,7 @@
       const k = (e.key || "").toLowerCase();
       if (active) {
         e.preventDefault(); e.stopImmediatePropagation();
+        if (k === "escape" && !e.repeat) { finish("snooze"); return; }
         if (e.repeat || Date.now() - active.shownAt < STEP_GUARD_MS) return;   // đang bấm dồn để bỏ qua thoại -> không nhảy bước
         if (k === "h") { finish("snooze"); openMenu(); }
         else if (k === "enter" || k === "arrowright" || k === " ") next();

@@ -47,15 +47,9 @@
     POISON_TURNS: 3, POISON_MAX_ULT: 6,
     SWORDSMAN_RAGE_ATTACK: 15, SWORDSMAN_ULT_POWER: 2.0,
     MAX_ROUNDS: 40,
-    // ---- Chế độ PvP (đấu trường): phòng thủ theo TỈ LỆ thay vì trừ thẳng, để không có class nào miễn nhiễm hoàn toàn ----
-    PVP_DEF_K: 100,        // sát thương = ATK*power * K/(K+DEF)
-    PVP_DMG_SCALE: 1.0,
-    PVP_DOT_MULT: 1.0,     // nhân sát thương độc/cháy theo thời gian trong PvP (DoT bỏ qua DEF nên dễ thành 'khắc chế cứng')
-    PVP_SWORD_ATK_PCT: 0.754, PVP_SWORDSMAN_ATK_PCT: 1.322, PVP_HP_SWORD: 0.500, PVP_HP_GUARD: 0.658   // chỉ số summon khi PvP
   };
 
   let rng = Math.random;
-  let pvpMode = false;   // đặt bởi create({pvp:true})
   const rand = (a, b) => a + rng() * (b - a);
   const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
@@ -70,7 +64,7 @@
               dieTwice     : hồi sinh 50% HP sau khi chết lần đầu trong trận],
            loseOnPlayerDeath (mặc định true), maxRounds, rng */
   function create(opts) {
-    if (opts.rng) rng = opts.rng;
+    rng = opts.rng || Math.random;
     const B = {
       opts: Object.assign({ controlAllies: false, autoPlayer: false, dodge: false,
                             loseOnPlayerDeath: true, maxRounds: CC.MAX_ROUNDS }, opts),
@@ -78,7 +72,6 @@
       nextUid: 1, settled: false, playerUnit: null
     };
     B.dodge = !!B.opts.dodge;
-    pvpMode = !!B.opts.pvp;
     B.known = Object.assign({}, B.opts.known || {});   // id địch mà người chơi đã biết hệ (thuộc tính)
     opts.allies.forEach(function (f, i) {
       const u = makeUnit(B, f, "A");
@@ -136,8 +129,7 @@
     const raw = atk * power;
     const def = o.ignoreDef ? 0 : eff(dst, "def");
     let d;
-    if (pvpMode) { d = raw * CC.PVP_DEF_K / (CC.PVP_DEF_K + Math.max(0, def)); d *= rand(CC.VARIANCE[0], CC.VARIANCE[1]) * CC.PVP_DMG_SCALE; }
-    else { d = Math.max(raw * CC.MIN_DMG_PCT, raw - def * CC.DEF_FACTOR); d *= rand(CC.VARIANCE[0], CC.VARIANCE[1]) * CC.DMG_SCALE; }
+    d = Math.max(raw * CC.MIN_DMG_PCT, raw - def * CC.DEF_FACTOR); d *= rand(CC.VARIANCE[0], CC.VARIANCE[1]) * CC.DMG_SCALE;
     return d;
   }
 
@@ -270,7 +262,7 @@
       const old = findSummon(B, u, "sword");
       if (old) { old.hp = old.maxHp; emit(B, "Ma Kiếm được làm mới sức mạnh.", "skill"); return; }
       if (findSummon(B, u, "swordsman")) { emit(B, "Ma Kiếm Sĩ đã ở trên sân — không cần thêm Ma Kiếm.", ""); return; }
-      const s = spawnSummon(B, u, "sword", { name: "Ma Kiếm", hp: Math.round(mh * (pvpMode ? CC.PVP_HP_SWORD : CC.SUMMON_HP.sword)), atkPct: (pvpMode ? CC.PVP_SWORD_ATK_PCT : CC.SWORD_ATK_PCT) });
+      const s = spawnSummon(B, u, "sword", { name: "Ma Kiếm", hp: Math.round(mh * CC.SUMMON_HP.sword), atkPct: CC.SWORD_ATK_PCT });
       if (u.voidActive) applyVoid(B, s);
       emit(B, u.name + " triệu hồi " + s.name + "!", "skill", { type: "summon", src: u.uid, uid: s.uid });
     } else if (kind === "guard") {
@@ -278,11 +270,11 @@
       const og = findSummon(B, u, "guard");
       if (og) { og.hp = og.maxHp; emit(B, "Hộ Vệ được làm mới sức mạnh.", "skill"); return; }
       const sw = findSummon(B, u, "sword");
-      const ghp = Math.round(mh * (pvpMode ? CC.PVP_HP_GUARD : CC.SUMMON_HP.guard));
+      const ghp = Math.round(mh * CC.SUMMON_HP.guard);
       if (sw) {                                           // HỢP THỂ
         const hp = sw.hp + ghp;
         sw.alive = false; sw.hp = 0;
-        const s = spawnSummon(B, u, "swordsman", { name: "Ma Kiếm Sĩ", hp: hp, atkPct: (pvpMode ? CC.PVP_SWORDSMAN_ATK_PCT : CC.SWORDSMAN_ATK_PCT), taunt: true });
+        const s = spawnSummon(B, u, "swordsman", { name: "Ma Kiếm Sĩ", hp: hp, atkPct: CC.SWORDSMAN_ATK_PCT, taunt: true });
         if (u.voidActive) applyVoid(B, s);
         emit(B, "Ma Kiếm và Hộ Vệ hợp thể thành " + s.name + "!", "skill", { type: "summon", src: u.uid, uid: s.uid });
       } else {
@@ -363,7 +355,7 @@
         case "status":
           for (const t of targets) {
             if (!t.alive || parried(ctx, t) || rng() >= (e.chance == null ? 1 : e.chance)) continue;
-            if (e.status === "burn") setSt(t, "burn", { turns: e.turns, dmg: Math.max(1, Math.round(effAtk(u) * e.dotPower * scale * CC.DMG_SCALE * (pvpMode ? CC.PVP_DOT_MULT : 1))) });
+            if (e.status === "burn") setSt(t, "burn", { turns: e.turns, dmg: Math.max(1, Math.round(effAtk(u) * e.dotPower * scale * CC.DMG_SCALE)) });
             else if (e.status === "freeze") setSt(t, "freeze", { turns: e.turns });
             else setSt(t, e.status, { turns: e.turns });           // paralyze / stun: tiêu hao khi bị bỏ lượt
             emit(B, t.name + " dính hiệu ứng " + ({ burn: "Cháy", freeze: "Đóng băng", paralyze: "Tê liệt", stun: "Choáng" }[e.status] || e.status) + "!", "skill", { type: "status", dst: t.uid, status: e.status });
@@ -373,14 +365,14 @@
           for (const t of targets) if (t.alive) {
             const p = t.st.poison || { stacks: 0 };
             setSt(t, "poison", { stacks: Math.min(e.max, p.stacks + e.amount), turns: CC.POISON_TURNS,
-                                  dmg: Math.max(1, Math.round(effAtk(u) * e.dotPower * CC.DMG_SCALE * (pvpMode ? CC.PVP_DOT_MULT : 1))) });
+                                  dmg: Math.max(1, Math.round(effAtk(u) * e.dotPower * CC.DMG_SCALE)) });
             emit(B, t.name + " nhiễm độc (" + t.st.poison.stacks + " stack)!", "skill", { type: "status", dst: t.uid, status: "poison" });
           }
           break;
         case "poisonDamage":
           for (const t of targets) if (t.alive) {
             const stacks = (t.st.poison ? t.st.poison.stacks : 0) + (e.baseStacks && !t.st.poison ? e.baseStacks : 0);
-            if (stacks > 0) yield* dmgGen(B, u, t, e.powerPerStack * stacks * scale * (pvpMode ? CC.PVP_DOT_MULT : 1), { ignoreDef: true }, ctx);
+            if (stacks > 0) yield* dmgGen(B, u, t, e.powerPerStack * stacks * scale, { ignoreDef: true }, ctx);
             else emit(B, t.name + " không có độc để kích nổ.", "");
           }
           break;

@@ -28,9 +28,10 @@
     </div>
     <div class="hud-block"><span class="hud-label" id="tiuLastSeenLabel">TIU LẦN CUỐI THẤY TẠI</span><span class="hud-value" id="tiuLastSeen" style="color:var(--blood-bright);">—</span></div>
     <div id="bagArea">
+      <button id="journalBtn" title="Nhật ký hành trình [Q]" aria-label="Nhật ký hành trình [Q]">📖 <kbd>Q</kbd></button>
       <button id="helpBtn" title="Hướng dẫn [H]">❓</button>
       <button id="talentBtn" title="Tài năng [T]">⭐ <span id="talentBadge"></span></button>
-      <button id="bagBtn" title="Túi đồ">🎒 <span id="bagCountBadge">0</span></button>
+      <button id="bagBtn" title="Túi đồ [B]" aria-label="Túi đồ [B]">🎒 <span id="bagCountBadge">0</span></button>
       <div id="hiddenStatsWrap">
         <button id="hiddenStatsBtn" title="Chỉ số ẩn">⋮</button>
         <div id="hiddenStatsPopover" class="hidden"></div>
@@ -38,11 +39,6 @@
     </div>
     <button id="soundToggleBtn" title="Bật/Tắt âm thanh" aria-pressed="false"><span id="soundIcon">🔊</span></button>
     <div id="nightBadge">ĐÊM 1</div>
-    <button id="playerArenaBtn" class="hidden" type="button" title="Hồ sơ nhân vật và PvP">
-      <span class="playerArenaIcon">⚔</span>
-      <span class="playerArenaInfo"><small>NHÂN VẬT · PvP</small><b id="playerArenaName">—</b><em id="playerArenaClass">—</em></span>
-      <span class="playerArenaArrow">↗</span>
-    </button>
   </div>
 
   <div id="main">
@@ -64,7 +60,8 @@
           <button id="resolveBtn">⚠ XỬ LÝ SỰ CỐ</button>
         </div>
         <div id="actionInner">
-          <div id="nightBrief" aria-live="polite"></div>
+          <div id="nightBrief"></div>
+          <nav id="controlHints" aria-label="Điều khiển"><span><kbd>WASD</kbd> Di chuyển</span><span><kbd>E</kbd> Tương tác</span><span><kbd>M</kbd> Bản đồ</span><span><kbd>B</kbd> Túi</span><span><kbd>T</kbd> Tài năng</span><span><kbd>Esc</kbd> Tạm dừng</span></nav>
           <div id="roomDesc"></div>
           <div id="actionButtons"></div>
           <div id="invRow"></div>
@@ -99,32 +96,20 @@
 <button id="mapToggleBtn" class="panelToggleBtn" title="Bật/tắt sơ đồ">🗺️</button>
 <button id="logToggleBtn" class="panelToggleBtn" title="Bật/tắt nhật ký">📜</button>
 
-<div class="overlay" id="accessGate">
-  <section id="accessCard" aria-labelledby="accessTitle">
-    <span class="accessEyebrow">THE TIU · CỔNG NGƯỜI CHƠI</span>
-    <h1 id="accessTitle">BẠN SẼ VÀO CA TRỰC BẰNG CÁCH NÀO?</h1>
-    <p>Đăng nhập để lưu hồ sơ nhân vật và dùng Đấu trường. Chơi khách để thử game; dữ liệu khách sẽ bị xóa khi rời trang.</p>
-    <div id="accessActions">
-      <button class="bigbtn" id="entryLoginBtn">ĐĂNG NHẬP</button>
-      <button class="bigbtn secondary" id="entryRegisterBtn">TẠO TÀI KHOẢN</button>
-      <button class="bigbtn neutral" id="entryGuestBtn">CHƠI VỚI TƯ CÁCH KHÁCH</button>
-    </div>
-    <div class="accessFoot">Tài khoản giữ hồ sơ nhân vật trên Supabase. Khách chỉ lưu tạm trong tab hiện tại.</div>
-  </section>
-</div>
 
-<div class="overlay hidden" id="titleScreen">
+<div class="overlay" id="titleScreen">
   <div id="titleLeft">
-    <h1>The TIU</h1>
-    <h2>GIẢI ĐẤU SINH VIÊN NĂM CUỐI</h2>
-    <p>5 sinh viên thiếu Điểm Rèn Luyện, 1 suất tốt nghiệp loại Giỏi. Chiến thuật theo lượt tại khuôn viên UIT.</p>
+    <div class="storyEyebrow">UIT · HỒ SƠ CA ĐÊM</div><h1>The TIU</h1>
+    <h2>MỘT ĐÊM. MỘT LỰA CHỌN.</h2>
+    <p>Khuôn viên đã đóng cửa. Năm sinh viên còn ở lại. Khám phá bí mật của The TIU, tìm người bạn có thể tin tưởng và tự quyết định cái giá của tấm bằng tốt nghiệp.</p>
     <p style="font-size:14px;color:var(--text-dim);margin-top:8px;">Sức mạnh của mỗi người không phải thật: đó là <b>ý chí</b> được The TIU mô phỏng thành hình hài.</p>
     <div id="menuBtnRow">
-      <button class="bigbtn" id="startBtn">BẮT ĐẦU</button>
-      <button class="bigbtn secondary hidden" id="continueBtn">TIẾP TỤC (ĐÃ LƯU)</button>
+      <button class="bigbtn hidden" id="continueBtn">TIẾP TỤC HÀNH TRÌNH</button>
+      <button class="bigbtn secondary" id="startBtn">HÀNH TRÌNH MỚI</button>
       <button class="bigbtn neutral" id="settingsBtn">CÀI ĐẶT</button>
-      <button class="bigbtn neutral arenaLaunchBtn" id="arenaBtn">⚔ ĐẤU TRƯỜNG</button>
     </div>
+    <div id="continueSummary" class="saveSummary"></div>
+    <div class="titleNote">CHƠI ĐƠN · LƯU TRÊN THIẾT BỊ<br><span>↑ ↓ để chọn · Enter để bắt đầu</span></div>
   </div>
   <div id="titleCarousel">
     <div id="carouselTrack"></div>
@@ -161,7 +146,7 @@
     <div id="vnSpeaker">—</div>
     <div id="vnText"></div>
     <div id="vnFooter">
-      <span id="vnHint">Bấm "J" để tiếp tục lời thoại hoặc crt để skip.</span>
+      <span id="vnHint">Enter / Space / J: tiếp tục · Ctrl: tua đến lựa chọn</span>
       <button class="btn primary" id="vnNextBtn">TIẾP TỤC ▶</button>
     </div>
   </div>
@@ -191,7 +176,7 @@
 
 
 <div id="mgModal" class="hidden">
-  <div id="mgBox">
+  <div id="mgBox" role="dialog" aria-modal="true" aria-labelledby="mgTitle">
     <div id="mgTitle"></div>
     <div id="mgTimer"></div>
     <div id="mgBody"></div>
@@ -200,11 +185,12 @@
 </div>
 
 <div id="pauseMenu" class="hidden">
-  <div id="pauseMenuBox">
+  <div id="pauseMenuBox" role="dialog" aria-modal="true" aria-labelledby="pauseMenuTitle">
     <div id="pauseMenuTitle">TẠM DỪNG</div>
     <button class="bigbtn secondary" id="pauseResumeBtn">TIẾP TỤC CA ĐÊM</button>
+    <button class="bigbtn neutral" id="pauseSaveBtn">LƯU HÀNH TRÌNH</button>
+    <div id="pauseSaveStatus" role="status"></div>
     <button class="bigbtn neutral" id="pauseSettingsBtn">CÀI ĐẶT</button>
-    <button class="bigbtn neutral" id="pauseArenaBtn">☁ ĐẤU TRƯỜNG</button>
     <button class="bigbtn" id="pauseMainMenuBtn">VỀ MÀN HÌNH CHÍNH</button>
   </div>
 </div>
@@ -228,7 +214,7 @@
     <div id="pkTextBox"><div id="pkText"></div><div id="pkArrow">▼</div></div>
     <div id="pkMenu"></div>
   </div>
-  <div id="dodgeArena" class="hidden">
+  <div id="dodgeOverlay" class="hidden">
     <div id="dodgeHint">BẤM ĐÚNG HƯỚNG MŨI TÊN KHI NÓ HIỆN</div>
     <div id="dodgeBox">
       <div id="soulCircle"></div>
@@ -242,11 +228,9 @@
 <script src="src/map.js"></script>
 <script src="src/rpg_core.js"></script>
 <script src="src/rpg_combat.js"></script>
-<script src="src/arena_core.js"></script>
+<script src="src/save_store.js"></script>
 <script src="src/script.js"></script>
 <script src="src/kbnav.js"></script>
-<script src="config/supabase_config.js"></script>
-<script src="src/arena.js"></script>
 <script src="src/tutorial.js"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 # THE TIU
 
-THE TIU là game sinh tồn pha nhập vai và chiến đấu theo lượt, lấy bối cảnh khuôn viên UIT. Năm sinh viên tranh suất tốt nghiệp loại Giỏi; người chơi phải kiếm Điểm Rèn Luyện (ĐRL), sống sót qua các đêm loại trừ và quyết định cách đối đầu với The TIU.
+THE TIU là game **chơi đơn**, sinh tồn pha nhập vai và chiến đấu theo lượt, lấy bối cảnh khuôn viên UIT. Năm sinh viên tranh suất tốt nghiệp loại Giỏi; người chơi phải kiếm Điểm Rèn Luyện (ĐRL), sống sót qua các đêm loại trừ và quyết định cách đối đầu với The TIU.
 
 ## Bắt đầu chơi
 
@@ -14,10 +14,10 @@ Game là ứng dụng web tĩnh, không cần cài gói hay chạy bước build
    ```
 
    Sau đó mở <http://localhost:8000>. Nếu lệnh `py` không có, thử `python -m http.server 8000`.
-3. Ở cổng người chơi, chọn **Đăng nhập** hoặc **Tạo tài khoản** để dùng hồ sơ và Đấu trường; hoặc chọn **Chơi với tư cách khách** để vào chơi ngay.
-4. Sau khi vào game, chọn **BẮT ĐẦU**, nhập tên, rồi làm bài trắc nghiệm để chọn Class. Chọn **TIẾP TỤC** để tải bản lưu hiện có.
+3. Chọn **HÀNH TRÌNH MỚI**, nhập tên (Enter để xác nhận), rồi làm bài trắc nghiệm chọn Class. Chọn **TIẾP TỤC HÀNH TRÌNH** để tải bản lưu.
+4. Mở **CÀI ĐẶT** để điều chỉnh âm lượng, rung/chớp màn hình, nhịp khám phá và tốc độ hiển thị lời thoại.
 
-Chế độ khách lưu tiến trình, kết thúc đã mở và hướng dẫn đã xem trong phiên tab hiện tại, rồi xóa dữ liệu tạm khi rời trang/đóng tab; khách không thể dùng Đấu trường hoặc đồng bộ hồ sơ nhân vật. Tài khoản cần cấu hình Supabase để đăng nhập và dùng các tính năng trực tuyến. Có thể chơi khách mà không cần Supabase.
+Tiến trình được lưu lâu dài trong trình duyệt trên thiết bị này, không cần tài khoản hoặc dịch vụ máy chủ. Dùng cùng trình duyệt và địa chỉ mở game để tìm lại bản lưu. Font trực tuyến có phông hệ thống thay thế khi mất mạng. NPC, đồng đội AI và các cuộc đối đầu trong cốt truyện vẫn thuộc chiến dịch chơi đơn.
 
 ## Điều khiển
 
@@ -28,7 +28,7 @@ Chế độ khách lưu tiến trình, kết thúc đã mở và hướng dẫn 
 | Mở/đóng bản đồ khuôn viên | `M` hoặc nút phóng to bản đồ |
 | Mở túi đồ | `B` |
 | Mở tài năng | `T` |
-| Mở nhật ký nhiệm vụ | `Q` |
+| Mở/đóng nhật ký hành trình, nhiệm vụ và lời thoại đã nghe | `Q` |
 | Mở hướng dẫn | `H` hoặc nút ❓ |
 | Tạm dừng | `Esc` |
 | Tiếp tục thoại | `J`, `Enter`, `Space` hoặc bấm khung thoại |
@@ -43,7 +43,7 @@ Các nút hành động trên giao diện cũng có thể bấm trực tiếp. T
 
 ### Chapter 1 — Ba đêm loại trừ
 
-- Mỗi đêm kéo dài từ 00:00 đến 07:30 theo giờ trong game. Một phút game tương ứng khoảng một giây thực khi thời gian đang chạy.
+- Mỗi đêm kéo dài từ 00:00 đến 07:30 theo giờ trong game. Mặc định **Nhịp khám phá chậm** cho mỗi phút game tương ứng 1,5 giây thực; tắt tùy chọn này để dùng nhịp gốc 1 giây. Chi phí di chuyển và chiến đấu không đổi.
 - Khám phá các tòa nhà, nói chuyện hoặc thách đấu NPC, nhặt linh kiện và xử lý sự cố để kiếm tài nguyên và ĐRL.
 - Cuối đêm, sinh viên còn sống có ĐRL thấp nhất bị loại. Nếu người chơi bị loại, có thể thử lại đêm đó từ checkpoint.
 - Theo dõi **Mục tiêu đêm**, bản đồ và nhật ký để biết thứ hạng, sự cố, mini-boss và vị trí The TIU nhìn thấy gần nhất.
@@ -56,7 +56,7 @@ Sau ba đêm đầu, Chapter 2 có một đêm chuẩn bị và một trận cu�
 
 ### Khám phá và sinh tồn
 
-- Khuôn viên có bản đồ các phòng nối với nhau; bản đồ nhỏ và bản đồ lớn cho phép đi sang phòng liền kề.
+- Khuôn viên có bản đồ các phòng nối với nhau; bản đồ nhỏ và bản đồ lớn cho phép đi sang phòng liền kề. Mở bản đồ lớn để tạm dừng và lên kế hoạch; chọn phòng bằng mũi tên rồi Enter, hoặc bấm trực tiếp.
 - Di chuyển giữa hai phòng tốn 10 phút game và 20 thể lực. Thể lực tối đa là 100 và hồi theo thời gian.
 - Nếu tiếp tục đi khi thiếu thể lực, bạn có thể bị phục kích khi đến nơi. Phục kích khiến trận bắt đầu với tối đa 50% HP và kỹ năng đang hồi chiêu.
 - Căn tin bán vật phẩm suốt đêm. Trong Chapter 1, đây là nơi an toàn để nghỉ từ 01:00–02:00 và 04:00–05:00. Nghỉ một giờ hồi HP cho bạn/đồng đội và hồi thể lực.
@@ -64,7 +64,7 @@ Sau ba đêm đầu, Chapter 2 có một đêm chuẩn bị và một trận cu�
 
 ### Sự cố và mini-boss
 
-The TIU có thể gây sự cố ở một số phòng. Hãy đến nơi được báo trong mục tiêu đêm và hoàn thành mini-game trước khi hết hạn để nhận ĐRL. Thử thách có thể yêu cầu tìm hình khác biệt, chỉnh đèn, nối dây, trả lời câu hỏi, nhập chuỗi phím hoặc sắp xếp số. Đêm đầu cho người chơi thêm thời gian làm quen: The TIU tuần tra chậm hơn, sự cố xuất hiện muộn hơn, thời hạn xử lý dài hơn và sự cố không lan dây chuyền. Từ các đêm sau, nhịp đe dọa tăng dần. Mini-boss có tay sai canh một số phòng; thắng nhận ĐRL, EXP và linh kiện, còn thua có thể mất tối đa 3 ĐRL.
+The TIU có thể gây sự cố ở một số phòng. Hãy đến nơi được báo trong mục tiêu đêm và hoàn thành mini-game trước khi hết hạn để nhận ĐRL. Thử thách có thể yêu cầu tìm hình khác biệt, chỉnh đèn, nối dây, trả lời câu hỏi, nhập chuỗi phím hoặc sắp xếp số. Đêm đầu cho người chơi thêm thời gian làm quen: The TIU tuần tra chậm hơn, sự cố xuất hiện muộn hơn, thời hạn xử lý dài hơn và sự cố không lan dây chuyền. Từ các đêm sau, nhịp đe dọa tăng dần. Trong mini-game, đồng hồ thế giới tạm dừng; thử thách vẫn có bộ đếm riêng. Các ô hình, đèn, đầu dây, đáp án và sách đều điều khiển được bằng Tab/mũi tên và Enter. Chuỗi hướng nhận cả WASD; Esc bỏ cuộc. Mini-boss có tay sai canh một số phòng; thắng nhận ĐRL, EXP và linh kiện, còn thua có thể mất tối đa 3 ĐRL.
 
 ### NPC và đồng đội
 
@@ -93,31 +93,29 @@ The TIU có thể gây sự cố ở một số phòng. Hãy đến nơi đượ
 
 ### Lưu game, hướng dẫn và kết thúc
 
-- Game tự lưu tiến trình; đầu mỗi đêm tạo checkpoint. Màn hình thất bại cho phép thử lại đêm từ checkpoint.
-- Tutorial tự giới thiệu một số cơ chế theo tình huống. Mở bằng `H`/❓ để xem chín chủ đề: điều khiển, sinh tồn, sự cố, quan hệ, chiến đấu, tài năng, đồ và chế tạo, cốt truyện, đấu trường. Chọn **Đặt lại tất cả** để xem lại từ đầu.
+- Game tự lưu ở trạng thái có thể khôi phục, định kỳ 15 giây khi khám phá và sau thao tác; đầu mỗi đêm tạo checkpoint. Không ghi trạng thái dở dang của trận đấu, câu đố hay hội thoại. Đóng trang giữa các hoạt động này sẽ trở lại mốc an toàn gần nhất. Màn hình thất bại cho phép thử lại đêm từ checkpoint.
+- Menu Esc có **Lưu hành trình**. Cài đặt có **Xuất bản lưu (.json)** và **Nhập bản lưu** để sao lưu/chuyển máy. Bản lưu sai cấu trúc bị từ chối; bản chính hỏng có thể phục hồi từ bản dự phòng gần nhất. Dữ liệu chơi đơn v2 cũ được giữ; bản lưu tạm trong tab còn mở được chuyển sang lưu lâu dài nếu mới hơn.
+- Rời cửa sổ lúc khám phá sẽ tự tạm dừng. Trở lại và bấm Esc để tiếp tục. Nhật ký Q giữ tối đa 120 dòng thoại/lựa chọn đã đọc.
+- Tutorial tự giới thiệu một số cơ chế theo tình huống. Mở bằng `H`/❓ để xem tám chủ đề: điều khiển, sinh tồn, sự cố, quan hệ, chiến đấu, tài năng, đồ và chế tạo, cốt truyện. Chọn **Đặt lại tất cả** để xem lại từ đầu.
 - Các lựa chọn, Gắn bó, La Peace và những lần đối đầu The TIU có thể dẫn đến kết thúc khác nhau. New Game+ giữ lại một phần tiến trình và tăng độ khó.
-
-## Đấu trường và đồng bộ (tùy chọn)
-
-Chế độ này cần dịch vụ Supabase hoạt động; phần chơi đơn không phụ thuộc vào nó. Chọn **⚔ ĐẤU TRƯỜNG** ở màn hình chính hoặc trong menu tạm dừng, đăng ký/đăng nhập email rồi chọn một trong **3 slot nhân vật**. Mỗi slot có hồ sơ và xếp hạng độc lập. Nhân vật mới được lưu riêng tư ngay khi tạo; chọn **Lưu nhân vật → Lưu & công khai** để dùng PvP mà không cần hoàn thành ending. PvP trực tiếp là trận giao hữu 1v1, không cộng/trừ điểm: hai người chọn hành động cùng lượt, trận đồng bộ qua Supabase và tự cập nhật khoảng mỗi giây. Đối thủ cần online để nhận/chấp nhận lời mời. Key cũ vẫn được hỗ trợ qua mục **Dùng key cũ**.
-
-### Bật PvP trực tiếp trên Supabase
-
-Sau khi chạy schema chính của game, chạy migration [`20261107000000_live_pvp.sql`](supabase/migrations/20261107000000_live_pvp.sql) một lần trong **Supabase Dashboard → SQL Editor**. Migration thêm bảng trận trực tiếp và các RPC có xác thực bằng key; bảng vẫn bật RLS và client không được đọc/ghi trực tiếp. Cả hai người phải lưu & công khai build để xuất hiện trong danh sách thách đấu. Nếu chưa chạy migration, PvP AI và phần chơi đơn vẫn hoạt động.
-
-Để bật đăng ký/đăng nhập và ba slot, chạy tiếp [`20261107010000_account_auth_3_character_slots.sql`](supabase/migrations/20261107010000_account_auth_3_character_slots.sql). Supabase Auth cần bật nhà cung cấp **Email**. Để bỏ xác nhận email, tắt **Confirm Email** tại **Authentication → Sign In / Providers → Email** trong Supabase Dashboard; khi đó đăng ký thành công sẽ tự đăng nhập.
-
-`config/supabase_config.js` chứa URL và khóa công khai phía client; file này cần được đưa vào repository để bản deploy tải được. Chỉ dùng anon/publishable key tại đây; tuyệt đối không đặt `service_role` key trong game. File schema nền hiện không nằm trong checkout; cần có schema nền đã tạo các bảng `players`, `characters`, các RPC hồ sơ hiện có và hàm `_player_of(text)` trước khi chạy migration PvP trực tiếp. Cách cấu hình và deploy Edge Function được ghi trong [`supabase/README.md`](supabase/README.md).
 
 ## Cấu trúc mã nguồn
 
 - `index.html`: điểm vào game; giữ ở thư mục gốc để host tĩnh phục vụ game trực tiếp.
-- `src/`: mã gameplay, RPG, chiến đấu, bản đồ, thoại, tutorial, đấu trường và điều khiển bàn phím.
+- `src/`: mã gameplay, RPG, chiến đấu, bản đồ, thoại, tutorial, lưu game và điều khiển bàn phím.
 - `styles/style.css`: toàn bộ giao diện và bố cục.
 - `assets/`: ảnh, bản đồ, nhạc, âm thanh và gói VFX.
-- `config/supabase_config.js`: URL và khóa anon/publishable dùng ở phía trình duyệt; phải được đưa vào repository/deployment. Khóa publishable được thiết kế để dùng phía client; không đặt `service_role` key vào đây.
-- `supabase/migrations/`: các migration SQL; `supabase/functions/arena-match/`: mã Edge Function và engine được tạo.
-- `tools/build_engine.cjs`: tạo lại `engine.mjs` cho Edge Function từ các file lõi trong `src/`.
 - VFX chiến đấu dùng theme **Flat Night** tại `assets/vfx/Cooked_FX_FREE_Flat_Night/Cooked_FX_FREE/Flat_Night/PNG_1x/`; metadata frame nằm trong `Flat_Night/anims.json`, giấy phép gốc được giữ cùng gói tải về.
 
-Frontend không cần bước build. Chạy game bằng máy chủ web tĩnh như hướng dẫn đầu README. Sau khi chỉnh `src/rpg_core.js`, `src/rpg_combat.js` hoặc `src/arena_core.js`, chạy `node tools/build_engine.cjs` rồi deploy lại Edge Function nếu muốn cập nhật mô phỏng PvP xếp hạng.
+Frontend không cần bước build. Chạy game bằng máy chủ web tĩnh như hướng dẫn đầu README.
+
+## Kiểm tra hồi quy
+
+Cần Node.js 22 trở lên (không phải cài gói npm):
+
+```powershell
+node --test tools/regression.test.cjs
+node tools/browser_smoke.cjs
+```
+
+Bộ kiểm tra lõi bao gồm lưu/tải, bản dự phòng, dữ liệu hỏng, hết dung lượng, di chuyển bản lưu cũ và 120 mô phỏng chiến đấu cho năm Class ở cấp 1/3/5/8. Kiểm tra trình duyệt mặc định dùng Microsoft Edge trên Windows với hồ sơ tạm riêng; có thể đặt biến môi trường BROWSER_PATH trỏ đến Chromium khác. Ảnh kiểm tra giao diện được lưu trong thư mục tạm và đường dẫn in ra khi chạy. Các kiểm tra này không thay thế việc chơi thử toàn bộ nhánh cốt truyện.
