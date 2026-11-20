@@ -5,17 +5,34 @@ const $ = id => document.getElementById(id);
 /* ============== CONFIG ============== */
 const MAP_IMG = {src:"assets/images/map.png", w:446, h:448};
 const ROOM_DEF = {
-  A:      {name:"TÒA A", sub:"Hội trường", x:48, y:65, connects:["LIB","E","B"], event:"stage"},
+  A:      {name:"TÒA A", sub:"Hội trường", x:44, y:68, connects:["LIB","E","B"], event:"stage"},
   B:      {name:"TÒA B", sub:"Khu học tập", x:33, y:38, connects:["A","C","E","CANTEEN","PARK"], event:"floors"},
-  C:      {name:"TÒA C", sub:"Khu học tập nhưng high tech", x:57, y:38, connects:["B","D","E","CANTEEN","FIELD"], event:"wire"},
-  D:      {name:"TÒA D", sub:"", x:65, y:10, connects:["C","FIELD"], event:"quiz"},
-  E:      {name:"TÒA E", sub:"Khu học tập nhưng 2 thang máy", x:68, y:59, connects:["A","B","C","FIELD"], event:"wibu"},
+  C:      {name:"TÒA C", sub:"Khu học tập nhưng high tech", x:63, y:38, connects:["B","D","E","CANTEEN","FIELD"], event:"wire"},
+  D:      {name:"TÒA D", sub:"", x:64, y:10, connects:["C","FIELD"], event:"quiz"},
+  E:      {name:"TÒA E", sub:"Khu học tập nhưng 2 thang máy", x:69, y:58, connects:["A","B","C","FIELD"], event:"wibu"},
   LIB:    {name:"THƯ VIỆN", sub:"Kho sách", x:37, y:76, connects:["A","PARK"], event:"books"},
-  CANTEEN:{name:"CĂN TIN", sub:"Khu an toàn", x:43, y:16, connects:["B","C"], safe:true},
-  PARK:   {name:"CHỖ GỬI XE", sub:"Bãi giữ xe", x:27, y:93, connects:["LIB","B"], event:"bikes", noEvent:true},
-  FIELD:  {name:"SÂN BÓNG", sub:"Sân thể thao ngoài trời", x:67, y:22, connects:["D","E","C"], event:"ball", noEvent:true}
+  CANTEEN:{name:"CĂN TIN", sub:"Khu an toàn", x:45, y:19, connects:["B","C"], safe:true},
+  PARK:   {name:"CHỖ GỬI XE", sub:"Bãi giữ xe", x:25, y:93, connects:["LIB","B"], event:"bikes", noEvent:true},
+  FIELD:  {name:"SÂN BÓNG", sub:"Sân thể thao ngoài trời", x:66, y:23, connects:["D","E","C"], event:"ball", noEvent:true}
 };
 const ROOM_KEYS = Object.keys(ROOM_DEF);
+/* Tuyến đi bám các lối sáng trên sơ đồ khuôn viên; node chỉ đánh dấu điểm đến. */
+const MAP_ROUTES = {
+  'A-B': [[41,59],[38,51],[35,44]],
+  'A-E': [[50,66],[57,63],[63,60]],
+  'A-LIB': [[40,71],[38,74]],
+  'B-C': [[41,38],[49,38],[56,38]],
+  'B-E': [[43,44],[51,49],[60,54]],
+  'B-CANTEEN': [[37,32],[40,26],[43,22]],
+  'B-PARK': [[31,50],[29,63],[27,77]],
+  'C-CANTEEN': [[59,32],[54,27],[50,23]],
+  'C-D': [[63,30],[64,21]],
+  'C-E': [[65,46],[67,53]],
+  'C-FIELD': [[65,32],[66,27]],
+  'D-FIELD': [[64,14],[65,19]],
+  'E-FIELD': [[68,48],[67,36]],
+  'LIB-PARK': [[33,82],[29,88]]
+};
 
 const ROOM_IMAGES = {
   A:"assets/images/ToaA.png", 
@@ -769,11 +786,12 @@ function buildMapInto(wrapId, prefix){
       if(drawn.has(key)) return;
       drawn.add(key);
       const a = ROOM_DEF[k], b = ROOM_DEF[c];
-      const line = document.createElementNS(NS,'line');
-      line.setAttribute('x1',a.x); line.setAttribute('y1',a.y);
-      line.setAttribute('x2',b.x); line.setAttribute('y2',b.y);
-      line.setAttribute('class','edge-line');
-      svg.appendChild(line);
+      const route = MAP_ROUTES[key] || [];
+      const points = [[a.x,a.y], ...route, [b.x,b.y]].map(point=>point.join(',')).join(' ');
+      const path = document.createElementNS(NS,'polyline');
+      path.setAttribute('points',points);
+      path.setAttribute('class','edge-line');
+      svg.appendChild(path);
     });
   });
   wrap.appendChild(svg);
