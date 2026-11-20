@@ -674,10 +674,10 @@
         t.phase = ph;
         const baseAtk = RPG.getStats(t.f).atk;
         if (ph === 2) {
-          emit(B, "☠ THE TIU — GIAI ĐOẠN 2! Nó gào lên, các linh hồn bên trong trỗi dậy!", "danger");
+          emit(B, "◎ THE TIU — GIAI ĐOẠN 2! Nó gào lên, các linh hồn bên trong trỗi dậy!", "danger");
           addMod(t, "atk", Math.round(baseAtk * 0.2), 99); t.rage = clamp(t.rage + 40, 0, RPG.CFG.RAGE_MAX);
         } else {
-          emit(B, "☠ THE TIU — GIAI ĐOẠN 3: CUỒNG NỘ! Nó xé toạc mọi hiệu ứng xấu và dồn hết sức tàn!", "danger");
+          emit(B, "◎ THE TIU — GIAI ĐOẠN 3: CUỒNG NỘ! Nó xé toạc mọi hiệu ứng xấu và dồn hết sức tàn!", "danger");
           cleanse(t); addMod(t, "atk", Math.round(baseAtk * 0.25), 99); addMod(t, "spd", 15, 99); t.rage = RPG.CFG.RAGE_MAX;
         }
         yield* flush(B);

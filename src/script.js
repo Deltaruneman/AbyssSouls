@@ -45,7 +45,7 @@ const ROOM_FALLBACK_GRADIENT = {
    Thư mục ảnh: xem img/README.txt. Portrait trong hội thoại khai báo ở DLG.PORTRAITS (dialogue.js). */
 const NPC_META = {
   WIBU:  { avatarBg:'#5a3a8a', avatarText:'', icon:'assets/images/icons/wibu.png' },
-  LINH:  { avatarBg:'#2a5a3a', avatarText:'', icon:'assets/images/icons/linh.png' },
+  LINH:  { avatarBg:'#2a5a3a', avatarText:'', icon:'assets/images/icons/changlinh.png' },
   TRONG: { avatarBg:'#7a1a1a', avatarText:'', icon:'assets/images/icons/trong.png' },
   TOBY:  { avatarBg:'#2a4a7a', avatarText:'', icon:'assets/images/icons/toby.png' }
 };
@@ -82,23 +82,21 @@ function savePreferences(){ try{localStorage.setItem('tiu_preferences',JSON.stri
 const TIU_IMAGE = "assets/images/TIU.png";
 const TIU_JUMPSCARE_SFX = "assets/sfx/TIUAttack.mp3";
 
-/* ---- OST TRẬN ĐẤU: mỗi đối thủ có 1 bản nhạc riêng (đặt file vào assets/ost/). Trận cuối KHÔNG có OST. ----
-   Thiếu file thì trận vẫn chạy bình thường, chỉ không có nhạc. Muốn đổi bài chỉ cần sửa đường dẫn ở đây. */
-const BATTLE_OST = {
-  WIBU:  "assets/ost/battle.mp3",
-  LINH:  "assets/ost/battle.mp3",
-  TRONG: "assets/ost/battle.mp3",
-  TOBY:  "assets/ost/battle.mp3"
-};
-const BATTLE_OST_DEFAULT = "assets/ost/battle_default.mp3";   // dùng khi đối thủ chưa có bài riêng
+/* ---- Nhạc nền theo khu vực và tình huống chiến đấu. ----
+   Thiếu file thì gameplay vẫn chạy bình thường, chỉ không có nhạc. */
+
 const BATTLE_OST_GAIN = 0.6;                                  // nhỏ hơn SFX để không át tiếng hiệu ứng
-let OST = { audio:null, src:null, fadeTimer:null, syncTimer:null };
+let OST = { audio:null, src:null, fadeAudio:null, fadeTimer:null, syncTimer:null };
 function ostVolume(){
   return (window.UIT_SOUND_MUTED ? 0 : 1) * ((SETTINGS.masterVolume!=null ? SETTINGS.masterVolume : 100) / 100) * BATTLE_OST_GAIN;
 }
-function startBattleOst(enemyId){
+const TITLE_OST = "assets/sfx/OST/The U I T.mp3";
+const FIRST_NIGHT_OST = "assets/sfx/OST/It`s my DRL.mp3";
+const BOSS_OST = "assets/sfx/OST/Unfriendly Buster.m4a";
+const FINAL_BOSS_OST = "assets/sfx/OST/Last Dance.m4a";
+let ostUnlockBound = false;
+function startOst(src){
   stopBattleOst(false);
-  const src = BATTLE_OST[enemyId] || BATTLE_OST_DEFAULT;
   if(!src) return;
   try{
     const a = new Audio(src);
@@ -106,6 +104,12 @@ function startBattleOst(enemyId){
     a.volume = Math.max(0, Math.min(1, ostVolume()));
     a.addEventListener('error', ()=>{});                       // thiếu file -> im lặng, không báo lỗi
     const p = a.play(); if(p && p.catch) p.catch(()=>{});
+    if(!ostUnlockBound){
+      const resume=()=>{ if(OST.audio && OST.audio.paused && !window.UIT_SOUND_MUTED) OST.audio.play().catch(()=>{}); };
+      document.addEventListener('pointerdown',resume,true);
+      document.addEventListener('keydown',resume,true);
+      ostUnlockBound=true;
+    }
     OST.audio = a; OST.src = src;
     // đồng bộ âm lượng/tắt tiếng theo thời gian thực (thanh Âm lượng tổng, nút 🔊)
     OST.syncTimer = setInterval(()=>{ if(OST.audio && !OST.fadeTimer) OST.audio.volume = Math.max(0, Math.min(1, ostVolume())); }, 250);
@@ -114,16 +118,24 @@ function startBattleOst(enemyId){
 function stopBattleOst(fade){
   clearInterval(OST.syncTimer); OST.syncTimer = null;
   clearInterval(OST.fadeTimer); OST.fadeTimer = null;
+  if(OST.fadeAudio){ try{ OST.fadeAudio.pause(); }catch(e){} OST.fadeAudio = null; }
   const a = OST.audio; OST.audio = null; OST.src = null;
   if(!a) return;
   if(!fade){ try{ a.pause(); }catch(e){} return; }
+  OST.fadeAudio = a;
   OST.fadeTimer = setInterval(()=>{
     const v = a.volume - 0.08;
-    if(v <= 0.01){ try{ a.pause(); }catch(e){} clearInterval(OST.fadeTimer); OST.fadeTimer = null; }
+    if(v <= 0.01){ try{ a.pause(); }catch(e){} clearInterval(OST.fadeTimer); OST.fadeTimer = null; OST.fadeAudio = null; }
     else a.volume = v;
   }, 60);
 }
 
+function battleOstFor(opts, foe){
+  if(opts.final) return FINAL_BOSS_OST;
+  if(opts.tiu || opts.mob) return BOSS_OST;
+  if(S && S.chapter===1 && S.night===1) return FIRST_NIGHT_OST;
+  return null;
+}
 /* ---- Thời gian: 1 giây thực = 1 phút game. 1 đêm = 00:00 -> 07:30 (450 phút game) = 7 phút 30 giây thực ---- */
 const GAME_MINUTES_TOTAL = 7.5*60;
 /* ---- Biến cố mỗi đêm ---- */
@@ -472,7 +484,8 @@ function playVN(lines, onDone, ctx){
   /* Portrait: tra theo tên người nói (DLG.PORTRAITS). Dòng có mood:'sad' thử img/portraits/XXX_sad.png trước.
      Người nói không có portrait (người chơi, loa trường, dẫn truyện) → portrait đang hiện bị làm mờ. */
   function setPortrait(l){
-    const base = l.spk && DLG.PORTRAITS && DLG.PORTRAITS[l.spk.toUpperCase()];
+    const player = RPG.getState && RPG.getState() ? RPG.player() : null;
+    const base = player && l.spk === player.name ? 'assets/images/icons/player.png' : (l.spk && DLG.PORTRAITS && DLG.PORTRAITS[l.spk.toUpperCase()]);
     if(base){
       const want = l.mood ? base.replace(/\.png$/i, '_'+l.mood+'.png') : base;
       if(portraitEl.dataset.want !== want){
@@ -1920,9 +1933,9 @@ const TARGET_LABEL = { self:'Bản thân', single:'1 mục tiêu', aoe:'Toàn b�
 
 function unitLook(u){
   if(!u.isSummon && u.f && u.f.mob) return { glyph:u.f.mobIcon||'👤', bg:'#241a33', meta:{ icon:'' } };
-  if(!u.isSummon && u.f && u.f.tiu) return { glyph:'☠', bg:'#3a0a0a', meta:{ icon:TIU_IMAGE } };
+  if(!u.isSummon && u.f && u.f.tiu) return { glyph:'◎', bg:'#3a0a0a', meta:{ icon:TIU_IMAGE } };
   if(u.isSummon) return { glyph:SUMMON_GLYPH[u.kind] || '✦', bg:'#4a3a8a' };
-  if(u.f.isPlayer) return { glyph:RPG.CLASSES[u.f.classId].icon, bg:'#2a5a8a' };   // người chơi: giữ icon class
+  if(u.f.isPlayer) return { glyph:'', bg:'#2a5a8a', meta:{icon:'assets/images/icons/player.png'} };
   const m = NPC_META[u.f.id];
   return { glyph: m ? m.avatarText : RPG.CLASSES[u.f.classId].icon, bg: m ? m.avatarBg : '#555', meta: m };
 }
@@ -2003,11 +2016,11 @@ function startBattle(opts){
   $('battleBg').style.backgroundImage = img ? `url('${img}')` : '';
   renderBattle();
   const foe = enemies[0];
-  if(opts.final || opts.tiu || opts.mob) stopBattleOst(false); else startBattleOst(foe.id);   // mỗi trận 1 bản OST, trừ trận cuối
+  startOst(battleOstFor(opts, foe));
   let openLine;
   if(opts.final) openLine = '★ TRẬN QUYẾT ĐỊNH! '+foe.name+' chặn đường bạn!';
   else if(opts.mob) openLine = '⚔ '+foe.name+' cùng đồng bọn xông vào! Đánh bại cả nhóm!';
-  else if(opts.tiu) openLine = '☠ THE TIU hiện hình — hiện thân của mọi người từng tham gia giải đấu này! Nó mang đủ skill của cả 5 class.';
+  else if(opts.tiu) openLine = '◎ THE TIU hiện hình — hiện thân của mọi người từng tham gia giải đấu này! Nó mang đủ skill của cả 5 class.';
   else if(opts.exhausted) openLine = '🪤 '+foe.name+' đánh lén! Bạn kiệt sức: chỉ còn '+Math.round(RPG.CFG.EXHAUST_HP_PCT*100)+'% HP và mọi skill đang hồi chiêu!';
   else if(opts.ambush) openLine = '🪤 '+foe.name+' úp sọt bạn! Bạn bị choáng và mất lượt đầu!';
   else openLine = foe.name+' muốn đấu với bạn!';
@@ -2885,6 +2898,7 @@ function showTitle(){
   hideAllOverlays();
   $('mgModal').classList.add('hidden');
   $('titleScreen').classList.remove('hidden');
+  startOst(TITLE_OST);
   refreshContinueBtn();
 }
 function refreshContinueBtn(){
@@ -2896,6 +2910,7 @@ function refreshContinueBtn(){
 
 /* ============== GAME MỚI: TÊN + TRẮC NGHIỆM CHỌN CLASS ============== */
 function startNewGame(){
+  stopBattleOst(false);
   hideAllOverlays();
   S = null;
   showModal('NHẬP TÊN', `<p style="font-size:12px;color:var(--text-dim);">Để trống sẽ dùng tên mặc định.</p>
@@ -3278,6 +3293,22 @@ function closeMapModal(){
 document.getElementById('miniMapExpand').onclick = openMapModal;
 document.getElementById('closeMapBtn').onclick = closeMapModal;
 
+/* Short Kenney CC0 UI sounds for mouse and keyboard activated controls. */
+(function initUiSounds(){
+  const click = new Audio('assets/sfx/ui/click_001.ogg');
+  const confirm = new Audio('assets/sfx/ui/confirmation_001.ogg');
+  const back = new Audio('assets/sfx/ui/back_001.ogg');
+  [click,confirm,back].forEach(a=>{a.preload='auto';a.volume=.35;});
+  let lastAt=0;
+  document.addEventListener('click', e=>{
+    const target=e.target && e.target.closest && e.target.closest('button, [role="button"], .room-node, .bookTile, .stageCell, .mapPin');
+    if(!target || target.disabled || window.UIT_SOUND_MUTED) return;
+    const now=performance.now(); if(now-lastAt<45) return; lastAt=now;
+    const sound=(target.matches('#vnNextBtn, #pauseResumeBtn, #pauseSaveBtn') || target.classList.contains('vnChoice')) ? confirm : (target.classList.contains('secondary') ? back : click);
+    sound.volume=.35*((typeof SETTINGS!=='undefined' && SETTINGS.masterVolume!=null ? SETTINGS.masterVolume : 100)/100);
+    sound.currentTime=0; sound.play().catch(()=>{});
+  }, true);
+})();
 /* ============== sound toggle (HUD) ============== */
 (function initSoundToggle(){
   const btn = document.getElementById('soundToggleBtn');
