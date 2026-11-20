@@ -201,29 +201,3 @@ window.TD_MAPS = {
     exits:[{x:10,y:0,to:'D'}, {x:7,y:11,to:'C'}, {x:13,y:11,to:'E'}]
   },
 };
-
-/* Cổng trên từng mặt bằng được đặt theo hướng của địa điểm kề bên trên sơ đồ tổng. */
-(function placeCampusGates(){
-  const gates = {
-    A:[{x:1,y:0,to:'B'},{x:19,y:6,to:'E'},{x:0,y:9,to:'LIB'}],
-    B:[{x:14,y:0,to:'CANTEEN'},{x:19,y:4,to:'C'},{x:19,y:7,to:'A'},{x:19,y:9,to:'E'},{x:5,y:11,to:'PARK'}],
-    C:[{x:5,y:0,to:'CANTEEN'},{x:15,y:0,to:'D'},{x:0,y:6,to:'B'},{x:19,y:4,to:'FIELD'},{x:14,y:11,to:'E'}],
-    D:[{x:7,y:11,to:'C'},{x:13,y:11,to:'FIELD'}],
-    E:[{x:7,y:0,to:'C'},{x:13,y:0,to:'FIELD'},{x:0,y:4,to:'B'},{x:0,y:8,to:'A'}],
-    LIB:[{x:19,y:4,to:'A'},{x:5,y:11,to:'PARK'}],
-    CANTEEN:[{x:7,y:11,to:'B'},{x:13,y:11,to:'C'}],
-    PARK:[{x:5,y:0,to:'B'},{x:13,y:0,to:'LIB'}],
-    FIELD:[{x:10,y:0,to:'D'},{x:0,y:6,to:'C'},{x:13,y:11,to:'E'}]
-  };
-  Object.keys(gates).forEach(room=>{
-    const map=window.TD_MAPS[room]; if(!map) return;
-    (map.exits||[]).forEach(e=>{ if(map.tiles[e.y]) map.tiles[e.y][e.x]=1; });
-    map.exits=gates[room];
-    map.exits.forEach(e=>{
-      map.tiles[e.y][e.x]=10;
-      const ix=e.x===0?1:(e.x===map.tiles[e.y].length-1?e.x-1:e.x);
-      const iy=e.y===0?1:(e.y===map.tiles.length-1?e.y-1:e.y);
-      map.tiles[iy][ix]=0;
-    });
-  });
-})();
