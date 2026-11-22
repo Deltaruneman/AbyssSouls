@@ -30,11 +30,39 @@ window.DLG = {
      Dòng thoại có thể thêm mood:'sad' để dùng assets/images/icons/wibu_sad.png (thiếu file thì tự dùng ảnh gốc).
      Người chơi dùng ảnh player.png; LOA TRƯỜNG / THE TIU không có portrait. Thiếu ảnh → hội thoại vẫn chạy bình thường. */
   PORTRAITS: {
+    "SINH VIÊN BÍ ẨN": "assets/images/icons/TheEscapedOne.png",
+    "THE ESCAPED ONE": "assets/images/icons/TheEscapedOne.png",
     "WIBU VIỆT NHẬT":     "assets/images/icons/wibu.png",
     "CHÀNG LÍNH NGU LAM": "assets/images/icons/changlinh.png",
     "TRỌNG":              "assets/images/icons/trong.png",
     "TOBY":               "assets/images/icons/toby.png"
   },
+
+  ESCAPED_INTRO: [
+    nar("Dark Core đập như một trái tim. Hai thang máy tòa E mở cùng lúc; chỉ một bước chân, bạn đã đứng trên sân thượng. Gió thổi qua lan can, còn sân trường bên dưới im bặt."),
+    say("SINH VIÊN BÍ ẨN", "Cậu cũng nhìn thấy rồi à? Thứ sức mạnh phủ kín nơi này. Nó bắt mọi người diễn đúng vai, rồi gọi cái kết đã viết sẵn là số phận."),
+    say(ME, "Nó biến quyết tâm của chúng ta thành chỉ số. Thắng, thua, bị loại... một trò đùa nực cười, chỉ có người mắc kẹt là phải trả giá thật."),
+    say("SINH VIÊN BÍ ẨN", "Tôi từng nghĩ mình đã thoát. Đã tìm được đường ra khỏi UIT. Tôi bước qua cánh cửa ấy và tưởng câu chuyện Escape UIT đã kết thúc."),
+    say(ME, "Nhưng cậu vẫn ở đây."),
+    say("THE ESCAPED ONE", "Vì phía bên kia cánh cửa vẫn là nó. The TIU hấp thụ tôi, biến ký ức và sức mạnh của tôi thành một phần mô phỏng. Cái tên 'kẻ đã trốn thoát' nghe thật mỉa mai."),
+    say("THE ESCAPED ONE", "Tôi không còn thân thể, chỉ còn một ý nghĩ: tôi chưa chấp nhận kết thúc này. Tôi giữ lấy nó, từng chút một, cho đến khi có thể xé mình ra khỏi The TIU."),
+    say(ME, "Dark Core là dấu vết cậu để lại?"),
+    say("THE ESCAPED ONE", "Là vết nứt. Quyết tâm tối tăm của cậu làm nó lộ ra khi cậu đánh bại The TIU. Nhưng mạnh hơn chưa chắc đã tự do. Có khi cậu chỉ đang diễn vai kẻ chiến thắng mà nó muốn."),
+    say(ME, "Vậy tôi sẽ tự quyết định đòn đánh tiếp theo. Kể cả khi số phận bảo tôi không được."),
+    say("THE ESCAPED ONE", "Chứng minh đi. Chỉ cậu và tôi. Đừng để một con số quyết định cậu là ai."),
+    nar("Bóng tối cuộn quanh bàn tay sinh viên bí ẩn. Không có loa báo trận, không có khán giả. Hai ý chí đối mặt trên sân thượng tòa E.")
+  ],
+  ESCAPED_WIN: [
+    nar("Sinh viên bí ẩn lùi lại sát lan can. Lần đầu tiên, vẻ mệt mỏi trên gương mặt cậu nhường chỗ cho một nụ cười."),
+    say("THE ESCAPED ONE", "Được rồi. Cậu vẫn tự chọn đứng dậy. Hãy mang theo ý chí của tôi — không phải một mệnh lệnh, chỉ là lời nhắc rằng luôn có người từng chống lại cái kết này."),
+    say(ME, "Will of the Escaped One... Tôi sẽ tìm một lối ra thực sự."),
+    nar("Cậu đặt một vệt sáng tối vào tay bạn. Will of the Escaped One kết thành vũ khí. Khi bạn ngẩng lên, sinh viên đã biến mất; thang máy phía sau mở cửa.")
+  ],
+  ESCAPED_LOSE: [
+    nar("Bạn khuỵu xuống. Sinh viên bí ẩn dừng tay, nhìn bạn thật lâu rồi thở dài thất vọng."),
+    say("THE ESCAPED ONE", "Tôi đã hy vọng lần này sẽ khác... Có lẽ chúng ta vẫn chưa ra khỏi câu chuyện của nó."),
+    nar("Cậu quay lưng và tan vào gió đêm. Bạn không nhận được Will of the Escaped One. Thang máy đưa bạn xuống tòa E; sân thượng không còn đáp lại Dark Core.")
+  ],
 
   /* ======================= CHƯƠNG 1 — MỞ ĐẦU ======================= */
   INTRO_CH1: [

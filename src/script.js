@@ -44,6 +44,7 @@ const ROOM_FALLBACK_GRADIENT = {
 /* NPC_META: icon = ảnh PNG vuông (avatar tròn: banner phòng, sân đấu, bản đồ). Chưa có ảnh → tự rơi về avatarText.
    Thư mục ảnh: xem img/README.txt. Portrait trong hội thoại khai báo ở DLG.PORTRAITS (dialogue.js). */
 const NPC_META = {
+  TheEscapedOne: { avatarBg:'#29153f', avatarText:'✦', icon:'assets/images/icons/TheEscapedOne.png' },
   WIBU:  { avatarBg:'#5a3a8a', avatarText:'', icon:'assets/images/icons/wibu.png' },
   LINH:  { avatarBg:'#2a5a3a', avatarText:'', icon:'assets/images/icons/changlinh.png' },
   TRONG: { avatarBg:'#7a1a1a', avatarText:'', icon:'assets/images/icons/trong.png' },
@@ -132,7 +133,7 @@ function stopBattleOst(fade){
 
 function battleOstFor(opts, foe){
   if(opts.final) return FINAL_BOSS_OST;
-  if(opts.tiu || opts.mob) return BOSS_OST;
+  if(opts.tiu || opts.mob || opts.escapedOne) return BOSS_OST;
   if(S && S.chapter===1 && S.night===1) return FIRST_NIGHT_OST;
   return null;
 }
@@ -301,7 +302,7 @@ function serializeSave(){
   return { v:2, savedAt:Date.now(), state:S, rpg:RPG.serialize(), story:STORY };
 }
 function canSaveCampaign(){
-  return !!(S && S.running && !isBattleActive() && !VN_ACTIVE && !TRAVEL.busy && !S.final &&
+  return !!(S && S.running && !isBattleActive() && !VN_ACTIVE && !TRAVEL.busy && !S.final && !S.escapedRooftop &&
     ($('mgModal').classList.contains('hidden') || ($('mgModal').dataset.kb==='1' && !$('mgModal').dataset.minigame)) &&
     $('jumpscareOverlay').classList.contains('hidden'));
 }
@@ -335,6 +336,7 @@ function restoreFrom(data){
   if(S.ng==null) S.ng = 0;
   if(S.drlSpent==null) S.drlSpent = 0;
   if(S.partyRef===undefined) S.partyRef = null;
+  S.escapedRooftop = false; // các cảnh sân thượng luôn khôi phục từ mốc an toàn ở tòa E
   RPG.load(data.rpg);
   STORY = Object.assign({ flags:{}, stage:{}, history:[] }, JSON.parse(JSON.stringify(data.story || {})));
   if(!Array.isArray(STORY.history)) STORY.history = [];
@@ -899,6 +901,7 @@ let lastExhausted = false;
 function markActionDirty(){ actionPaneDirty = true; scheduleAutoSave(); refreshBagBadge(); }
 
 function roomDescText(def){
+  if(S.escapedRooftop) return 'Gió đêm trên sân thượng tòa E. Một sinh viên bí ẩn đứng chờ bên lan can.';
   let desc = def.sub || '';
   if(def.safe && !isRoomSafe(S.playerRoom)){
     desc += (desc?' — ':'') + 'Căn tin chỉ mở cửa lúc 01:00-02:00 và 04:00-05:00.';
@@ -920,7 +923,7 @@ function refreshActionPane(){
   if(!S) return;
   const def = ROOM_DEF[S.playerRoom];
   const safeNow = isRoomSafe(S.playerRoom);
-  $('roomTitle').textContent = def.name;
+  $('roomTitle').textContent = S.escapedRooftop ? 'SÂN THƯỢNG TÒA E' : def.name;
   let safeTag = '';
   if(def.safe) safeTag = safeNow ? '✓ KHU AN TOÀN — ĐANG MỞ CỬA' : '✕ HẾT GIỜ AN TOÀN — QUẦY VẪN MỞ';
   $('roomSafeTag').textContent = safeTag;
@@ -969,6 +972,7 @@ function refreshActionPane(){
     group.row.appendChild(b);
   }
 
+  if(S.escapedRooftop) return;
   const moveGroup = makeGroup('DI CHUYỂN');
   const exhausted = isExhausted();
   def.connects.forEach(c=> addBtn(moveGroup, (exhausted?'😮‍💨 ':'➜ ')+ROOM_DEF[c].name, exhausted?'danger':'', ()=>movePlayer(c)));
@@ -1027,6 +1031,7 @@ function refreshNightBrief(){
     goal = 'Thắng trận cuối để tốt nghiệp loại Giỏi';
     detail = `${me.hp}/${me.maxHp} HP · ${me.drl} ĐRL`;
   }
+  const secretTip = escapedJourneyText(me);
   const nextEvent = events[0];
   const eventTip = nextEvent ? `Sự cố gần nhất: <b>${ROOM_DEF[nextEvent.room].name}</b> · còn ${nextEvent.left} phút · cách ${nextEvent.distance} chặng` : '';
   const peaceTip = (S.chapter===1 && unclaimed>0) ? `La Peace chưa nhặt: <b>${unclaimed}</b> · mảnh trên bản đồ chuyển cho đối thủ lúc 03:00` : '';
@@ -1035,7 +1040,7 @@ function refreshNightBrief(){
   const gRooms = Object.keys(S.guardians||{}).filter(r=>!S.guardians[r].defeated);
   const guardTip = gRooms.length ? `Mini-boss canh giữ: ${gRooms.map(r=>'<b>'+ROOM_DEF[r].name+'</b> ('+RPG.MOB_KINDS[S.guardians[r].kind].name+')').join(', ')}` : '';
   el.style.cssText = 'margin:0 0 10px;padding:9px 11px;border:1px solid rgba(201,150,47,.38);background:rgba(24,20,14,.72);border-radius:6px;font-size:11px;line-height:1.55;color:var(--text-dim);';
-  el.innerHTML = `<div style="color:var(--amber);font-weight:800;letter-spacing:.08em;margin-bottom:2px;">MỤC TIÊU · ${goal}</div><div>${detail}</div>${eventTip?`<div>⚠ ${eventTip}</div>`:''}${peaceTip?`<div>💠 ${peaceTip}</div>`:''}${modTip?`<div>${modTip}</div>`:''}${guardTip?`<div>⚔ ${guardTip}</div>`:''}<div>${tiuTip}</div>`;
+  el.innerHTML = `<div style="color:var(--amber);font-weight:800;letter-spacing:.08em;margin-bottom:2px;">MỤC TIÊU · ${goal}</div><div>${detail}</div>${eventTip?`<div>⚠ ${eventTip}</div>`:''}${peaceTip?`<div>💠 ${peaceTip}</div>`:''}${modTip?`<div>${modTip}</div>`:''}${guardTip?`<div>⚔ ${guardTip}</div>`:''}<div>${tiuTip}</div>${secretTip?`<div class="darkDetermination">✦ ${secretTip}</div>`:''}`;
 }
 
 /* ---- Chỉ số ẩn (nút ⋮): Tin tưởng + thông tin đã dò được của NPC ---- */
@@ -1117,7 +1122,7 @@ function openCraftBench(){
       const need = Object.keys(r).map(c=>RPG.COMPONENTS[c].name+' x'+r[c]).join(', ');
       return `<div class="shopItem"><span>${it.icon} ${it.name} <span style="font-size:11px;color:var(--text-dim);">(cần ${need})</span><br><span style="font-size:11px;color:var(--text-dim);">${it.desc}</span></span><button class="btn primary" data-craft="${id}" ${RPG.canCraft(me,id)?'':'disabled'}>${RPG.canCraft(me,id)?'Chế tạo':'Thiếu'}</button></div>`;
     }).join('');
-    const eqRows = Object.keys(RPG.EQUIPMENT).map(id=>{
+    const eqRows = Object.keys(RPG.EQUIPMENT).filter(id=>RPG.EQUIPMENT[id].recipe).map(id=>{
       const e = RPG.EQUIPMENT[id], need = Object.keys(e.recipe).map(k=>RPG.COMPONENTS[k].name+' x'+e.recipe[k]).join(', ');
       const bn = [e.bonus.atk?'+'+e.bonus.atk+' ATK':'', e.bonus.def?'+'+e.bonus.def+' DEF':'', e.bonus.hp?'+'+e.bonus.hp+' HP':'', e.bonus.spd?'+'+e.bonus.spd+' SPD':'', e.bonus.crit?'+'+Math.round(e.bonus.crit*100)+'% chí mạng':'', e.bonus.sp?'+'+e.bonus.sp+' TL/lượt':''].filter(Boolean).join(', ');
       const worn = me.equip && me.equip[e.slot]===id, can = RPG.canCraftEquip(me,id);
@@ -1304,7 +1309,8 @@ function openQuestLog(){
     return `<div class="shopItem"><span>📜 <b>${f.name}</b> — ${q.title} (${st.step+1}/${q.steps.length})<br><span style="font-size:11px;color:var(--text-dim);">${step.text}<br>${questProgressText(step)}</span></span></div>`;
   }).join('');
   const history=(STORY.history||[]).slice().reverse().map(l=>'<article class="journalLine"><small>CHƯƠNG '+l.chapter+' · ĐÊM '+l.night+' · '+escapeTutorialHtml(l.speaker)+'</small><p>'+escapeTutorialHtml(l.text)+'</p></article>').join('');
-  const overview='<div class="journalOverview"><span class="storyEyebrow">CHƯƠNG '+S.chapter+' · '+nightName(S.chapter,S.night)+'</span><h3>'+(S.chapter===1?'Sống sót. Tìm đồng minh. Tìm sự thật.':'Quyết định cách đối đầu với The TIU.')+'</h3><p>Nói chuyện với những người còn ở lại, hoàn thành nhiệm vụ riêng và khám phá La Peace. Các mối quan hệ và lựa chọn của bạn sẽ mở những hướng kết thúc khác nhau.</p></div>';
+  const secret='<div class="darkDetermination">'+escapedJourneyText(me)+'</div>';
+  const overview=secret+'<div class="journalOverview"><span class="storyEyebrow">CHƯƠNG '+S.chapter+' · '+nightName(S.chapter,S.night)+'</span><h3>'+(S.chapter===1?'Sống sót. Tìm đồng minh. Tìm sự thật.':'Quyết định cách đối đầu với The TIU.')+'</h3><p>Nói chuyện với những người còn ở lại, hoàn thành nhiệm vụ riêng và khám phá La Peace. Các mối quan hệ và lựa chọn của bạn sẽ mở những hướng kết thúc khác nhau.</p></div>';
   showModal('📖 NHẬT KÝ HÀNH TRÌNH', overview+rows+'<h3>Lời thoại đã nghe</h3>'+(history||'<p>Chưa ghi nhận lời thoại.</p>')+`<p style="font-size:11px;color:var(--text-dim);margin-top:8px;">Nói chuyện với NPC để nhận / nộp nhiệm vụ. Mini-boss xuất hiện ở các phòng được báo trong Mục tiêu đêm.</p>`, [{label:'Đóng', onClick:()=>closeModal()}]);
 }
 
@@ -1377,6 +1383,21 @@ const BAG_MAP_USE = {
   },
   antidote: ()=>{ addLog('Không có hiệu ứng xấu nào để giải ngoài trận.', ''); return false; }
 };
+function escapedJourneyText(me){
+  if(S.escapedRooftop) return 'Sân thượng tòa E · đối mặt với ý chí của người đã trốn thoát.';
+  if(me.escapedOutcome==='won') return 'The Escaped One: đã chiến thắng · nhận Will of the Escaped One.';
+  if(me.escapedOutcome==='lost') return 'The Escaped One đã thở dài và biến mất. Cuộc gặp đã kết thúc.';
+  if(RPG.canMeetEscapedOne(me)) return 'Dark Core đang gọi bạn tới tòa E — sân thượng có người chờ.';
+  if(me.darkDetermination) return 'Dark Determination: +25% sát thương đòn đánh, kỹ năng và triệu hồi. Hạ The TIU để tìm Dark Core.';
+  if(S.chapter===1 && S.night===1) return 'Quyết tâm trong bóng tối: thắng '+(me.firstNightWins||[]).length+'/4 NPC khác nhau trong đêm đầu.';
+  return '';
+}
+function escapedBagHtml(me){
+  const core=me.items.dark_core>0 ? '<p>🖤 <b>Dark Core</b> ×1 — '+RPG.RELICS.dark_core.desc+'</p>' : '';
+  const buff=me.darkDetermination ? '<p class="darkDetermination">✦ <b>Dark Determination</b> · +25% sát thương đòn đánh, kỹ năng và triệu hồi; tồn tại suốt hành trình.</p>' : '';
+  const will=me.escapedWillOwned || me.escapedOutcome==='won' ? '<p>✦ <b>Will of the Escaped One</b> · Vũ khí · +24 ATK, +8 SPD, +10% chí mạng.</p><button class="btn primary" id="equipEscapedWill">'+(me.equip && me.equip.weapon==='escaped_will'?'Đang trang bị':'Trang bị Will of the Escaped One')+'</button>' : '';
+  return core+buff+will;
+}
 function openBagModal(){
   const me = RPG.player();
   const ids = Object.keys(me.items).filter(k=>me.items[k]>0 && RPG.ITEMS[k]);
@@ -1386,7 +1407,12 @@ function openBagModal(){
     return `<div class="shopItem"><span>${it.icon} ${it.name} <b>x${me.items[id]}</b><br><span style="font-size:11px;color:var(--text-dim);">${it.desc}${it.usable.indexOf('map')<0?' (dùng trong trận)':''}</span></span>${mapUse?`<button class="btn primary" data-use="${id}">Dùng</button>`:''}</div>`;
   }).join('') : '<p style="color:var(--text-dim);">Túi đồ trống.</p>';
   const comp = Object.keys(RPG.COMPONENTS).map(k=>RPG.COMPONENTS[k].icon+' '+RPG.COMPONENTS[k].name+' '+(me.components[k]||0)).join(' &nbsp;|&nbsp; ');
-  showModal('🎒 TÚI ĐỒ', `${rows}<p style="font-size:12px;color:var(--text-dim);margin-top:10px;">Linh kiện: ${comp}<br>🧰 Trang bị: ${Object.keys(RPG.EQUIP_SLOTS).map(sl=>RPG.EQUIP_SLOTS[sl].icon+' '+((me.equip&&me.equip[sl])?RPG.EQUIPMENT[me.equip[sl]].name:'—')).join(' | ')}<br>💠 Mảnh La Peace: ${me.laPeace||0}/${RPG.CFG.LAPEACE_NEEDED}${pieceNamesHtml(me)}${me.taintedEver?'<br>🖤 ĐRL vấy bẩn: '+(me.taintedDrl||0):''}${(me.pieces||[]).map(k=>'<br><span style="font-size:11px;">'+RPG.LAPEACE_PIECES[k].icon+' '+RPG.LAPEACE_PIECES[k].name+': '+RPG.LAPEACE_PIECES[k].desc+'</span>').join('')}</p>`, [{label:'Đóng', onClick:()=>closeModal()}]);
+  showModal('🎒 TÚI ĐỒ', `${rows}${escapedBagHtml(me)}<p style="font-size:12px;color:var(--text-dim);margin-top:10px;">Linh kiện: ${comp}<br>🧰 Trang bị: ${Object.keys(RPG.EQUIP_SLOTS).map(sl=>RPG.EQUIP_SLOTS[sl].icon+' '+((me.equip&&me.equip[sl])?RPG.EQUIPMENT[me.equip[sl]].name:'—')).join(' | ')}<br>💠 Mảnh La Peace: ${me.laPeace||0}/${RPG.CFG.LAPEACE_NEEDED}${pieceNamesHtml(me)}${me.taintedEver?'<br>🖤 ĐRL vấy bẩn: '+(me.taintedDrl||0):''}${(me.pieces||[]).map(k=>'<br><span style="font-size:11px;">'+RPG.LAPEACE_PIECES[k].icon+' '+RPG.LAPEACE_PIECES[k].name+': '+RPG.LAPEACE_PIECES[k].desc+'</span>').join('')}</p>`, [{label:'Đóng', onClick:()=>closeModal()}]);
+  const equipWill = $('equipEscapedWill');
+  if(equipWill){
+    equipWill.disabled = !!(me.equip && me.equip.weapon==='escaped_will');
+    equipWill.onclick = ()=>{ if(RPG.equipEscapedWill(me)){ markActionDirty(); refreshAll(); openBagModal(); } };
+  }
   document.querySelectorAll('#mgBody [data-use]').forEach(b=>{
     b.onclick = ()=>{
       const id = b.getAttribute('data-use');
@@ -1598,6 +1624,7 @@ function moveMonster(){
   addLog('The TIU vừa rời khỏi '+ROOM_DEF[from].name+'...', 'tiu');
 }
 function checkEncounter(){
+  if(S.paused || S.escapedRooftop || (S.playerRoom==='E' && RPG.canMeetEscapedOne(RPG.player()))) return;
   if(!S.tiuOn || S.gameMinutes < S.invulnUntil) return;
   if(isRoomSafe(S.playerRoom)) return;
   if(S.playerRoom === S.monsterRoom) caughtByTIU();
@@ -1710,6 +1737,7 @@ function expireEvents(){
 /* ============== NPC: GẶP GỠ & TƯƠNG TÁC ============== */
 function getRoomNPCs(room){
   if(!S || !S.running) return [];
+  if(S.escapedRooftop && room==='E') return [Object.assign({id:'TheEscapedOne',key:'TheEscapedOne',name:'SINH VIÊN BÍ ẨN'},NPC_META.TheEscapedOne)];
   return wanderingNPCs().filter(f=>S.npcRoom[f.id]===room).map(f=>
     Object.assign({ key:f.id, id:f.id, name:f.name.toUpperCase() }, NPC_META[f.id]));
 }
@@ -1795,6 +1823,7 @@ function tick(now){
       S.gameMinutes += dGameMin;
       advanceWorld(dGameMin);
       if(S && S.running){
+        processEscapedEncounter();
         checkEncounter();
         checkExhaustion();
         processPartyLeave();
@@ -1911,6 +1940,22 @@ function giveUpToTiu(){
   }, {});
 }
 
+/* Sân thượng là cảnh riêng của tòa E, không thêm vào đường tuần tra / sự cố. */
+function processEscapedEncounter(){
+  if(!S || !S.running || S.paused || S.final || S.introPending || S.playerRoom!=='E' || S.escapedRooftop) return;
+  if(TRAVEL.busy || isBlockingOverlayOpen() || !RPG.canMeetEscapedOne(RPG.player())) return;
+  persistSave();
+  S.escapedRooftop = true;
+  S.paused = true;
+  S.guardianPending = null; S.exhaustPending = false;
+  tdEnterRoom('E'); refreshAll();
+  addLog('🖤 Dark Core dịch chuyển bạn lên sân thượng tòa E.', 'warn');
+  playDLG(DLG.ESCAPED_INTRO, ()=>{
+    const boss = RPG.makeEscapedOne(RPG.player().level, S.ng);
+    startBattle({ enemyIds:[boss.id], enemyFighters:[boss], allyFighters:[], escapedOne:true, final:false });
+  });
+}
+
 /* The TIU không còn trừ ĐRL thuần: nó là đối thủ thật, mang mọi skill của mọi class */
 function startTiuBattle(){
   const me = RPG.player();
@@ -1961,13 +2006,13 @@ function startBattle(opts){
   const me = RPG.player();
   // Trận thường gọn hơn để dành thời gian cho khám phá; trận nhóm và The TIU
   // vẫn có trọng lượng lớn hơn. Trận cuối không tính thời gian đêm.
-  opts.battleMinutes = opts.final ? 0 : (opts.tiu ? RPG.CFG.BATTLE_TIU_MINUTES : (opts.mob ? RPG.CFG.BATTLE_MOB_MINUTES : ((opts.ambush || opts.exhausted) ? RPG.CFG.BATTLE_AMBUSH_MINUTES : RPG.CFG.BATTLE_MINUTES)));
+  opts.battleMinutes = opts.final ? 0 : ((opts.tiu || opts.escapedOne) ? RPG.CFG.BATTLE_TIU_MINUTES : (opts.mob ? RPG.CFG.BATTLE_MOB_MINUTES : ((opts.ambush || opts.exhausted) ? RPG.CFG.BATTLE_AMBUSH_MINUTES : RPG.CFG.BATTLE_MINUTES)));
   RPG.scaleOpponents(oppLevelFloor());   // đối thủ luôn có Lv >= Lv người chơi và >= mốc theo đêm
   const allies = [me].concat(opts.allyFighters || (opts.final ? [] : RPG.partyAllies()));
   const enemies = opts.enemyFighters || opts.enemyIds.map(id=>RPG.get(id));
   const aiL = aiLevelNow();
   enemies.forEach(f=>{   // NPC thật: random cấp theo tỉ lệ (trận cuối: giữ cấp cao); tài năng tự học theo cấp + đêm
-    if(f.tiu || f.mob || f.ghost) return;
+    if(f.tiu || f.mob || f.ghost || f.escapedOne) return;
     if(!opts.final){
       const roll = rollOpponentLevel(me.level);
       RPG.forceLevel(f, roll.lv);
@@ -1977,7 +2022,7 @@ function startBattle(opts){
   });
   const knownEl = {};
   enemies.forEach(f=>{ if((f.trust||0)>=1 || (S.knownElements && S.knownElements[f.id])) knownEl[f.id] = true; });   // đã quen / đã khám phá từ trận trước
-  const B = RPGCombat.create({ allies, enemies, dodge:!!opts.final, controlAllies:false, known:knownEl, aiLevel:aiL });
+  const B = RPGCombat.create({ allies, enemies, dodge:!!(opts.final || opts.escapedOne), controlAllies:false, known:knownEl, aiLevel:opts.escapedOne ? 4 : aiL, chapter:S.chapter, night:S.night, final:!!opts.final });
   // Bẫy gài đã trúng: -HP và mất lượt đầu
   enemies.forEach(f=>{
     const d = S.npcDebuff && S.npcDebuff[f.id];
@@ -2012,13 +2057,15 @@ function startBattle(opts){
   const _pcs = (me.pieces||[]).map(k=>RPG.LAPEACE_PIECES[k]).filter(Boolean);
   $('pkSB').textContent = '✦ '+_pcs.map(p=>p.name.toUpperCase()).join(' · ');
   $('pkSB').classList.toggle('hidden', !_pcs.length);
-  const img = ROOM_IMAGES[S.playerRoom];
+  $('pkField').classList.toggle('escapedArena', !!opts.escapedOne);
+  const img = opts.escapedOne ? null : ROOM_IMAGES[S.playerRoom];
   $('battleBg').style.backgroundImage = img ? `url('${img}')` : '';
   renderBattle();
   const foe = enemies[0];
   startOst(battleOstFor(opts, foe));
   let openLine;
-  if(opts.final) openLine = '★ TRẬN QUYẾT ĐỊNH! '+foe.name+' chặn đường bạn!';
+  if(opts.escapedOne) openLine = '✦ THE ESCAPED ONE — cuộc đấu giữa hai ý chí trên sân thượng tòa E. Không có đồng đội can thiệp.';
+  else if(opts.final) openLine = '★ TRẬN QUYẾT ĐỊNH! '+foe.name+' chặn đường bạn!';
   else if(opts.mob) openLine = '⚔ '+foe.name+' cùng đồng bọn xông vào! Đánh bại cả nhóm!';
   else if(opts.tiu) openLine = '◎ THE TIU hiện hình — hiện thân của mọi người từng tham gia giải đấu này! Nó mang đủ skill của cả 5 class.';
   else if(opts.exhausted) openLine = '🪤 '+foe.name+' đánh lén! Bạn kiệt sức: chỉ còn '+Math.round(RPG.CFG.EXHAUST_HP_PCT*100)+'% HP và mọi skill đang hồi chiêu!';
@@ -2162,6 +2209,7 @@ function updateUnitView(u){
     const stacks = k==='poison' && state && state.stacks ? `, ${state.stacks} tầng` : '';
     return `${STATUS_NAME[k]||k}${stacks}${turns!=null?`, còn ${turns} lượt`:''}`;
   });
+  if(!u.isSummon && u.f.darkDetermination) statusParts.push('Dark Determination: +25% sát thương đòn đánh, kỹ năng và triệu hồi (suốt hành trình)');
   if(u.spirit) statusParts.push('Tinh linh đang hoạt động');
   if(u.taunt) statusParts.push('Đang khiêu khích');
   (u.mods||[]).forEach(mod=>{
@@ -2171,7 +2219,7 @@ function updateUnitView(u){
   const statusText=Object.keys(u.st).filter(k=>u.st[k]).map(k=>{
     const state=u.st[k];
     return (STATUS_ICON[k]||'•')+(state&&Number.isFinite(state.turns)?state.turns:'')+(k==='poison'&&state&&state.stacks?'×'+state.stacks:'');
-  }).concat(u.spirit?['🌪️']:[],u.taunt?['🎯']:[],(u.mods||[]).length?['✦'+Math.max(...u.mods.map(mod=>Number(mod.turns)||0))]:[]).join(' · ');
+  }).concat(!u.isSummon && u.f.darkDetermination?['🖤']:[],u.spirit?['🌪️']:[],u.taunt?['🎯']:[],(u.mods||[]).length?['✦'+Math.max(...u.mods.map(mod=>Number(mod.turns)||0))]:[]).join(' · ');
   const statusButton=box.querySelector('.pkSt');
   statusButton.textContent=statusText;
   statusButton.title=statusParts.length?statusParts.join(' · '):'Không có trạng thái';
@@ -2549,6 +2597,7 @@ function spendTime(minutes, label){
 function battleFinish(){
   const B = BATTLE.B, opts = BATTLE.opts;
   const sum = RPGCombat.settle(B);
+  if(!sum) return;
   opts.enemyIds.forEach(id=>{ S.duelDone[id] = true; });
   S.knownElements = S.knownElements || {};
   Object.keys((BATTLE && BATTLE.B && BATTLE.B.known) || {}).forEach(id=>{ S.knownElements[id] = true; });
@@ -2566,7 +2615,20 @@ function battleFinish(){
 
   const me = RPG.player();
   let html = '';
+  if(sum.darkDetermination){
+    html += '<p class="darkDetermination"><b>✦ DARK DETERMINATION</b><br>Bạn đã thắng cả 4 NPC trong đêm đầu. +25% sát thương đòn đánh, kỹ năng và triệu hồi trong suốt hành trình!</p>';
+    addLog('✦ Nhận Dark Determination: +25% sát thương đòn đánh, kỹ năng và triệu hồi.', 'good');
+  }
+  if(sum.darkCore){
+    html += '<p><b>🖤 Nhận Dark Core!</b><br>Một giọng nói thoát khỏi The TIU: “Tới sân thượng tòa E. Tôi sẽ chờ.”</p>';
+    addLog('🖤 Nhận Dark Core từ The TIU. Hãy tới tòa E.', 'good');
+  }
   sum.duels.forEach(d=>{
+    if(d.escapedOne){
+      html += d.reward ? '<p><b>✦ Nhận Will of the Escaped One!</b><br>Đã trang bị vào ô vũ khí: +24 ATK, +8 SPD, +10% chí mạng.</p>' : '<p>The Escaped One thở dài thất vọng và biến mất. Bạn không nhận được vũ khí.</p>';
+      addLog(d.reward ? '✦ Nhận và trang bị Will of the Escaped One.' : 'The Escaped One thở dài thất vọng rồi biến mất.', d.reward ? 'good' : 'warn');
+      return;
+    }
     if(d.mob){
       if(won){
         const dl = Object.keys(d.drops||{}).map(k=>RPG.COMPONENTS[k].icon+' '+RPG.COMPONENTS[k].name+' x'+d.drops[k]).join(', ');
@@ -2601,12 +2663,17 @@ function battleFinish(){
   html += `<p style="color:var(--text-dim);font-size:12px;">ĐRL: <b>${me.drl}</b> · HP còn lại: <b>${me.hp}/${me.maxHp}</b> (được giữ cho trận sau)</p>`;
   if(!opts.final) html += `<p style="color:var(--text-dim);font-size:12px;">⏳ Trận đấu kéo dài ${opts.battleMinutes} phút (${formatClock(S.gameMinutes)} → ${formatClock(S.gameMinutes+opts.battleMinutes)}).</p>`;
 
-  const afterLines = opts.final ? null : (won ? DLG.AFTER_WIN : DLG.AFTER_LOSE)[opts.enemyIds[0]];
+  const afterLines = opts.escapedOne ? (won ? DLG.ESCAPED_WIN : DLG.ESCAPED_LOSE) : opts.final ? null : (won ? DLG.AFTER_WIN : DLG.AFTER_LOSE)[opts.enemyIds[0]];
   showModal(won ? '★ CHIẾN THẮNG!' : '✖ THẤT BẠI', html, [{ label:'Tiếp tục', primary:true, onClick:()=>{
     closeModal(true);
     const proceed = ()=>{
       if(opts.final){ endFinal(won, opts.path); return; }
       BATTLE = null;
+      if(opts.escapedOne){
+        S.escapedRooftop = false;
+        tdEnterRoom('E');
+        addLog('Thang máy đưa bạn trở lại tòa E.', '');
+      }
       S.paused = false; S.lastTick = performance.now();
       if(opts.tiu){   // sau trận với TIU: nó bị đẩy đi chỗ khác, người chơi được yên một lúc
         const others = ROOM_KEYS.filter(r=>r!==S.playerRoom && !isRoomSafe(r));
@@ -2614,7 +2681,7 @@ function battleFinish(){
         S.invulnUntil = S.gameMinutes + opts.battleMinutes + rand(15,20);
       }
       spendTime(opts.battleMinutes, 'Trận đấu kéo dài '+opts.battleMinutes+' phút');
-      if(S.running) refreshAll();
+      if(S.running){ refreshAll(); persistSave(); }
     };
     if(afterLines) playDLG(afterLines, proceed, { npcId:opts.enemyIds[0] }); else proceed();
   }}]);
@@ -2806,9 +2873,11 @@ function recordEnding(key){
 function startNewGamePlus(endKey){
   const old = RPG.player(), ng = (old.ngPlus||0) + 1;
   const keep = { name:old.name, classId:old.classId, level:old.level, exp:old.exp, talents:old.talents||{}, equip:old.equip||{},
+                 escapedWillOwned:!!old.escapedWillOwned || old.escapedOutcome==='won',
                  bonusPoints:old.bonusPoints||0, taintedDrl:old.taintedDrl||0, taintedEver:!!old.taintedEver,
                  items:Object.assign({}, old.items), components:Object.assign({}, old.components),
                  bondsKeep:Object.assign({}, old.bonds||{}) };
+  delete keep.items.dark_core; // lõi nhiệm vụ phải được kiếm lại trong hành trình mới
   // Phần thưởng NG+ riêng cho từng kết thúc
   let perkText = '';
   if(endKey==='normal'){ keep.bonusPoints += 1; perkText = '+1 điểm Tài Năng.'; }
@@ -2819,7 +2888,7 @@ function startNewGamePlus(endKey){
   else { keep.bondsKeep = {}; }
   RPG.init({ playerName:keep.name, playerClass:keep.classId });
   const me = RPG.player();
-  Object.assign(me, { level:keep.level, exp:keep.exp, talents:keep.talents, equip:keep.equip, bonusPoints:keep.bonusPoints,
+  Object.assign(me, { level:keep.level, exp:keep.exp, talents:keep.talents, equip:keep.equip, bonusPoints:keep.bonusPoints, escapedWillOwned:keep.escapedWillOwned,
                       taintedDrl:keep.taintedDrl, taintedEver:keep.taintedEver, items:keep.items, components:keep.components, ngPlus:ng, bonds:keep.bondsKeep });
   const st = RPG.getStats(me); me.maxHp = st.hp; me.hp = st.hp;
   resetStory();
@@ -4036,7 +4105,7 @@ const TD = { S:null, room:null, x:1.5, y:1.5, face:{x:0,y:1}, moving:false, keys
              canvas:null, ctx:null, W:0, H:0, dpr:1, imgs:{}, debug:false, npcMeta:null, npcMetas:[], near:null };
 
 function tdMap(room){
-  const m = window.TD_MAPS && window.TD_MAPS[room];
+  const m = window.TD_MAPS && window.TD_MAPS[S && S.escapedRooftop && room==='E' ? 'E_ROOFTOP' : room];
   if(!m || !m.tiles || !m.tiles.length) return null;
   if(!m._ix) tdIndex(m);
   return m;
@@ -4115,6 +4184,7 @@ function tdNpcSpot(m,i){
 }
 /* Danh sách mọi thứ có thể tương tác ở phòng hiện tại, dựng lại từ trạng thái game mỗi lần gọi. */
 function tdInteractables(m){
+  if(S.escapedRooftop) return [{kind:'npc', pos:tdNpcSpot(m,0), meta:getRoomNPCs('E')[0], label:'Sinh viên bí ẩn'}];
   const room = S.playerRoom, def = ROOM_DEF[room], ix = m._ix, list = [];
   (TD.npcMetas||[]).forEach((meta,i)=>{
     list.push({kind:'npc', pos:tdNpcSpot(m,i), meta, label:'💬 Gặp '+meta.name, act:()=>openNPCMenu(meta)});

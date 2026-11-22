@@ -91,6 +91,17 @@ The TIU có thể gây sự cố ở một số phòng. Hãy đến nơi đượ
 - Ba mảnh La Peace đem lại các sức mạnh riêng. Mảnh chưa được ai nắm giữ có thể xuất hiện để nhặt; mảnh chưa nhặt trước 03:00 có thể rơi vào tay đối thủ. Thắng họ để cướp lại.
 - Đánh bại The TIU có thể cho ĐRL vấy bẩn, dùng để đổi vật phẩm đặc biệt và mở thêm hướng kết thúc.
 
+### Nhánh bí mật — Dark Determination / The Escaped One
+
+1. Trong **Chapter 1, đêm đầu**, thắng cả bốn NPC **Wibu Việt Nhật, Chàng Lính Ngu Lam, Trọng và Toby** để nhận **Dark Determination**. Chỉ chiến thắng của người chơi mới được tính; đấu lại một người không cộng thêm, trận thua và các trận NPC tự đánh nhau không tính.
+2. Hiệu ứng tồn tại suốt hành trình, tăng **25% sát thương đòn đánh, kỹ năng và triệu hồi**; không tăng sát thương cố định của vật phẩm hay sát thương theo thời gian. Tiến độ hiện ở Mục tiêu đêm/nhật ký; hiệu ứng hiện trong túi đồ và trên thẻ chiến đấu.
+3. Khi có Dark Determination, thắng **The TIU tuần tra** để nhận **Dark Core** một lần. Trận The TIU ở phần kết không mở nhánh này vì hành trình đã bước vào chung kết.
+4. Mang Dark Core tới **tòa E**: bạn tự động được dịch chuyển lên **sân thượng tòa E**, gặp một sinh viên bí ẩn. Nếu đang ở tòa E khi nhận lõi, cuộc gặp bắt đầu sau khi đóng tổng kết trận. Cuộc gặp cũng có thể diễn ra trong đêm chuẩn bị Chapter 2.
+5. Hội thoại nhắc tới sức mạnh bao phủ UIT và ép buộc số phận mọi người: cậu từng tưởng đã trốn thoát, nhưng bị The TIU hấp thụ và chỉ thoát ra bằng quyết tâm của mình — easter egg của **Escape UIT**. Sau đó là trận đấu một chọi một với secret boss **The Escaped One** (ID: TheEscapedOne), có QTE phòng thủ. Hội thoại dừng đồng hồ; trận đấu tốn 60 phút game.
+6. **Thua:** The Escaped One thở dài thất vọng rồi biến mất, không trao vũ khí. **Thắng:** nhận **Will of the Escaped One**, tự trang bị vào **ô vũ khí**, cộng **24 ATK, 8 SPD và 10% tỉ lệ chí mạng**. Vũ khí không thể chế tạo; sau khi đổi sang vũ khí khác, có thể trang bị lại từ túi đồ.
+
+Sau cả hai kết quả, thang máy đưa bạn về tòa E. Cuộc gặp chỉ xảy ra **một lần mỗi hành trình**; Dark Core được giữ làm kỷ vật. Tiến độ, hiệu ứng và kết quả được lưu qua các đêm và khi tải lại game. Đóng game giữa hội thoại/trận sân thượng sẽ trở lại mốc an toàn trước cuộc gặp. New Game+ giữ quyền sở hữu vũ khí đã nhận, còn điều kiện Dark Determination, Dark Core và cuộc gặp được làm lại từ đầu.
+
 ### Lưu game, hướng dẫn và kết thúc
 
 - Game tự lưu ở trạng thái có thể khôi phục, định kỳ 15 giây khi khám phá và sau thao tác; đầu mỗi đêm tạo checkpoint. Không ghi trạng thái dở dang của trận đấu, câu đố hay hội thoại. Đóng trang giữa các hoạt động này sẽ trở lại mốc an toàn gần nhất. Màn hình thất bại cho phép thử lại đêm từ checkpoint.
@@ -118,4 +129,4 @@ node --test tools/regression.test.cjs
 node tools/browser_smoke.cjs
 ```
 
-Bộ kiểm tra lõi bao gồm lưu/tải, bản dự phòng, dữ liệu hỏng, hết dung lượng, di chuyển bản lưu cũ và 120 mô phỏng chiến đấu cho năm Class ở cấp 1/3/5/8. Kiểm tra trình duyệt mặc định dùng Microsoft Edge trên Windows với hồ sơ tạm riêng; có thể đặt biến môi trường BROWSER_PATH trỏ đến Chromium khác. Ảnh kiểm tra giao diện được lưu trong thư mục tạm và đường dẫn in ra khi chạy. Các kiểm tra này không thay thế việc chơi thử toàn bộ nhánh cốt truyện.
+Bộ kiểm tra lõi bao gồm lưu/tải, bản dự phòng, dữ liệu hỏng, hết dung lượng, di chuyển bản lưu cũ và 120 mô phỏng chiến đấu thường/The TIU cho năm Class ở cấp 1/3/5/8, 15 mô phỏng The Escaped One và kiểm tra điều kiện mở khóa, hệ số sát thương, phần thưởng một lần, dữ liệu lưu của nhánh bí mật. Kiểm tra trình duyệt mặc định dùng Microsoft Edge trên Windows với hồ sơ tạm riêng; có thể đặt biến môi trường BROWSER_PATH trỏ đến Chromium khác. Ảnh kiểm tra giao diện được lưu trong thư mục tạm và đường dẫn in ra khi chạy. Kiểm tra trình duyệt còn đi qua hai kết quả thắng/thua trên sân thượng, trang bị lại vũ khí và tải lại mốc an toàn. Các kiểm tra này không thay thế việc chơi thử toàn bộ nhánh cốt truyện hoặc cân bằng độ khó.

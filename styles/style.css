@@ -1118,3 +1118,8 @@ button.toggle{padding:0;flex-shrink:0;cursor:pointer;}
 @media(min-width:1200px){#sidePane{margin-right:310px;}#miniMapWrap{top:136px;bottom:auto;width:260px;}#logPane{width:280px;max-height:280px;}}
 @media(max-width:700px){#roomBanner.td-on{min-height:320px;flex-basis:320px;}#actionInner{padding:12px;}}
 #menuBtnRow .bigbtn:not(.secondary):not(.neutral){color:#fff1df;}
+
+/* Nhánh bí mật trên sân thượng tòa E. */
+.darkDetermination { color:#d8b5ff; line-height:1.6; }
+#pkField.escapedArena { background:linear-gradient(180deg,#0b1025 0%,#302443 58%,#15101e 59%,#292330 100%); }
+#pkField.escapedArena::before { content:"SÂN THƯỢNG TÒA E"; position:absolute; top:12px; left:50%; transform:translateX(-50%); color:#dcc5ee; font-size:11px; letter-spacing:.16em; pointer-events:none; }

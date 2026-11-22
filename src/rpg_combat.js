@@ -130,6 +130,8 @@
     const def = o.ignoreDef ? 0 : eff(dst, "def");
     let d;
     d = Math.max(raw * CC.MIN_DMG_PCT, raw - def * CC.DEF_FACTOR); d *= rand(CC.VARIANCE[0], CC.VARIANCE[1]) * CC.DMG_SCALE;
+    const owner = src.isSummon ? src.owner : src;
+    if (owner.f && owner.f.darkDetermination) d *= RPG.CFG.DARK_DETERMINATION_MULT;
     return d;
   }
 
@@ -748,6 +750,13 @@
     const foes = B.units.filter(function (u) { return u.side === "E" && !u.isSummon; }).map(function (u) { return u.f; });
     const mates = B.units.filter(function (u) { return u.side === "A" && !u.isSummon && u.f !== pf; }).map(function (u) { return u.f; });
     const out = { winner: B.winner, duels: [], allyExp: [] };
+    if (foes.length === 1 && foes[0].escapedOne) {
+      const won = B.winner === "A";
+      const resolved = RPG.resolveEscapedOne(pf, won);
+      out.duels.push({ escapedOne: true, won: won, reward: resolved && won ? "escaped_will" : null });
+      return out;
+    }
+    if (B.winner === "A") out.darkDetermination = RPG.recordFirstNightWins(pf, foes.map(function (f) { return f.id; }), B.opts.chapter, B.opts.night);
     if (foes.length && foes.every(function (e) { return e.mob; })) {   // trận với quái / mini-boss
       if (B.winner === "A") {
         let expSum = 0, drl = 0; const drops = {};
@@ -770,6 +779,7 @@
         if (e.tiu) {   // thắng The TIU: không cướp ĐRL, nhận ĐRL VẤY BẨN + EXP
           const exp = RPG.addExp(pf, 40 + 15 * pf.level);
           RPG.addTainted(pf, RPG.CFG.TIU_TAINTED_WIN);
+          if (!B.opts.final) out.darkCore = RPG.awardDarkCore(pf);
           out.duels.push({ tiu: true, winnerId: pf.id, loserId: "TIU", drl: 0, lost: 0, tainted: RPG.CFG.TIU_TAINTED_WIN, exp: exp, pieces: [], loot: null });
           return;
         }

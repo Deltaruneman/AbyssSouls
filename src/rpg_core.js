@@ -67,6 +67,7 @@
     EXHAUST_HP_PCT: 0.5,                 // đi khi thiếu thể lực -> bị đánh lén: vào trận chỉ còn tối đa 50% HP, mọi skill đang hồi chiêu
 
     // ---- The TIU là boss: bị bắt = đấu với TIU (hiện thân của mọi skill) ----
+    DARK_DETERMINATION_MULT: 1.25,       // sát thương đòn đánh / kỹ năng / triệu hồi
     TIU_TAINTED_WIN: 8,                  // thắng TIU: +8 ĐRL vấy bẩn
     TIU_HP_BASE: 190, TIU_HP_PER_LV: 42, // HP TIU = base + perLv * Lv người chơi
     TIU_ATK_BASE: 13, TIU_ATK_PER_LV: 1.5,
@@ -390,6 +391,7 @@
                effects: [{ type: "buff", stat: "def", amount: 20, turns: 3 }] }
   };
   const RELICS = {
+    dark_core: { name: "Dark Core", icon: "🖤", desc: "Lõi bóng tối tách khỏi The TIU. Mang tới tòa E để tìm người đã trốn thoát." },
     lapeace: { name: "Mảnh La Peace", icon: "💠" }
   };
   /* Mỗi loại Mảnh La Peace = 1 sức mạnh đặc biệt cho người nắm giữ (người chơi lẫn NPC). Mỗi loại chỉ có 1 mảnh. */
@@ -420,6 +422,7 @@
      Chế tạo ở bàn chế tạo (Căn tin) -> tự động mang vào ô tương ứng, thay món cũ. */
   const EQUIP_SLOTS = { weapon: { name: "Vũ khí", icon: "🗡️" }, armor: { name: "Giáp", icon: "🦺" }, charm: { name: "Bùa", icon: "🍀" } };
   const EQUIPMENT = {
+    escaped_will: { slot: "weapon", name: "Will of the Escaped One", icon: "✦", bonus: { atk: 24, spd: 8, crit: 0.10 } },
     bat:    { slot: "weapon", name: "Gậy Bóng Chày Gắn Đinh", icon: "🏏", recipe: { pipe: 2, tape: 1 },           bonus: { atk: 8 } },
     laser:  { slot: "weapon", name: "Kiếm Pin Laser",          icon: "🔦", recipe: { pin: 3, pipe: 2, wire: 1 },   bonus: { atk: 16, crit: 0.05 } },
     vest:   { slot: "armor",  name: "Áo Giáp Ống Thép",        icon: "🦺", recipe: { pipe: 3, tape: 2 },           bonus: { def: 10, hp: 15 } },
@@ -434,7 +437,7 @@
     return t;
   }
   function canCraftEquip(f, id) {
-    const e = EQUIPMENT[id]; if (!e || (f.equip && f.equip[e.slot] === id)) return false;
+    const e = EQUIPMENT[id]; if (!e || !e.recipe || (f.equip && f.equip[e.slot] === id)) return false;
     return Object.keys(e.recipe).every(function (k) { return (f.components[k] || 0) >= e.recipe[k]; });
   }
   function craftEquip(f, id) {
@@ -610,6 +613,48 @@
                        def: CFG.TIU_DEF_BASE + CFG.TIU_DEF_PER_LV * lv, spd: CFG.TIU_SPD }
     };
   }
+  /* Nhánh bí mật: lưu trên người chơi để tồn tại qua các đêm và save v2. */
+  function recordFirstNightWins(f, ids, chapter, night) {
+    if (!f.isPlayer || chapter !== 1 || night !== 1 || f.darkDetermination) return false;
+    f.firstNightWins = f.firstNightWins || [];
+    ids.forEach(function (id) {
+      if (NPC_ROSTER.some(function (n) { return n.id === id; }) && !f.firstNightWins.includes(id)) f.firstNightWins.push(id);
+    });
+    if (!NPC_ROSTER.every(function (n) { return f.firstNightWins.includes(n.id); })) return false;
+    f.darkDetermination = true;
+    return true;
+  }
+  function awardDarkCore(f) {
+    if (!f.darkDetermination || f.darkCoreClaimed) return false;
+    f.darkCoreClaimed = true;
+    f.items.dark_core = 1;
+    return true;
+  }
+  function canMeetEscapedOne(f) {
+    return !!(f && f.items.dark_core > 0 && !f.escapedOutcome);
+  }
+  function equipEscapedWill(f) {
+    if (!f || (!f.escapedWillOwned && f.escapedOutcome !== "won")) return false;
+    f.equip = f.equip || {};
+    f.equip.weapon = "escaped_will";
+    return true;
+  }
+  function resolveEscapedOne(f, won) {
+    if (!canMeetEscapedOne(f)) return false;
+    f.escapedOutcome = won ? "won" : "lost";
+    if (won) { f.escapedWillOwned = true; equipEscapedWill(f); }
+    return true;
+  }
+  function makeEscapedOne(playerLv, ng) {
+    const lv = Math.max(3, Math.min(CFG.MAX_LEVEL, (playerLv || 1) + 1));
+    const f = createFighter({ id: "TheEscapedOne", name: "The Escaped One", title: "Ý chí vượt khỏi mô phỏng", classId: "assassin" });
+    f.level = lv; f.exp = CFG.EXP_TABLE[lv]; f.escapedOne = true;
+    const mult = 1 + 0.25 * Math.max(0, ng || 0);
+    f.statsOverride = { hp: Math.round((150 + 30 * lv) * mult), atk: Math.round((17 + 2 * lv) * mult), def: 10 + 2 * lv, spd: 40 + lv };
+    f.hp = f.maxHp = f.statsOverride.hp;
+    return f;
+  }
+
   /* ------------------------- QUÁI / MINI-BOSS TRONG PHÒNG ------------------------- */
   const MOB_KINDS = {
     guard:     { name: "Bảo vệ Căn tin",      icon: "👮", classId: "fighter",  hp: 120, hpLv: 30, atk: 12, atkLv: 1.8, def: 16, defLv: 2,   spd: 18, drl: 4, drops: { pin: 1, tape: 1 } },
@@ -849,6 +894,7 @@
 
   /* ============================ XUẤT RA NGOÀI ============================ */
   const RPG = {
+    recordFirstNightWins, awardDarkCore, canMeetEscapedOne, equipEscapedWill, resolveEscapedOne, makeEscapedOne,
     CFG: CFG, CLASSES: CLASSES, CLASS_IDS: CLASS_IDS, CLASS_QUIZ: CLASS_QUIZ,
     ITEMS: ITEMS, RELICS: RELICS, LAPEACE_PIECES: LAPEACE_PIECES, LAPEACE_ORDER: LAPEACE_ORDER, COMPONENTS: COMPONENTS, RECIPES: RECIPES, NPC_ROSTER: NPC_ROSTER,
     DEFAULT_PLAYER_NAME: DEFAULT_PLAYER_NAME,

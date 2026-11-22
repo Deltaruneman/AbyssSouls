@@ -85,6 +85,7 @@ async function run(){
   await evaluate(`TiuTutorial.start('basic',true)`);await sleep(750);await key('Enter');
   assert(await evaluate(`TiuTutorial.isActive()`));await key('Escape');await waitFor(`!TiuTutorial.isActive()`);
   await require('./campaign_checks.cjs')({evaluate,key,click,waitFor,screenshot,send,sleep,finishDialogue,output});
+  await require('./escaped_checks.cjs')({evaluate,key,click,waitFor,screenshot,send,sleep,finishDialogue});
   // Narrow and short viewport captures for layout review.
   await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:false});
   await key('Escape');await click('#pauseMainMenuBtn');await screenshot('05-mobile-title');

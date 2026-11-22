@@ -26,6 +26,9 @@
       if(!Object.keys(f.items).every(k=>Object.hasOwn(RPG.ITEMS,k)||Object.hasOwn(RPG.RELICS,k)))return false;
       if(!Object.keys(f.components).every(k=>Object.hasOwn(RPG.COMPONENTS,k)))return false;
       if(f.pieces && (!Array.isArray(f.pieces)||!f.pieces.every(k=>RPG.LAPEACE_ORDER.includes(k))))return false;
+      if(f.firstNightWins !== undefined && (!Array.isArray(f.firstNightWins) || f.firstNightWins.length > RPG.NPC_ROSTER.length || new Set(f.firstNightWins).size !== f.firstNightWins.length || !f.firstNightWins.every(id=>RPG.NPC_ROSTER.some(n=>n.id===id))))return false;
+      for(const key of ['darkDetermination','darkCoreClaimed','escapedWillOwned']) if(f[key] !== undefined && typeof f[key] !== 'boolean')return false;
+      if(f.escapedOutcome !== undefined && !['won','lost'].includes(f.escapedOutcome))return false;
       if(f.talents && !object(f.talents))return false;
       if(f.equip && (!object(f.equip)||!Object.values(f.equip).every(k=>!k||Object.hasOwn(RPG.EQUIPMENT,k))))return false;
       if(f.quests && (!object(f.quests)||!Object.values(f.quests).every(q=>object(q)&&Number.isInteger(q.step)&&q.step>=0)))return false;
