@@ -400,8 +400,8 @@ function applyFx(fx, ctx){
     const id = fx.npc || (ctx && ctx.npcId);
     const f = id && RPG.get(id);
     if(f && typeof f.trust==='number'){
-      f.trust = Math.max(0, Math.min(RPG.CFG.TRUST_MAX, f.trust + fx.trust));
-      addLog('💬 '+f.name+(fx.trust>0?' có thiện cảm hơn với bạn':' mất lòng tin ở bạn')+' (Tin tưởng '+f.trust+'/'+RPG.CFG.TRUST_MAX+').', fx.trust>0?'good':'');
+      const delta = RPG.dialogueTrust(f, fx, STORY.stage[id] || 0);
+      if(delta) addLog('💬 '+f.name+(delta>0?' tin tưởng vì bạn đã lắng nghe':' mất lòng tin ở bạn')+' (Tin tưởng '+f.trust+'/'+RPG.CFG.TRUST_MAX+').', delta>0?'good':'');
     }
   }
 }
@@ -1304,7 +1304,7 @@ function openQuestLog(){
     if(!f.alive) return `<div class="shopItem" style="opacity:.5;"><span>${f.name}: đã bị loại</span></div>`;
     if(me.bonds[n.id]) return `<div class="shopItem talentOn"><span>🤝 <b>${f.name}</b> — ${q.title}<br><span style="font-size:11px;color:var(--text-dim);">Hoàn thành · Gắn bó</span></span></div>`;
     const st = me.quests[n.id];
-    if(!st) return `<div class="shopItem"><span>❔ <b>${f.name}</b> — ${q.title}<br><span style="font-size:11px;color:var(--text-dim);">${f.trust>=QUEST_TRUST?'Nói chuyện với họ để nhận nhiệm vụ.':'Cần Tin tưởng '+QUEST_TRUST+'/'+RPG.CFG.TRUST_MAX+' (hiện '+f.trust+') — nói chuyện thêm.'}</span></span></div>`;
+    if(!st) return `<div class="shopItem"><span>❔ <b>${f.name}</b> — ${q.title}<br><span style="font-size:11px;color:var(--text-dim);">${f.trust>=QUEST_TRUST?'Nói chuyện với họ để nhận nhiệm vụ.':'Cần Tin tưởng '+QUEST_TRUST+'/'+RPG.CFG.TRUST_MAX+' (hiện '+f.trust+') — lắng nghe và giữ cam kết trong trận.'}</span></span></div>`;
     const step = q.steps[st.step];
     return `<div class="shopItem"><span>📜 <b>${f.name}</b> — ${q.title} (${st.step+1}/${q.steps.length})<br><span style="font-size:11px;color:var(--text-dim);">${step.text}<br>${questProgressText(step)}</span></span></div>`;
   }).join('');
@@ -2022,7 +2022,7 @@ function startBattle(opts){
   });
   const knownEl = {};
   enemies.forEach(f=>{ if((f.trust||0)>=1 || (S.knownElements && S.knownElements[f.id])) knownEl[f.id] = true; });   // đã quen / đã khám phá từ trận trước
-  const B = RPGCombat.create({ allies, enemies, dodge:!!(opts.final || opts.escapedOne), controlAllies:false, known:knownEl, aiLevel:opts.escapedOne ? 4 : aiL, chapter:S.chapter, night:S.night, final:!!opts.final });
+  const B = RPGCombat.create({ allies, enemies, dodge:!!(opts.final || opts.escapedOne), controlAllies:false, known:knownEl, aiLevel:opts.escapedOne ? 4 : aiL, chapter:S.chapter, night:S.night, final:!!opts.final, escapedOne:!!opts.escapedOne });
   // Bẫy gài đã trúng: -HP và mất lượt đầu
   enemies.forEach(f=>{
     const d = S.npcDebuff && S.npcDebuff[f.id];
@@ -2411,7 +2411,25 @@ function battleNextRound(){
   $('battleTurnNum').textContent = B.round;
   BATTLE.pending = info.pending.slice();
   snapDisp(); renderBattle();
-  battlePromptNext();
+  battleDialogue();
+}
+function battleDialogue(){
+  const bt = BATTLE;
+  if(!bt || bt.closed) return;
+  const scene = RPGCombat.dialogue(bt.B);
+  if(!scene){ battlePromptNext(); return; }
+  pkActive(null);
+  pkPrompt(scene.name+' — “'+scene.text+'”');
+  pkMenuSet('dialogue', scene.choices.map(c=>({
+    label:c.label, sub:c.desc, hint:c.desc,
+    onClick:()=>{
+      if(BATTLE !== bt || bt.closed) return;
+      const result = RPGCombat.chooseDialogue(bt.B, scene.uid, c.id);
+      if(!result.ok) return;
+      renderBattle();
+      battlePromptNext();
+    }
+  })));
 }
 function battlePromptNext(){
   if(!BATTLE.pending.length){ battleResolve(); return; }
@@ -2465,6 +2483,17 @@ function showFightMenu(uid){
   pkPrompt('Chọn đòn đánh.');
   const items = [{ label:'Tấn công', cls:'fgoCmd buster', icon:'⚔️', sub:(op.basicEl?RPG.ELEMENTS[op.basicEl].icon+' ':'')+'Thường · +'+RPG.CFG.RAGE_ON_ATTACK+' Nộ', hint:'Đòn đánh thường lên 1 mục tiêu'+(op.basicEl?' (Hệ '+RPG.elementLabel(op.basicEl)+')':'')+'.',
                    onClick:()=>pickTarget(u,'single',t=>commit(uid,{type:'attack',target:t}),()=>showFightMenu(uid), op.basicEl) }];
+  RPGCombat.attackChoices(B,u).forEach(a=>items.push({
+    label:a.name, cls:'fgoCmd quick', icon:'⚔️', sub:a.cost+' TL', hint:a.desc, disabled:!a.ready,
+    onClick:()=>pickTarget(u,'single',t=>commit(uid,{type:'attack',style:a.id,target:t}),()=>showFightMenu(uid),op.basicEl)
+  }));
+  if(B.distinct){
+    const state = u.f.classId==='mage' ? ' · Ấn '+(u.runes||0)+'/3' :
+      u.f.classId==='assassin' ? ' · Liên đòn '+(u.chain||0)+'/3' :
+      u.f.classId==='fighter' && u.guardReady ? ' · Đòn sau thủ +35%' : '';
+    items[0].hint += ' '+(RPGCombat.attackChoices(B,u)[0]?.desc || '');
+    items[0].sub += state;
+  }
   op.skills.forEach((s,k)=>{
     items.push({ label:s.name, cls:'fgoCmd '+(k%2 ? 'quick' : 'arts'), icon:(k%2 ? '💨' : '✨'),
       sub: s.unlocked ? ((s.el?RPG.ELEMENTS[s.el].icon+' ':'')+(TARGET_LABEL[s.target]||'')+(s.cost?' · '+s.cost+' TL':'')+(s.cd>0?' · hồi '+s.cd:'')) : 'Mở ở Lv'+s.lvl,
@@ -2510,13 +2539,24 @@ function castWithQte(uid, type, def){
     if(type !== 'ultimate'){ commit(uid, {type, id:def.id, target:tgt, quality:1}); return; }
     $('pkMenu').innerHTML = '';
     pkPrompt(u.name+' tập trung niệm chiêu cuối...');
-    const count = (QTE_COUNT[u.f.classId] || 3) + 2;
+    const distinct = BATTLE.B.distinct;
+    const profiles = {
+      fighter:{count:3, windowMs:1700, parryWidth:0.25},
+      assassin:{count:6, windowMs:1050, parryWidth:0.4},
+      mage:{count:4, windowMs:1450, parryWidth:0.4, sequence:['ArrowUp','ArrowRight','ArrowDown','ArrowLeft']},
+      healer:{count:4, windowMs:1500, parryWidth:0.6},
+      summoner:{count:5, windowMs:1300, parryWidth:0.45, sequence:['ArrowLeft','ArrowLeft','ArrowRight','ArrowRight','ArrowUp']}
+    };
+    const profile = distinct ? profiles[u.f.classId] : null;
+    const count = profile ? profile.count : (QTE_COUNT[u.f.classId] || 3) + 2;
     runArrowQte({
       mode:'attack',
       title:'✧ '+def.name.toUpperCase()+' — '+count+' MŨI TÊN',
-      subtitle:u.name+' niệm chiêu cuối: bấm đúng chuỗi mũi tên (←↑↓→ / WASD)! Dưới 40% chính xác, chiêu thất bại. Bấm Q để bỏ QTE (70%).',
-      count, windowMs: 1500-(count-3)*60, feintChance:0, parryWidth:0.5, shake:0, drift:0, allowSkip:true,
-      onDone:(r)=>commit(uid, {type, id:def.id, target:tgt, quality:r.accuracy})
+      subtitle:u.name+' — '+(distinct?'Đúng hướng ngoài vùng sáng chỉ tính nửa điểm. ':'')+'Dưới 40% chính xác: thất bại. Q: bỏ QTE, chắc chắn 70% hiệu lực.'+(profile?.sequence?' Chuỗi: '+profile.sequence.map(k=>ARROW_GLYPHS[k]).join(' '):''),
+      count, windowMs:profile ? profile.windowMs : 1500-(count-3)*60, feintChance:0,
+      parryWidth:profile ? profile.parryWidth : 0.5, sequence:profile?.sequence,
+      weightedTiming:distinct, fixedZone:distinct, shake:0, drift:0, allowSkip:true,
+      onDone:(r)=>commit(uid, {type, id:def.id, target:tgt, quality:r.accuracy, skipped:!!r.skipped})
     });
   }, back, def.el);
 }
@@ -2540,7 +2580,7 @@ function runDefendQte(req, cb){
       mode:'defend',
       title:'✦ SPELL BREAKER — '+src.name+' tung "'+req.skill+'"!',
       subtitle:'Bấm đúng hướng trong VÙNG SÁNG để PARRY hoàn toàn Ultimate!',
-      count:3, windowMs:1250, feintChance:0.1, parryWidth:0.3, shake:0, drift:0,
+      count:3, windowMs:1250, feintChance:0.1, fairFeint:B.distinct, parryWidth:0.3, shake:0, drift:0,
       onDone:(r)=>{
         const mult = clamp(1 - (r.perfect + 0.5*r.blocked)/r.total, 0, 1);
         if(mult===0) cb(0);   // engine tự báo "SPELL BREAKER!" khi phá giải hoàn toàn
@@ -2614,7 +2654,7 @@ function battleFinish(){
   $('battleOverlay').classList.add('hidden');
 
   const me = RPG.player();
-  let html = '';
+  let html = (sum.relationships || []).map(msg=>'<p>'+msg+'</p>').join('');
   if(sum.darkDetermination){
     html += '<p class="darkDetermination"><b>✦ DARK DETERMINATION</b><br>Bạn đã thắng cả 4 NPC trong đêm đầu. +25% sát thương đòn đánh, kỹ năng và triệu hồi trong suốt hành trình!</p>';
     addLog('✦ Nhận Dark Determination: +25% sát thương đòn đánh, kỹ năng và triệu hồi.', 'good');
@@ -3990,15 +4030,17 @@ function runArrowQte(opts){
   function endAll(accuracyOverride){
     if(q.done) return;
     cleanup();
-    const out = {hits:q.hits, perfect:q.perfect, blocked:q.blocked, total, accuracy:accuracyOverride==null?(q.perfect+q.blocked)/total:accuracyOverride, bestStreak:q.bestStreak};
+    const out = {hits:q.hits, perfect:q.perfect, blocked:q.blocked, total,
+      accuracy:accuracyOverride==null?(q.perfect+(opts.weightedTiming?0.5:1)*q.blocked)/total:accuracyOverride,
+      skipped:accuracyOverride!=null, bestStreak:q.bestStreak};
     setTimeout(()=>{ qteReleaseHost(); QTE = null; opts.onDone(out); }, 420);
   }
   function nextStrike(){
     if(q.idx >= total){ endAll(); return; }
     q.locked = false; q.feinted = false;
-    q.target = pick(ARROW_KEYS);
+    q.target = opts.sequence ? opts.sequence[q.idx % opts.sequence.length] : pick(ARROW_KEYS);
     // cửa sổ parry DỊCH CHUYỂN: vị trí xuất phát ngẫu nhiên mỗi cú; ở độ khó cao còn trôi trái/phải
-    q.zoneStart = 0.08 + Math.random()*(0.9 - parryWidth - 0.08);
+    q.zoneStart = opts.fixedZone ? (1-parryWidth)/2 : 0.08 + Math.random()*(0.9 - parryWidth - 0.08);
     q.zoneDrift = drift ? (Math.random()<0.5?-1:1) * drift * (0.4+Math.random()*0.6) : 0;
     elArrow.textContent = ARROW_GLYPHS[q.target];
     elArrow.style.color = opts.mode==='attack' ? '#ffd27a' : '#ff8f8f';
@@ -4020,6 +4062,9 @@ function runArrowQte(opts){
         const dx=(Math.random()-0.5)*2*shake, dy=(Math.random()-0.5)*2*shake, rot=(Math.random()-0.5)*shake*1.2;
         elArrow.style.transform = 'translate('+dx.toFixed(1)+'px,'+dy.toFixed(1)+'px) rotate('+rot.toFixed(1)+'deg)';
       }
+      if(opts.fairFeint && feintAt && !q.feinted && now >= feintAt-250 && now < feintAt){
+        feedback('CHÚ Ý — SẮP ĐỔI HƯỚNG!', '#ff4fd8');
+      }
       if(feintAt && !q.feinted && now >= feintAt){
         q.feinted = true;
         let nt; do{ nt = pick(ARROW_KEYS); }while(nt===q.target);
@@ -4027,6 +4072,12 @@ function runArrowQte(opts){
         elArrow.textContent = ARROW_GLYPHS[nt];
         elArrow.style.color = '#ff4fd8';
         feedback('ĐỔI HƯỚNG!', '#ff4fd8');
+        // Trận thường: cấp lại trọn cửa sổ phản ứng sau đòn giả.
+        if(opts.fairFeint){
+          q.shownAt = now;
+          q.raf = requestAnimationFrame(frame);
+          return; // Không dùng t cũ để kết thúc cú vừa đổi hướng.
+        }
       }
       if(t >= 1){ resolveStrike('timeout'); return; }
       q.raf = requestAnimationFrame(frame);

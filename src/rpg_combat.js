@@ -82,6 +82,10 @@
     // SPELL BREAKER: người chơi đang giữ Mảnh La Peace loại Spell Breaker -> được QTE parry Ultimate của kẻ địch
     B.spellBreaker = !!(B.playerUnit && B.playerUnit.f && RPG.hasPiece(B.playerUnit.f, "spellBreaker"));
     opts.enemies.forEach(function (f) { makeUnit(B, f, "E").controller = "ai"; });
+    // Một cổng duy nhất cho mọi thay đổi: boss bí mật và toàn bộ đêm cuối giữ luật cũ.
+    B.distinct = opts.distinctCombat !== false && !opts.final && !opts.escapedOne &&
+      !(opts.chapter === 2 && opts.night === 2) && !opts.enemies.some(f => f.escapedOne);
+    B.dialogues = {}; B.promises = [];
     return B;
   }
 
@@ -420,6 +424,91 @@
     }
   }
 
+  const ATTACK_STYLES = {
+    fighter: { id:'heavy', name:'Trọng kích', cost:20, desc:'1,65 lần sức đánh; ra đòn chậm hơn 20 tốc độ. Đánh thường sau Phòng thủ mạnh thêm 35%.' },
+    assassin: { id:'flurry', name:'Liên kích', cost:20, desc:'Hai nhát, mỗi nhát 70% sức đánh. Đánh thường liên tiếp cùng mục tiêu tăng 12% mỗi lần, tối đa 36%.' },
+    mage: { id:'detonate', name:'Kích nổ ấn', cost:15, desc:'Đánh thường đặt tối đa 3 ấn trên một mục tiêu. Kích nổ: 80% + 50% sức đánh mỗi ấn, rồi tiêu hết ấn.' },
+    healer: { id:'siphon', name:'Hấp thu sinh lực', cost:15, desc:'85% sức đánh; nếu gây sát thương thì hồi 8% HP tối đa. Đánh thường để dành thể lực cho hồi phục.' },
+    summoner: { id:'command', name:'Hiệp kích', cost:15, desc:'75% sức đánh; mỗi vật triệu hồi có sức tấn công đang sống đánh thêm một nhát 50% sức đánh của nó.' }
+  };
+  function attackChoices(B, u) {
+    if (!B.distinct || !u || u.isSummon) return [];
+    const def = ATTACK_STYLES[u.f.classId];
+    return def ? [Object.assign({}, def, { ready:u.sp >= def.cost &&
+      (def.id !== 'command' || B.units.some(x => x.alive && x.isSummon && x.owner === u && x.atkPct > 0)) })] : [];
+  }
+  function dialogue(B) {
+    if (!B.distinct || B.over || Object.keys(B.dialogues).length >= 2) return null;
+    const foe = B.units.find(u => u.side === 'E' && u.alive && !u.isSummon &&
+      !B.dialogues[u.uid] && (B.round >= 2 || u.hp <= u.maxHp * 0.5));
+    if (!foe) return null;
+    const social = RPG.NPC_ROSTER.some(n => n.id === foe.id);
+    const lines = {
+      WIBU:'Đừng tưởng cậu đã hiểu mình chỉ sau vài câu nói.',
+      LINH:'Cậu định dùng mọi thứ trong túi để thắng à?',
+      TRONG:'Mình sẽ không chấp nhận một chiến thắng dễ dãi.',
+      TOBY:'Cậu có thể chậm lại một chút không? Mình vẫn muốn đấu công bằng.'
+    };
+    const vows = {
+      WIBU:'Thắng và Phòng thủ ít nhất 2 lần sau lời hứa; không dùng vật phẩm.',
+      LINH:'Thắng sau ít nhất 2 lượt nữa; không dùng vật phẩm.',
+      TRONG:'Thắng sau ít nhất 2 lượt nữa; không dùng Ultimate hoặc vật phẩm.',
+      TOBY:'Thắng và Phòng thủ ít nhất 1 lần sau lời hứa; không dùng vật phẩm.'
+    };
+    const choices = [
+      {id:'provoke', label:'Khiêu khích', desc:'Địch +20% Công, −15% Thủ trong 2 lượt hành động.'},
+      {id:'read', label:'Chỉ ra sơ hở', desc:B.known[foe.id] ? 'Đã hiểu hệ đối thủ: giảm 15% Công trong 2 lượt.' : 'Chưa hiểu hệ đối thủ: đối thủ cảnh giác, +15% Công trong 2 lượt.'}
+    ];
+    if (social) choices.push({id:'promise', label:'Cam kết đấu công bằng', desc:vows[foe.id] +
+      ' Địch +10% Công trong 3 lượt. Giữ lời: +1 Tin tưởng một lần; phá lời: −1. Thắng còn ≤35% HP, không bỏ QTE: thêm +1 một lần.'});
+    choices.push({id:'silent', label:'Giữ im lặng', desc:'Giữ nguyên trạng thái, không đổi Tin tưởng.'});
+    return {uid:foe.uid, name:foe.name, text:lines[foe.id] || 'Đối thủ khựng lại, chờ phản ứng của bạn.', choices};
+  }
+  function chooseDialogue(B, uid, choice) {
+    const current = dialogue(B);
+    if (!current || current.uid !== uid || !current.choices.some(c => c.id === choice)) return {ok:false};
+    const foe = unit(B, uid); B.dialogues[uid] = choice;
+    if (choice === 'provoke') {
+      addMod(foe, 'atk', Math.max(1, Math.round(foe.base.atk * 0.2)), 2);
+      addMod(foe, 'def', -Math.max(1, Math.round(foe.base.def * 0.15)), 2);
+    } else if (choice === 'read') {
+      addMod(foe, 'atk', Math.max(1, Math.round(foe.base.atk * 0.15)) * (B.known[foe.id] ? -1 : 1), 2);
+    } else if (choice === 'promise') {
+      addMod(foe, 'atk', Math.max(1, Math.round(foe.base.atk * 0.1)), 3);
+      B.promises.push({foe:foe.f, round:B.round, defends:0, broken:false, skipped:false});
+    }
+    // Đối thoại xảy ra trước hành động: tính lượt hiện tại là lượt hiệu lực đầu tiên.
+    foe.mods.forEach(m => { if (m.fresh) m.fresh = false; });
+    emit(B, '💬 ' + foe.name + ': ' + current.choices.find(c => c.id === choice).label + '.', 'skill');
+    return {ok:true};
+  }
+  function recordPromiseAction(B, u, a) {
+    if (!B.distinct || u !== B.playerUnit) return;
+    B.promises.forEach(p => {
+      if (a.type === 'defend') p.defends++;
+      if (a.skipped) p.skipped = true;
+      if (a.type === 'item' || (p.foe.id === 'TRONG' && a.type === 'ultimate')) {
+        if (!p.broken) emit(B, '💔 Bạn đã phá lời hứa với ' + p.foe.name + '.', 'warn');
+        p.broken = true;
+      }
+    });
+  }
+  function settlePromises(B) {
+    const start = B.log.length;
+    B.promises.forEach(p => {
+      const defended = p.foe.id === 'WIBU' ? p.defends >= 2 : p.foe.id === 'TOBY' ? p.defends >= 1 : B.round - p.round >= 2;
+      if (p.broken) {
+        p.foe.trust = Math.max(0, (p.foe.trust || 0) - 1);
+        emit(B, '💔 ' + p.foe.name + ' mất 1 Tin tưởng vì lời hứa bị phá.', 'warn');
+      } else if (B.winner === 'A' && defended) {
+        const earned = RPG.grantTrust(p.foe, 'battlePromise');
+        const mastery = !p.skipped && B.playerUnit.hp <= B.playerUnit.maxHp * 0.35 ? RPG.grantTrust(p.foe, 'battleMastery') : 0;
+        emit(B, '🤝 Giữ lời với ' + p.foe.name + ': +' + (earned + mastery) + ' Tin tưởng (mỗi thử thách chỉ thưởng một lần).', 'good');
+      } else emit(B, '💬 Chưa hoàn thành cam kết với ' + p.foe.name + '; không nhận Tin tưởng.', 'warn');
+    });
+    return B.log.slice(start).map(ev => ev.msg);
+  }
+
   /* ----------------------------- HÀNH ĐỘNG ----------------------------- */
   const qScale = q => { q = (q == null ? 1 : q); return q < CC.QTE_FAIL_BELOW ? 0 : 0.7 + 0.3 * clamp((q - CC.QTE_FAIL_BELOW) / (1 - CC.QTE_FAIL_BELOW), 0, 1); };
   const hasSummon = (B, u) => B.units.some(function (s) { return s.isSummon && s.alive && s.owner === u; });
@@ -441,6 +530,10 @@
 
   function* execAction(B, u, a) {
     const ctx = { dodge: null, ult: false, skillName: "" };
+    recordPromiseAction(B, u, a);
+    if (B.distinct && !u.isSummon && a.type !== 'attack') { u.chain = 0; u.chainTarget = null; }
+    const wasGuarding = u.guardReady;
+    if (B.distinct && !u.isSummon) u.guardReady = a.type === 'defend';
     if (a.type === "defend") { gainSp(u, RPG.CFG.SP_ON_DEFEND); emit(B, u.name + " thủ thế, chuẩn bị chịu đòn" + (u.isSummon ? "" : " (+" + RPG.CFG.SP_ON_DEFEND + " Thể Lực)") + ".", "def", { type: "defend", src: u.uid }); yield* flush(B); return; }
 
     if (a.type === "attack") {
@@ -448,7 +541,38 @@
       if (!ts.length) return;
       ctx.element = u.isSummon ? "void" : RPG.basicElement(u.f);
       emit(B, u.name + " tấn công " + ts[0].name + "!", "atk", { type: "attack", src: u.uid, dst: ts[0].uid, element: ctx.element });
-      yield* dmgGen(B, u, ts[0], 1.0, { basic: true }, ctx);
+      const t = ts[0], active = B.distinct && !u.isSummon;
+      const style = active && attackChoices(B, u).find(s => s.id === a.style && s.ready);
+      if (style) u.sp -= style.cost;
+      const cls = active ? u.f.classId : null;
+      let power = 1;
+      if (cls === 'fighter') power = style ? 1.65 : wasGuarding ? 1.35 : 1;
+      if (cls === 'assassin') power = style ? 0.7 : 1 + 0.12 * (u.chainTarget === t.uid ? Math.min(3, u.chain || 0) : 0);
+      if (style && cls === 'mage') power = 0.8 + 0.5 * (u.runeTarget === t.uid ? u.runes || 0 : 0);
+      if (style && cls === 'healer') power = 0.85;
+      if (style && cls === 'summoner') power = 0.75;
+      if (style) emit(B, u.name + ' — ' + style.name + '!', 'skill');
+      const before = t.hp;
+      yield* dmgGen(B, u, t, power, { basic: true }, ctx);
+      if (active) {
+        if (cls === 'assassin') {
+          if (style && t.alive) yield* dmgGen(B, u, t, 0.7, {basic:true}, ctx);
+          u.chain = style ? 0 : u.chainTarget === t.uid ? Math.min(3, (u.chain || 0) + 1) : 1;
+          u.chainTarget = t.uid;
+        }
+        if (cls === 'mage') {
+          u.runes = style ? 0 : u.runeTarget === t.uid ? Math.min(3, (u.runes || 0) + 1) : 1;
+          u.runeTarget = t.uid;
+          emit(B, 'Ấn trên ' + t.name + ': ' + u.runes + '/3.', 'skill');
+        }
+        if (style && cls === 'healer' && t.hp < before) heal(B, u, u.maxHp * 0.08);
+        if (style && cls === 'summoner') {
+          for (const summon of B.units.filter(x => x.alive && x.isSummon && x.owner === u && x.atkPct > 0)) {
+            if (!t.alive) break;
+            yield* dmgGen(B, summon, t, 0.5, {basic:true}, {dodge:null, ult:false, element:'void'});
+          }
+        }
+      }
       if (!u.isSummon) { u.rage = clamp(u.rage + RPG.CFG.RAGE_ON_ATTACK, 0, RPG.CFG.RAGE_MAX); gainSp(u, RPG.CFG.SP_ON_ATTACK); }
       else if (u.hasRage) {
         u.rage += CC.SWORDSMAN_RAGE_ATTACK;
@@ -486,7 +610,7 @@
     const manaRefund = isUlt && !u.isSummon && u.f && RPG.hasPiece(u.f, "manaTransfer");
     if (isUlt) u.rage = manaRefund ? Math.round(RPG.CFG.RAGE_MAX * RPG.CFG.MANA_TRANSFER_PCT) : 0;
     else { u.cds[def.id] = Math.max(1, def.cd + 1 - (tal(u, "sp3") ? 1 : 0)); u.rage = clamp(u.rage + RPG.CFG.RAGE_ON_SKILL + (tal(u, "sp3") ? 15 : 0), 0, RPG.CFG.RAGE_MAX); u.sp -= skillCost(u, def); }
-    const scale = qScale(a.quality);
+    const scale = B.distinct && a.skipped ? 0.7 : qScale(a.quality);
     emit(B, (isUlt ? "✧ " : "✦ ") + u.name + " dùng \"" + def.name + "\"" + (scale === 0 ? " — THẤT BẠI!" : "") + (isUlt ? " ✧" : ""), isUlt ? "skill" : "skill", { type: "cast", src: u.uid, skill: def.id, element: ctx.element, ultimate: isUlt });
     if (manaRefund) emit(B, "🔷 MANA TRANSFER! " + u.name + " hồi lại " + u.rage + " Nộ.", "good");
     if (scale === 0) { yield* flush(B); return; }
@@ -537,7 +661,7 @@
     });
     return best ? best.uid : undefined;
   }
-  function aiChoose(B, u) {
+  function aiChooseLegacy(B, u) {
     const L = aiLvl(B, u);
     const q = Math.min(1, 0.75 + rng() * 0.25 + 0.04 * L);
     if (u.isSummon) return { type: "attack" };
@@ -605,6 +729,15 @@
   }
 
   /* ----------------------------- VÒNG ĐẤU ----------------------------- */
+  function aiChoose(B, u) {
+    const a = aiChooseLegacy(B, u);
+    if (B.distinct && !u.isSummon && a.type === 'attack') {
+      const special = attackChoices(B, u).find(s => s.ready);
+      const mageReady = u.f.classId !== 'mage' || (u.runes >= 2 && (!a.target || a.target === u.runeTarget));
+      if (special && mageReady && (u.f.classId === 'mage' || rng() < 0.45)) a.style = special.id;
+    }
+    return a;
+  }
   function beginRound(B) {
     B.round++;
     B.units.forEach(function (u) { u.action = null; });
@@ -622,6 +755,7 @@
   function submit(B, uid, a) {
     const u = unit(B, uid);
     if (!u || !u.alive) return { ok: false, reason: "dead" };
+    if (a.type === 'attack' && a.style && !attackChoices(B, u).some(s => s.id === a.style && s.ready)) return {ok:false, reason:'style'};
     if (a.type === "skill") {
       const s = RPG.getSkills(u.f).find(function (x) { return x.id === a.id; });
       if (!s || !s.unlocked) return { ok: false, reason: "locked" };
@@ -688,7 +822,7 @@
       }
     }
     const order = B.units.filter(function (u) { return u.alive; })
-      .map(function (u) { return { u: u, k: eff(u, "spd") + rng() * 0.01 }; })
+      .map(function (u) { return { u: u, k: eff(u, "spd") - (B.distinct && u.action && u.action.style === "heavy" ? 20 : 0) + rng() * 0.01 }; })
       .sort(function (a, b) { return b.k - a.k; }).map(function (x) { return x.u; });
     order.forEach(function (u) { if (u.action && u.action.type === "defend") u.defending = true; });
 
@@ -744,12 +878,13 @@
   function settle(B) {
     if (!B.over || B.settled) return null;
     B.settled = true;
+    const relationships = B.distinct ? settlePromises(B) : [];
     // Ghi lại HP sau trận (người thua kiệt sức còn 1 HP). Làm TRƯỚC khi cộng EXP để bonus lên cấp được tính.
     B.units.forEach(function (u) { if (!u.isSummon && u.f) u.f.hp = Math.max(1, Math.min(u.f.maxHp, u.hp)); });
     const pf = B.playerUnit.f;
     const foes = B.units.filter(function (u) { return u.side === "E" && !u.isSummon; }).map(function (u) { return u.f; });
     const mates = B.units.filter(function (u) { return u.side === "A" && !u.isSummon && u.f !== pf; }).map(function (u) { return u.f; });
-    const out = { winner: B.winner, duels: [], allyExp: [] };
+    const out = { winner: B.winner, duels: [], allyExp: [], relationships: relationships };
     if (foes.length === 1 && foes[0].escapedOne) {
       const won = B.winner === "A";
       const resolved = RPG.resolveEscapedOne(pf, won);
@@ -800,6 +935,7 @@
   }
 
   const api = {
+    attackChoices: attackChoices, dialogue: dialogue, chooseDialogue: chooseDialogue,
     CC: CC, create: create, unit: unit, options: options, beginRound: beginRound, submit: submit,
     roundGen: roundGen, runRound: runRound, autoBattle: autoBattle, settle: settle,
     aiChoose: aiChoose, legalTargets: legalTargets, calcDamage: calcDamage, eff: eff,

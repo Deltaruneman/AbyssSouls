@@ -772,8 +772,32 @@
 
   /* ============================ TRUST / PARTY ============================ */
   function talk(npc) {
-    npc.trust = Math.min(CFG.TRUST_MAX, npc.trust + 1);
+    // Lời chào không phải bằng chứng tin cậy.
+    npc.trust = npc.trust || 0;
     return npc.trust;
+  }
+  function grantTrust(npc, source) {
+    if (!NPC_ROSTER.some(n => n.id === npc.id)) return 0;
+    const allowed = ['understanding', 'battlePromise', 'battleMastery'];
+    if (!allowed.includes(source)) return 0;
+    npc.trustRewards = npc.trustRewards || {};
+    if (npc.trustRewards[source]) return 0;
+    npc.trustRewards[source] = true;
+    const before = npc.trust || 0;
+    npc.trust = Math.min(CFG.TRUST_MAX, before + 1);
+    return npc.trust - before;
+  }
+  function dialogueTrust(npc, fx, stage) {
+    if (fx.trust < 0) {
+      const before = npc.trust || 0;
+      npc.trust = Math.max(0, before + fx.trust);
+      return npc.trust - before;
+    }
+    // Chỉ một lần khi đã nghe ít nhất hai cảnh và chọn phản hồi có ý nghĩa.
+    // Lời hứa phải được chứng minh trong trận, không trao điểm tại đây.
+    if (stage < 2 || !(fx.flag || fx.set) ||
+        (fx.set && Object.keys(fx.set).some(k => k.startsWith('promised_')))) return 0;
+    return grantTrust(npc, 'understanding');
   }
   function partyAllies() {
     return aliveFighters().filter(function (f) { return !f.isPlayer && f.inParty; });
@@ -908,7 +932,7 @@
     rankAscending: rankAscending, eliminateLowest: eliminateLowest,
     addLaPeace: addLaPeace, hasPiece: hasPiece, pieceOwner: pieceOwner, unownedPieces: unownedPieces,
     transferPieces: transferPieces, giveToRandomOpponent: giveToRandomOpponent, syncPieces: syncPieces,
-    talk: talk, partyAllies: partyAllies, canRecruit: canRecruit, recruit: recruit, dismiss: dismiss,
+    grantTrust: grantTrust, dialogueTrust: dialogueTrust, talk: talk, partyAllies: partyAllies, canRecruit: canRecruit, recruit: recruit, dismiss: dismiss,
     countItem: countItem, addItem: addItem, removeItem: removeItem, addComponent: addComponent,
     canCraft: canCraft, craft: craft, lootRandomItem: lootRandomItem,
     simulateDuel: simulateDuel, simulateNpcNight: simulateNpcNight

@@ -1123,3 +1123,8 @@ button.toggle{padding:0;flex-shrink:0;cursor:pointer;}
 .darkDetermination { color:#d8b5ff; line-height:1.6; }
 #pkField.escapedArena { background:linear-gradient(180deg,#0b1025 0%,#302443 58%,#15101e 59%,#292330 100%); }
 #pkField.escapedArena::before { content:"SÂN THƯỢNG TÒA E"; position:absolute; top:12px; left:50%; transform:translateX(-50%); color:#dcc5ee; font-size:11px; letter-spacing:.16em; pointer-events:none; }
+
+/* Hội thoại giữa trận: giữ điều kiện và hậu quả dễ đọc trên màn hình hẹp. */
+#pkMenu[data-mode="dialogue"] .pkBtn{display:flex;flex-direction:column;align-items:flex-start;gap:4px;white-space:normal;}
+#pkMenu[data-mode="dialogue"] .pkBtnSub{text-align:left;line-height:1.4;overflow-wrap:anywhere;}
+#pkMenu[data-mode="dialogue"]:not(:empty)::after{content:'↑↓ chọn · Enter xác nhận';}

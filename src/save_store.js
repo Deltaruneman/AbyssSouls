@@ -29,6 +29,8 @@
       if(f.firstNightWins !== undefined && (!Array.isArray(f.firstNightWins) || f.firstNightWins.length > RPG.NPC_ROSTER.length || new Set(f.firstNightWins).size !== f.firstNightWins.length || !f.firstNightWins.every(id=>RPG.NPC_ROSTER.some(n=>n.id===id))))return false;
       for(const key of ['darkDetermination','darkCoreClaimed','escapedWillOwned']) if(f[key] !== undefined && typeof f[key] !== 'boolean')return false;
       if(f.escapedOutcome !== undefined && !['won','lost'].includes(f.escapedOutcome))return false;
+      if(f.trustRewards !== undefined && (!object(f.trustRewards) ||
+        !Object.entries(f.trustRewards).every(([k,v])=>['understanding','battlePromise','battleMastery'].includes(k) && v===true)))return false;
       if(f.talents && !object(f.talents))return false;
       if(f.equip && (!object(f.equip)||!Object.values(f.equip).every(k=>!k||Object.hasOwn(RPG.EQUIPMENT,k))))return false;
       if(f.quests && (!object(f.quests)||!Object.values(f.quests).every(q=>object(q)&&Number.isInteger(q.step)&&q.step>=0)))return false;

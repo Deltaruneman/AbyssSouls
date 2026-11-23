@@ -68,7 +68,7 @@ The TIU có thể gây sự cố ở một số phòng. Hãy đến nơi đượ
 
 ### NPC và đồng đội
 
-- NPC có thể di chuyển giữa các phòng. Nói chuyện để tăng Tin tưởng; đạt ngưỡng cần thiết để mời họ vào đội hoặc nhận nhiệm vụ riêng.
+- NPC có thể di chuyển giữa các phòng. Lắng nghe và hoàn thành cam kết chiến đấu để tăng Tin tưởng; đạt ngưỡng cần thiết để mời họ vào đội hoặc nhận nhiệm vụ riêng.
 - Đội hình gồm người chơi và tối đa một đồng đội. Đồng đội tự hành động trong chiến đấu.
 - Đồng đội thường cần bạn duy trì ĐRL để tiếp tục ở lại. Hoàn thành nhiệm vụ riêng sẽ tạo Gắn bó, giúp mở thêm lựa chọn ở phần kết.
 - Bấm `⋮` để xem thông tin NPC và La Peace mà bạn đã khám phá. Bấm `Q` để xem nhật ký nhiệm vụ.
@@ -130,3 +130,25 @@ node tools/browser_smoke.cjs
 ```
 
 Bộ kiểm tra lõi bao gồm lưu/tải, bản dự phòng, dữ liệu hỏng, hết dung lượng, di chuyển bản lưu cũ và 120 mô phỏng chiến đấu thường/The TIU cho năm Class ở cấp 1/3/5/8, 15 mô phỏng The Escaped One và kiểm tra điều kiện mở khóa, hệ số sát thương, phần thưởng một lần, dữ liệu lưu của nhánh bí mật. Kiểm tra trình duyệt mặc định dùng Microsoft Edge trên Windows với hồ sơ tạm riêng; có thể đặt biến môi trường BROWSER_PATH trỏ đến Chromium khác. Ảnh kiểm tra giao diện được lưu trong thư mục tạm và đường dẫn in ra khi chạy. Kiểm tra trình duyệt còn đi qua hai kết quả thắng/thua trên sân thượng, trang bị lại vũ khí và tải lại mốc an toàn. Các kiểm tra này không thay thế việc chơi thử toàn bộ nhánh cốt truyện hoặc cân bằng độ khó.
+
+### Nhịp chiến đấu và tin cậy
+
+Mọi trận thường (kể cả phục kích, quái, mini-boss và The TIU tuần tra) dùng đòn đánh riêng theo Class. Secret boss và toàn bộ đêm cuối giữ luật chiến đấu cũ.
+
+- Đấu sĩ: đánh thường sau Phòng thủ mạnh thêm 35%; Trọng kích tốn 20 TL, sức đánh 165%, chậm 20 tốc độ.
+- Sát thủ: đánh thường liên tiếp cùng mục tiêu tăng 12% mỗi lần (tối đa 36%); Liên kích tốn 20 TL cho hai nhát 70%.
+- Pháp sư: đánh thường tích tối đa 3 ấn trên một mục tiêu; Kích nổ tốn 15 TL, sức đánh 80% + 50% mỗi ấn và tiêu hết ấn.
+- Hộ tế: Hấp thu tốn 15 TL, sức đánh 85%, hồi 8% HP tối đa nếu gây sát thương.
+- Triệu hồi: Hiệp kích tốn 15 TL, sức đánh 75%, mỗi vật triệu hồi có sức tấn công đang sống đánh thêm một nhát 50%.
+
+Ultimate có nhịp QTE riêng theo Class. Trong trận thường, đúng hướng ngoài vùng sáng được nửa điểm; bỏ QTE bằng Q hoặc nút bấm luôn cho 70% hiệu lực. Đòn giả trong QTE phòng thủ trận thường cảnh báo trước 250 ms và cấp lại cửa sổ phản ứng sau khi đổi hướng.
+
+Từ lượt 2 (hoặc khi đối thủ còn nửa HP), hội thoại có thể làm đối thủ mạnh/yếu hơn. Mỗi đối thủ chỉ mở thoại một lần, tối đa hai đối thủ trong trận nhóm. Quái không trao điểm tin cậy.
+
+Tin cậy vẫn tối đa 3, cần 2 để mời đồng đội/nhận nhiệm vụ riêng. Không còn cộng điểm khi chỉ bắt đầu nói chuyện. Có ba nguồn thưởng, mỗi nguồn chỉ nhận một lần cho mỗi NPC trong cả hành trình:
+
+1. Lắng nghe ít nhất hai cảnh và chọn một phản hồi có ý nghĩa: +1. Lời hứa ngoài trận chưa trao điểm.
+2. Chọn cam kết trong trận và thắng đúng điều kiện: +1. Wibu cần Phòng thủ hai lần; Toby một lần; Linh cần chiến đấu thêm ít nhất hai lượt; Trọng cần thêm hai lượt và không dùng Ultimate. Mọi cam kết đều cấm vật phẩm sau khi hứa. Đối thủ được +10% Công trong ba lượt.
+3. Hoàn thành cam kết khi thắng còn tối đa 35% HP và không bỏ QTE sau lời hứa: thêm +1.
+
+Dùng vật phẩm hoặc vi phạm điều kiện cấm sẽ trừ 1 tin cậy khi kết toán. Thua hoặc chưa đủ số lượt/phòng thủ không nhận thưởng. Điểm đã có trong bản lưu cũ được giữ lại; các nguồn thưởng mới được lưu để chặn nhận lặp lại.
