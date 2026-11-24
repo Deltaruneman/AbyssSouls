@@ -650,8 +650,6 @@ function kbSelect(btn, how){          // how: 'init' | 'key' | 'mouse'
   KB.cur = btn || null;
   if(!btn) return;
   btn.classList.add('kb');
-  const battleMenu = document.getElementById('pkMenu');
-  if(battleMenu && battleMenu.contains(btn) && battleMenu._showHint) battleMenu._showHint(btn);
   if(btn._enterHover) btn._enterHover();
   if(how==='key'){ btn.focus({preventScroll:true}); btn.scrollIntoView({ block:'nearest' }); if(btn.onmouseenter) btn.onmouseenter(); }
   else if(how==='init' && btn.dataset.hover && btn.onmouseenter) btn.onmouseenter();
@@ -2372,8 +2370,7 @@ function pkMenuSet(mode, items){
     const b = document.createElement('button');
     b.className = 'pkBtn'+(it.cls?' '+it.cls:'');
     b.style.setProperty('--i', i); b.style.setProperty('--n', nCmd);
-    const inlineHint=(it.hint&&(mode==='fight'||mode==='bag'))?`<span class="pkBtnHint">${it.hint}</span>`:'';
-    b.innerHTML = (it.icon ? `<span class="pkBtnIco">${it.icon}</span>` : '')+`<span class="pkBtnContent"><span class="pkBtnLbl">${it.label}</span>${inlineHint}</span>`+(it.sub ? `<span class="pkBtnSub">${it.sub}</span>` : '');
+    b.innerHTML = (it.icon ? `<span class="pkBtnIco">${it.icon}</span>` : '')+`<span class="pkBtnContent"><span class="pkBtnLbl">${it.label}</span></span>`+(it.sub ? `<span class="pkBtnSub">${it.sub}</span>` : '');
     if(it.disabled) b.disabled = true;
     b.onclick = it.onClick;
     if(it.hint) b.dataset.hint = it.hint;
@@ -2385,15 +2382,20 @@ function pkMenuSet(mode, items){
     }
     if(it.hoverUid) b.dataset.hover = '1';
     b.addEventListener('mouseenter',()=>m._showHint&&m._showHint(b));
-    b.addEventListener('focus',()=>m._showHint&&m._showHint(b));
+    b.addEventListener('mouseleave',()=>m._hideHint&&m._hideHint());
     b.addEventListener('mouseenter', ()=>kbSelect(b,'mouse'));
     m.appendChild(b);
   });
   const detail=document.createElement('div');
   detail.className='pkDetail'; detail.setAttribute('aria-live','polite');
-  m._showHint=(button)=>{ if(!button||!button.dataset.hint) return; detail.textContent=button.dataset.hint; };
+  detail.hidden = true;
+  m._hideHint=()=>{ detail.hidden=true; detail.textContent=''; };
+  m._showHint=(button)=>{
+    const hint=button && button.dataset.hint;
+    detail.textContent=hint || '';
+    detail.hidden=!hint;
+  };
   m.appendChild(detail);
-  m._showHint(m.querySelector('button:not(:disabled)'));
   kbReset('menu');
 }
 function clearTargeted(){

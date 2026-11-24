@@ -1005,7 +1005,7 @@ body.mod-midterm #nightBadge{color:var(--amber);}
 .pkThreat:empty{display:none;}
 .duelCard.enemy.threat-ready{border-color:#ff725f;box-shadow:0 0 0 1px #ff725f,0 0 16px rgba(255,74,64,.5);}
 .pkBtnContent{display:flex;min-width:0;flex:1;flex-direction:column;align-items:flex-start;gap:2px;}
-.pkBtnHint{font-size:12px;line-height:1.3;color:#c3c8d4;font-weight:400;}
+.pkDetail[hidden]{display:none;}
 .pkDetail{padding:8px 12px;border-top:1px solid rgba(255,255,255,.12);font-size:13px;line-height:1.4;color:#d9dce5;}
 #qtePad{display:none;grid-template-columns:repeat(3,48px);grid-template-rows:repeat(2,44px);gap:5px;touch-action:manipulation;}
 .qteArrowBtn{display:grid;place-items:center;min-width:48px;min-height:44px;border:1px solid rgba(255,255,255,.45);border-radius:6px;background:rgba(226,182,92,.18);color:#fff;font-size:23px;font-weight:800;touch-action:manipulation;}
@@ -1035,10 +1035,8 @@ body.mod-midterm #nightBadge{color:var(--amber);}
   .duelCard.active{transform:translateY(-2px);}
   #pkMenu{left:8px;right:8px;top:auto;bottom:calc(6px + env(safe-area-inset-bottom));transform:none;width:auto;max-height:34vh;z-index:12;}
   #pkMenu .pkBtn{gap:7px;padding:6px 9px;min-height:40px;font-size:15px;}
-  #pkMenu .pkBtnHint{font-size:11px;}
   #pkMenu .pkBtnSub{font-size:11px;}
   #pkMenu .pkDetail{padding:5px 9px;font-size:11px;}
-  #pkMenu[data-mode="fight"] .pkDetail,#pkMenu[data-mode="bag"] .pkDetail{display:none;}
   #pkMenu:not(:empty)::after{padding:4px 9px;font-size:10px;}
   #battleOverlay:has(#pkMenu:not(:empty)) #pkTextBox{left:8px;right:8px;top:52%;bottom:auto;transform:none;width:auto;max-height:8vh;min-height:0;padding:4px 24px 4px 8px;font-size:14px;background:rgba(10,12,18,.84);}
   #battleOverlay:not(:has(#pkMenu:not(:empty))) #pkTextBox{left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));width:auto;transform:none;max-height:16vh;padding:8px 30px 8px 10px;font-size:15px;background:rgba(10,12,18,.86);}
